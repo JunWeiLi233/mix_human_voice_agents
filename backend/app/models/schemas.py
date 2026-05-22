@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 ConsentType = Literal["self_or_written_permission"]
 TtsBackend = Literal["local_development_wav", "qwen3_tts"]
+VerificationStatus = Literal["missing", "passed", "failed"]
 BlendStrategy = Literal[
     "adapter_embedding_mix",
     "multi_reference_prompt",
@@ -83,6 +84,18 @@ class TtsRuntimeStatus(BaseModel):
     available: bool
     model_id: str | None = None
     message: str
+
+
+class QwenVerificationReport(BaseModel):
+    status: VerificationStatus
+    tts_backend: TtsBackend = "qwen3_tts"
+    report_path: str
+    voice_profile_ids: list[str] = []
+    blend_id: str | None = None
+    blend_strategy: BlendStrategy | None = None
+    output_audio_path: str | None = None
+    text: str | None = None
+    error: str | None = None
 
 
 AgentProviderKind = Literal["openai_compatible", "ollama"]

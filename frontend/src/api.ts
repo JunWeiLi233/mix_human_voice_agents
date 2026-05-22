@@ -4,6 +4,7 @@ import type {
   BlendDraftProfile,
   DeleteVoiceResult,
   GenerationResult,
+  QwenVerificationReport,
   TtsBackend,
   TtsRuntimeStatus,
   VoiceConsentInput,
@@ -29,6 +30,14 @@ export async function deleteVoice(voiceProfileId: string): Promise<DeleteVoiceRe
 
 export async function getQwenRuntimeStatus(): Promise<TtsRuntimeStatus> {
   const response = await fetch("/api/tts/qwen/status");
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  return response.json();
+}
+
+export async function getQwenVerificationReport(): Promise<QwenVerificationReport> {
+  const response = await fetch("/api/tts/qwen/verification");
   if (!response.ok) {
     throw new Error(await response.text());
   }

@@ -64,6 +64,10 @@ The report must contain `"status": "passed"`, `"tts_backend": "qwen3_tts"`, and 
 
 If Qwen generation fails with a missing reference text error, re-import the voice sample with the matching transcript. The transcript should describe the words spoken in the reference clip, not the speaker's name.
 
+## Report in the Studio
+
+The backend exposes the saved report at `/api/tts/qwen/verification`. The frontend reads that endpoint on load and shows `Verification passed`, `Verification failed`, or `Verification missing` in the `Voice Engine` panel. When a passed report includes `output_audio_path`, the panel shows the verified output file path.
+
 ## Safety Gate
 
 Only use samples where the speaker is the user or has provided written permission. Do not use public figures, celebrities, politicians, or third-party voices without consent.

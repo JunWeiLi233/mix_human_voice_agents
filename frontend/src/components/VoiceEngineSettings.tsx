@@ -1,12 +1,13 @@
-import type { TtsBackend, TtsRuntimeStatus } from "../types";
+import type { QwenVerificationReport, TtsBackend, TtsRuntimeStatus } from "../types";
 
 type Props = {
   value: TtsBackend;
   status: TtsRuntimeStatus | null;
+  verification: QwenVerificationReport | null;
   onChange: (backend: TtsBackend) => void;
 };
 
-export function VoiceEngineSettings({ value, status, onChange }: Props) {
+export function VoiceEngineSettings({ value, status, verification, onChange }: Props) {
   return (
     <section className="panel">
       <h2>Voice Engine</h2>
@@ -42,7 +43,27 @@ export function VoiceEngineSettings({ value, status, onChange }: Props) {
             <dd>{status.message}</dd>
           </>
         ) : null}
+        <dt>Verification</dt>
+        <dd>{verification ? verificationLabel(verification.status) : "Checking"}</dd>
+        {verification?.output_audio_path ? (
+          <>
+            <dt>Verified output</dt>
+            <dd>{verification.output_audio_path}</dd>
+          </>
+        ) : null}
+        {verification?.error ? (
+          <>
+            <dt>Verification note</dt>
+            <dd>{verification.error}</dd>
+          </>
+        ) : null}
       </dl>
     </section>
   );
+}
+
+function verificationLabel(status: QwenVerificationReport["status"]) {
+  if (status === "passed") return "Verification passed";
+  if (status === "failed") return "Verification failed";
+  return "Verification missing";
 }

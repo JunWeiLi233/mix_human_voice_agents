@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -30,6 +31,7 @@ from app.models.schemas import (
     BlendStrategy,
     ConsentRequest,
     GenerationResult,
+    QwenVerificationReport,
     TtsRuntimeStatus,
     TtsBackend,
     VoiceProfile,
@@ -39,6 +41,7 @@ from app.tts.local_wav import LocalWavTtsAdapter
 from app.tts.qwen import QwenTtsAdapter, QwenTtsNotConfigured
 
 router = APIRouter(prefix="/api")
+QWEN_VERIFICATION_REPORT_PATH = Path("data") / "qwen-runtime-verification-report.json"
 
 
 class CreateBlendRequest(BaseModel):
@@ -68,6 +71,20 @@ def health() -> dict[str, str]:
 @router.get("/tts/qwen/status", response_model=TtsRuntimeStatus)
 def qwen_status_route() -> TtsRuntimeStatus:
     return QwenTtsAdapter.runtime_status()
+
+
+@router.get("/tts/qwen/verification", response_model=QwenVerificationReport)
+def qwen_verification_route() -> QwenVerificationReport:
+    report_path = QWEN_VERIFICATION_REPORT_PATH
+    if not report_path.exists():
+        return QwenVerificationReport(
+            status="missing",
+            report_path=str(report_path),
+            error="Run python -m app.cli.verify_qwen_runtime with two consented voice profile ids.",
+        )
+    payload = json.loads(report_path.read_text(encoding="utf-8"))
+    payload.setdefault("report_path", str(report_path))
+    return QwenVerificationReport.model_validate(payload)
 
 
 @router.post("/blends", response_model=VoiceBlend)

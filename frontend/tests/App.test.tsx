@@ -28,6 +28,15 @@ describe("App", () => {
           message: 'qwen-tts is not installed. Run: python -m pip install -e ".[qwen]"',
         });
       }
+      if (url === "/api/tts/qwen/verification") {
+        return jsonResponse({
+          status: "missing",
+          tts_backend: "qwen3_tts",
+          report_path: "data/qwen-runtime-verification-report.json",
+          voice_profile_ids: [],
+          error: "Run python -m app.cli.verify_qwen_runtime with two consented voice profile ids.",
+        });
+      }
       return new Response("not found", { status: 404 });
     });
 
@@ -41,6 +50,7 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Qwen3-TTS" })).toBeInTheDocument();
     expect(await screen.findByText("Qwen/Qwen3-TTS-12Hz-0.6B-Base")).toBeInTheDocument();
     expect(screen.getByText("Not installed")).toBeInTheDocument();
+    expect(await screen.findByText("Verification missing")).toBeInTheDocument();
     expect(screen.getByText("No imported voices yet.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Create blend from imported voices" })).toBeDisabled();
     expect(screen.getByLabelText("Import consented voice sample")).toBeDisabled();
@@ -89,6 +99,18 @@ describe("App", () => {
           available: true,
           model_id: "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
           message: "qwen-tts package is importable. Verify with consented samples before launch.",
+        });
+      }
+
+      if (url === "/api/tts/qwen/verification" && !init) {
+        return jsonResponse({
+          status: "passed",
+          tts_backend: "qwen3_tts",
+          report_path: "data/qwen-runtime-verification-report.json",
+          voice_profile_ids: ["voice_saved_a", "voice_saved_b"],
+          blend_strategy: "multi_reference_prompt",
+          output_audio_path: "data/generations/qwen_verify.wav",
+          text: "verification text",
         });
       }
 
@@ -163,6 +185,8 @@ describe("App", () => {
     render(<App />);
     await waitFor(() => expect(screen.getByText("No imported voices yet.")).toBeInTheDocument());
     await screen.findByText("Installed");
+    await screen.findByText("Verification passed");
+    expect(screen.getByText("data/generations/qwen_verify.wav")).toBeInTheDocument();
     await screen.findByRole("button", { name: "Saved Alice + Bob" });
     expect(screen.getByRole("button", { name: "Generate AI Voice" })).toBeEnabled();
     await screen.findByText("synthetic mixed voice using voice_saved_a + voice_saved_b");
@@ -301,6 +325,16 @@ describe("App", () => {
           available: false,
           model_id: "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
           message: "qwen-tts is not installed.",
+        });
+      }
+
+      if (url === "/api/tts/qwen/verification" && !init) {
+        return jsonResponse({
+          status: "failed",
+          tts_backend: "qwen3_tts",
+          report_path: "data/qwen-runtime-verification-report.json",
+          voice_profile_ids: ["voice_alice", "voice_bob"],
+          error: "Qwen runtime failed.",
         });
       }
 

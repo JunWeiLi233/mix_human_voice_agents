@@ -4,6 +4,7 @@ import {
   deleteVoice,
   generateClip,
   getQwenRuntimeStatus,
+  getQwenVerificationReport,
   listBlends,
   listGenerations,
   listVoices,
@@ -20,6 +21,7 @@ import type {
   AgentConfig,
   BlendDraftProfile,
   GenerationResult,
+  QwenVerificationReport,
   TtsBackend,
   TtsRuntimeStatus,
   VoiceBlend,
@@ -42,6 +44,7 @@ export default function App() {
   const [blend, setBlend] = useState<VoiceBlend | null>(null);
   const [generations, setGenerations] = useState<GenerationResult[]>([]);
   const [qwenStatus, setQwenStatus] = useState<TtsRuntimeStatus | null>(null);
+  const [qwenVerification, setQwenVerification] = useState<QwenVerificationReport | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -84,6 +87,20 @@ export default function App() {
           available: false,
           model_id: null,
           message: "Qwen3-TTS runtime status is unavailable.",
+        });
+      });
+  }, []);
+
+  useEffect(() => {
+    void getQwenVerificationReport()
+      .then(setQwenVerification)
+      .catch(() => {
+        setQwenVerification({
+          status: "missing",
+          tts_backend: "qwen3_tts",
+          report_path: "data/qwen-runtime-verification-report.json",
+          voice_profile_ids: [],
+          error: "Qwen runtime verification report is unavailable.",
         });
       });
   }, []);
@@ -165,7 +182,12 @@ export default function App() {
       ) : null}
       <div className="layout">
         <AgentProviderSettings value={agentConfig} onChange={setAgentConfig} />
-        <VoiceEngineSettings value={ttsBackend} status={qwenStatus} onChange={setTtsBackend} />
+        <VoiceEngineSettings
+          value={ttsBackend}
+          status={qwenStatus}
+          verification={qwenVerification}
+          onChange={setTtsBackend}
+        />
         <VoiceLibrary voices={voices} onDeleteVoice={handleDeleteVoice} />
         <ImportVoice onImported={handleImported} />
         <BlendMixer

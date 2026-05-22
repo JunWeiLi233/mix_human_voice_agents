@@ -51,6 +51,18 @@ export type TtsRuntimeStatus = {
   message: string;
 };
 
+export type QwenVerificationReport = {
+  status: "missing" | "passed" | "failed";
+  tts_backend: "qwen3_tts";
+  report_path: string;
+  voice_profile_ids: string[];
+  blend_id?: string | null;
+  blend_strategy?: BlendStrategy | null;
+  output_audio_path?: string | null;
+  text?: string | null;
+  error?: string | null;
+};
+
 export type VoiceProfile = {
   id: string;
   display_name: string;

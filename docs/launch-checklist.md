@@ -20,6 +20,7 @@
 - Deleting an imported voice profile removes its local profile/audio directory.
 - Deleting an imported voice profile removes saved blend presets that reference that profile so stale blends cannot generate audio.
 - Deleting an imported voice profile removes generated clip audio and metadata that reference that profile.
+- Voice Engine panel shows the saved Qwen runtime verification report status and verified output path when present.
 
 ## Known MVP Limits
 
@@ -37,4 +38,5 @@
 - Run `cd backend && .\.venv\Scripts\python -m app.cli.verify_qwen_runtime --voice-profile-id <id-a> --voice-profile-id <id-b> --report data/qwen-runtime-verification-report.json`.
 - Generate a short reply and confirm the output WAV is produced by Qwen3-TTS rather than the local development adapter.
 - Confirm `data/qwen-runtime-verification-report.json` contains `"status": "passed"` and an existing `output_audio_path`.
+- Confirm the Voice Engine panel shows `Verification passed` and the verified output path from the report.
 - Follow `docs/qwen-runtime-verification.md` before claiming real acoustic cloning/mixing is verified on a target machine.

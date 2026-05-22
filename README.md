@@ -12,6 +12,7 @@ Local-first prototype for an AI voice agent that imports multiple consented voic
 - Generates an agent reply first, then synthesizes audio with either:
   - `local_development_wav`: deterministic preview WAV for development.
   - `qwen3_tts`: Qwen3-TTS voice-clone path, then weighted waveform mixing across imported profiles.
+- Surfaces the saved Qwen runtime verification report in the Voice Engine panel.
 - Labels generated audio as synthetic in metadata and UI.
 - Blocks high-risk impersonation/payment authorization language.
 
@@ -51,6 +52,12 @@ Qwen preflight:
 
 ```powershell
 Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8000/api/tts/qwen/status
+```
+
+Qwen runtime verification report:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8000/api/tts/qwen/verification
 ```
 
 ## Frontend Setup

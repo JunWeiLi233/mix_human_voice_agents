@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 from pathlib import Path
+import json
 import wave
 
 from app.main import app
@@ -32,6 +33,46 @@ def test_qwen_status_route_reports_runtime_availability(monkeypatch):
     assert payload["backend"] == "qwen3_tts"
     assert payload["available"] is False
     assert payload["model_id"] == "Qwen/Qwen3-TTS-12Hz-0.6B-Base"
+
+
+def test_qwen_verification_report_returns_missing_when_no_report(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    response = client.get("/api/tts/qwen/verification")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "missing"
+    assert payload["tts_backend"] == "qwen3_tts"
+    assert payload["report_path"] == str(Path("data") / "qwen-runtime-verification-report.json")
+
+
+def test_qwen_verification_report_returns_saved_report(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    report_path = tmp_path / "data" / "qwen-runtime-verification-report.json"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text(
+        json.dumps(
+            {
+                "status": "passed",
+                "voice_profile_ids": ["voice_a", "voice_b"],
+                "tts_backend": "qwen3_tts",
+                "blend_strategy": "multi_reference_prompt",
+                "output_audio_path": "data/generations/qwen_verify.wav",
+                "text": "verification text",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    response = client.get("/api/tts/qwen/verification")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "passed"
+    assert payload["voice_profile_ids"] == ["voice_a", "voice_b"]
+    assert payload["blend_strategy"] == "multi_reference_prompt"
+    assert payload["output_audio_path"] == "data/generations/qwen_verify.wav"
 
 
 def test_create_blend_endpoint_normalizes_weights():
