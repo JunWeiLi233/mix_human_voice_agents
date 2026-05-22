@@ -25,6 +25,11 @@ export type GenerationResult = {
   synthetic_label: string;
   source_profile_ids: string[];
   source_profiles?: BlendProfile[];
+  watermark?: {
+    type: "metadata";
+    label: string;
+    disclosure: string;
+  };
   blend_strategy: BlendStrategy;
   tts_backend: TtsBackend;
 };

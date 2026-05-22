@@ -44,6 +44,11 @@ def test_generation_writes_wav_and_metadata(tmp_path: Path):
 
     metadata = json.loads(Path(result.metadata_path).read_text(encoding="utf-8"))
     assert metadata["source_profile_ids"] == ["voice_a", "voice_b"]
+    assert metadata["watermark"] == {
+        "type": "metadata",
+        "label": "synthetic mixed voice",
+        "disclosure": "Generated audio is synthetic and mixed from consented imported voice profiles.",
+    }
     assert metadata["source_profiles"] == [
         {"voice_profile_id": "voice_a", "weight": pytest.approx(2 / 3)},
         {"voice_profile_id": "voice_b", "weight": pytest.approx(1 / 3)},

@@ -349,6 +349,8 @@ def test_generate_endpoint_returns_audio_metadata(tmp_path: Path, monkeypatch):
     assert metadata_response.headers["content-type"] == "application/json"
     assert metadata_response.json()["id"] == payload["id"]
     assert metadata_response.json()["synthetic_label"] == "synthetic mixed voice"
+    assert metadata_response.json()["watermark"]["type"] == "metadata"
+    assert "synthetic" in metadata_response.json()["watermark"]["disclosure"]
     assert metadata_response.json()["source_profiles"] == [
         {"voice_profile_id": "voice_a", "weight": 0.5},
         {"voice_profile_id": "voice_b", "weight": 0.5},

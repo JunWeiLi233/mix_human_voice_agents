@@ -109,6 +109,11 @@ describe("App", () => {
               { voice_profile_id: "voice_saved_a", weight: 0.6 },
               { voice_profile_id: "voice_saved_b", weight: 0.4 },
             ],
+            watermark: {
+              type: "metadata",
+              label: "synthetic mixed voice",
+              disclosure: "Generated audio is synthetic and mixed from consented imported voice profiles.",
+            },
             synthetic_label: "synthetic mixed voice",
             blend_strategy: "local_development_wav",
             tts_backend: "local_development_wav",
@@ -251,6 +256,11 @@ describe("App", () => {
           metadata_path: "data/generations/generation_1.json",
           source_profile_ids: body.blend.profiles.map((profile: { voice_profile_id: string }) => profile.voice_profile_id),
           source_profiles: body.blend.profiles,
+          watermark: {
+            type: "metadata",
+            label: body.blend.synthetic_label,
+            disclosure: "Generated audio is synthetic and mixed from consented imported voice profiles.",
+          },
           synthetic_label: body.blend.synthetic_label,
           tts_backend: body.tts_backend,
         });
@@ -267,6 +277,9 @@ describe("App", () => {
     await screen.findByRole("button", { name: "Saved Alice + Bob" });
     expect(screen.getByRole("button", { name: "Generate AI Voice" })).toBeEnabled();
     await screen.findByText("synthetic mixed voice using voice_saved_a 60% + voice_saved_b 40%");
+    expect(
+      screen.getByText("Generated audio is synthetic and mixed from consented imported voice profiles."),
+    ).toBeInTheDocument();
     expect(screen.getByLabelText("Play synthetic mixed voice")).toHaveAttribute(
       "src",
       "/api/generations/generation_existing/audio",

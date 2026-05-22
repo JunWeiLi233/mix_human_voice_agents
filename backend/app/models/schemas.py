@@ -72,6 +72,12 @@ class VoiceBlend(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+class MetadataWatermark(BaseModel):
+    type: Literal["metadata"] = "metadata"
+    label: str = "synthetic mixed voice"
+    disclosure: str = "Generated audio is synthetic and mixed from consented imported voice profiles."
+
+
 class GenerationResult(BaseModel):
     id: str = Field(default_factory=lambda: f"generation_{uuid4().hex[:12]}")
     audio_path: str
@@ -81,6 +87,7 @@ class GenerationResult(BaseModel):
     source_profiles: list[BlendProfile] = Field(default_factory=list)
     blend_strategy: BlendStrategy
     tts_backend: TtsBackend = "local_development_wav"
+    watermark: MetadataWatermark = Field(default_factory=MetadataWatermark)
 
 
 class TtsRuntimeStatus(BaseModel):

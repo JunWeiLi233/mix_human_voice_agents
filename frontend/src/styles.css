@@ -201,6 +201,12 @@ audio {
   margin-top: 8px;
 }
 
+.metadata-watermark {
+  color: #596052;
+  font-size: 13px;
+  margin: 4px 0 0;
+}
+
 .history-actions {
   display: flex;
   gap: 8px;
