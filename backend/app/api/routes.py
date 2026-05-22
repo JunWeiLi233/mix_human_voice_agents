@@ -49,6 +49,7 @@ from app.tts.qwen import QwenTtsAdapter, QwenTtsNotConfigured
 router = APIRouter(prefix="/api")
 QWEN_VERIFICATION_REPORT_PATH = Path("data") / "qwen-runtime-verification-report.json"
 AGENT_PROVIDER_VERIFICATION_REPORT_PATH = Path("data") / "agent-provider-verification-report.json"
+RESEARCH_REVIEW_PATH = Path("docs") / "research-review.md"
 
 
 class CreateBlendRequest(BaseModel):
@@ -151,8 +152,15 @@ def launch_readiness_route() -> LaunchReadinessReport:
         qwen_verification.output_audio_path
         and Path(qwen_verification.output_audio_path).exists()
     )
+    research_review = _research_review_status()
 
     checks = [
+        LaunchReadinessCheck(
+            id="research_review",
+            label="Research review",
+            passed=research_review["passed"],
+            detail=research_review["detail"],
+        ),
         LaunchReadinessCheck(
             id="imported_voices",
             label="Imported voices",
@@ -277,8 +285,42 @@ def _qwen_verification_detail(report: QwenVerificationReport, output_exists: boo
     return "No passed Qwen runtime verification report."
 
 
+def _research_review_status() -> dict[str, object]:
+    review_path = _resolve_research_review_path()
+    if not review_path.exists():
+        return {
+            "passed": False,
+            "detail": f"Missing {RESEARCH_REVIEW_PATH}.",
+        }
+
+    content = review_path.read_text(encoding="utf-8")
+    required_markers = ("Sources Reviewed", "Qwen3-TTS")
+    missing_markers = [marker for marker in required_markers if marker not in content]
+    if missing_markers:
+        return {
+            "passed": False,
+            "detail": f"{RESEARCH_REVIEW_PATH} is missing required section markers: {', '.join(missing_markers)}.",
+        }
+
+    return {
+        "passed": True,
+        "detail": f"Reviewed: {RESEARCH_REVIEW_PATH}",
+    }
+
+
+def _resolve_research_review_path() -> Path:
+    cwd_path = RESEARCH_REVIEW_PATH
+    if cwd_path.exists():
+        return cwd_path
+    backend_parent_path = Path("..") / RESEARCH_REVIEW_PATH
+    if Path.cwd().name == "backend" and backend_parent_path.exists():
+        return backend_parent_path
+    return cwd_path
+
+
 def _launch_blocking_reasons(checks: list[LaunchReadinessCheck]) -> list[str]:
     reasons = {
+        "research_review": "Review docs/research-review.md before launch.",
         "imported_voices": "Import at least two consented voice profiles.",
         "saved_blend": "Create and save a mixed voice blend.",
         "generated_audio": "Generate at least one disclosed synthetic voice clip.",

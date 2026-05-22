@@ -229,9 +229,11 @@ def test_launch_readiness_reports_blockers_when_requirements_are_missing(tmp_pat
     payload = response.json()
     assert payload["status"] == "blocked"
     assert "Import at least two consented voice profiles." in payload["blocking_reasons"]
+    assert "Review docs/research-review.md before launch." in payload["blocking_reasons"]
     assert "Test the selected agent provider successfully before launch." in payload["blocking_reasons"]
     assert "Run Qwen runtime verification successfully before launch." in payload["blocking_reasons"]
     assert {check["id"]: check["passed"] for check in payload["checks"]} == {
+        "research_review": False,
         "imported_voices": False,
         "saved_blend": False,
         "generated_audio": False,
@@ -243,6 +245,17 @@ def test_launch_readiness_reports_blockers_when_requirements_are_missing(tmp_pat
 
 def test_launch_readiness_reports_ready_after_full_qwen_verification(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
+    research_review_path = tmp_path / "docs" / "research-review.md"
+    research_review_path.parent.mkdir(parents=True)
+    research_review_path.write_text(
+        "# Mixed Voice Agent Research Review\n\n"
+        "## Sources Reviewed\n\n"
+        "- OpenAI Voice Agents\n"
+        "- LiveKit Agents\n"
+        "- Pipecat\n"
+        "- Qwen3-TTS\n",
+        encoding="utf-8",
+    )
     sample_path = tmp_path / "sample.wav"
     write_reference_wav(sample_path)
     voices = []
