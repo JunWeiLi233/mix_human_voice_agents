@@ -367,15 +367,41 @@ def test_delete_voice_removes_profile_and_dependent_blends(tmp_path: Path, monke
         },
     ).json()
 
+    dependent_generation = client.post(
+        "/api/generate",
+        json={
+            "prompt": "Say hello as a disclosed synthetic assistant.",
+            "agent_reply": "Hello from Alice and Bob.",
+            "blend": dependent_blend,
+        },
+    ).json()
+    unrelated_generation = client.post(
+        "/api/generate",
+        json={
+            "prompt": "Say hello as a disclosed synthetic assistant.",
+            "agent_reply": "Hello from Bob and Cara.",
+            "blend": unrelated_blend,
+        },
+    ).json()
+
     response = client.delete(f"/api/voices/{removed_voice_id}")
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload == {"deleted_voice_profile_id": removed_voice_id, "deleted_blend_ids": [dependent_blend["id"]]}
+    assert payload == {
+        "deleted_voice_profile_id": removed_voice_id,
+        "deleted_blend_ids": [dependent_blend["id"]],
+        "deleted_generation_ids": [dependent_generation["id"]],
+    }
     assert not Path(imported[0]["source_audio_path"]).parent.exists()
+    assert not Path(dependent_generation["audio_path"]).exists()
+    assert not Path(dependent_generation["metadata_path"]).exists()
+    assert Path(unrelated_generation["audio_path"]).exists()
+    assert Path(unrelated_generation["metadata_path"]).exists()
     remaining_voice_ids = {voice["id"] for voice in client.get("/api/voices").json()}
     assert remaining_voice_ids == {imported[1]["id"], imported[2]["id"]}
     assert [blend["id"] for blend in client.get("/api/blends").json()] == [unrelated_blend["id"]]
+    assert [generation["id"] for generation in client.get("/api/generations").json()] == [unrelated_generation["id"]]
 
 
 def write_reference_wav(path: Path, duration_seconds: int = 5, sample_rate: int = 16000) -> None:

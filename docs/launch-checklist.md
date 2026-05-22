@@ -18,12 +18,12 @@
 - Generated audio is disclosed as synthetic in UI and metadata.
 - Deleting an imported voice profile removes its local profile/audio directory.
 - Deleting an imported voice profile removes saved blend presets that reference that profile so stale blends cannot generate audio.
+- Deleting an imported voice profile removes generated clip audio and metadata that reference that profile.
 
 ## Known MVP Limits
 
 - Local development adapter produces valid WAV preview audio but does not clone voices.
 - Qwen3-TTS adapter supports the real cloning path but requires model installation/configuration before real cloning.
-- Generated clips are not yet cascade-deleted with a voice profile; delete generated clips manually from local storage if the source voice must be purged from all historical output.
 - Microphone input and realtime WebRTC conversation are deferred.
 - Public voice sharing and celebrity/public-figure cloning are out of scope.
 

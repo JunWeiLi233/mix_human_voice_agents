@@ -115,6 +115,9 @@ export default function App() {
         current.filter((profile) => profile.voice_profile_id !== result.deleted_voice_profile_id),
       );
       setSavedBlends((current) => current.filter((savedBlend) => !result.deleted_blend_ids.includes(savedBlend.id)));
+      setGenerations((current) =>
+        current.filter((generation) => !result.deleted_generation_ids.includes(generation.id)),
+      );
       setBlend((current) => {
         if (!current) return null;
         const deletedActiveBlend = result.deleted_blend_ids.includes(current.id);

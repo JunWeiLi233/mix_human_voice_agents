@@ -263,7 +263,26 @@ describe("App", () => {
       }
 
       if (url === "/api/generations" && !init) {
-        return jsonResponse([]);
+        return jsonResponse([
+          {
+            id: "generation_alice_bob",
+            audio_path: "data/generations/generation_alice_bob.wav",
+            metadata_path: "data/generations/generation_alice_bob.json",
+            source_profile_ids: ["voice_alice", "voice_bob"],
+            synthetic_label: "synthetic mixed voice",
+            blend_strategy: "local_development_wav",
+            tts_backend: "local_development_wav",
+          },
+          {
+            id: "generation_bob_cara",
+            audio_path: "data/generations/generation_bob_cara.wav",
+            metadata_path: "data/generations/generation_bob_cara.json",
+            source_profile_ids: ["voice_bob", "voice_cara"],
+            synthetic_label: "synthetic mixed voice",
+            blend_strategy: "local_development_wav",
+            tts_backend: "local_development_wav",
+          },
+        ]);
       }
 
       if (url === "/api/tts/qwen/status" && !init) {
@@ -279,6 +298,7 @@ describe("App", () => {
         return jsonResponse({
           deleted_voice_profile_id: "voice_alice",
           deleted_blend_ids: ["blend_alice_bob"],
+          deleted_generation_ids: ["generation_alice_bob"],
         });
       }
 
@@ -288,6 +308,8 @@ describe("App", () => {
     render(<App />);
 
     await screen.findByRole("button", { name: "Alice + Bob" });
+    await screen.findByText("synthetic mixed voice using voice_alice + voice_bob");
+    await screen.findByText("synthetic mixed voice using voice_bob + voice_cara");
     expect(screen.getByRole("button", { name: "Generate AI Voice" })).toBeEnabled();
 
     fireEvent.click(screen.getByRole("button", { name: "Delete Alice voice" }));
@@ -295,6 +317,8 @@ describe("App", () => {
     await waitFor(() => expect(screen.queryByText("Alice")).not.toBeInTheDocument());
     expect(screen.queryByRole("button", { name: "Alice + Bob" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Bob + Cara" })).toBeInTheDocument();
+    expect(screen.queryByText("synthetic mixed voice using voice_alice + voice_bob")).not.toBeInTheDocument();
+    expect(screen.getByText("synthetic mixed voice using voice_bob + voice_cara")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Generate AI Voice" })).toBeDisabled();
     expect(fetchMock).toHaveBeenCalledWith("/api/voices/voice_alice", { method: "DELETE" });
   });

@@ -57,6 +57,7 @@ class GenerateRequest(BaseModel):
 class DeleteVoiceResponse(BaseModel):
     deleted_voice_profile_id: str
     deleted_blend_ids: list[str]
+    deleted_generation_ids: list[str]
 
 
 @router.get("/health")
@@ -187,7 +188,11 @@ def list_voices_route() -> list[VoiceProfile]:
 @router.delete("/voices/{voice_profile_id}", response_model=DeleteVoiceResponse)
 def delete_voice_route(voice_profile_id: str) -> DeleteVoiceResponse:
     try:
-        deleted_blend_ids = delete_voice_profile(voice_profile_id)
+        result = delete_voice_profile(voice_profile_id)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return DeleteVoiceResponse(deleted_voice_profile_id=voice_profile_id, deleted_blend_ids=deleted_blend_ids)
+    return DeleteVoiceResponse(
+        deleted_voice_profile_id=voice_profile_id,
+        deleted_blend_ids=result.deleted_blend_ids,
+        deleted_generation_ids=result.deleted_generation_ids,
+    )

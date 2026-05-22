@@ -7,7 +7,7 @@ Local-first prototype for an AI voice agent that imports multiple consented voic
 - Imports 5-30 second WAV voice samples only after explicit self or written-permission consent confirmation.
 - Lists imported voice profiles from local storage.
 - Builds a mixed voice from two or more imported profiles with user-controlled weights.
-- Deletes imported voice profiles and removes saved blends that depend on deleted voices.
+- Deletes imported voice profiles, saved blends, and generated clips that depend on deleted voices.
 - Lets the user choose an OpenAI-compatible API provider or an Ollama-compatible local LLM endpoint.
 - Generates an agent reply first, then synthesizes audio with either:
   - `local_development_wav`: deterministic preview WAV for development.

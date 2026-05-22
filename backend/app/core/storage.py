@@ -11,6 +11,12 @@ BLEND_ROOT = DATA_ROOT / "blends"
 GENERATION_ROOT = DATA_ROOT / "generations"
 
 
+class VoiceProfileDeleteResult:
+    def __init__(self, deleted_blend_ids: list[str], deleted_generation_ids: list[str]) -> None:
+        self.deleted_blend_ids = deleted_blend_ids
+        self.deleted_generation_ids = deleted_generation_ids
+
+
 def ensure_storage() -> None:
     for path in (VOICE_ROOT, BLEND_ROOT, GENERATION_ROOT):
         path.mkdir(parents=True, exist_ok=True)
@@ -55,7 +61,7 @@ def get_voice_profiles_by_ids(profile_ids: list[str]) -> dict[str, VoiceProfile]
     return {profile_id: profiles[profile_id] for profile_id in profile_ids}
 
 
-def delete_voice_profile(profile_id: str) -> list[str]:
+def delete_voice_profile(profile_id: str) -> VoiceProfileDeleteResult:
     ensure_storage()
     voice_dir = VOICE_ROOT / profile_id
     if not (voice_dir / "profile.json").exists():
@@ -69,7 +75,24 @@ def delete_voice_profile(profile_id: str) -> list[str]:
         if any(profile.voice_profile_id == profile_id for profile in blend.profiles):
             deleted_blend_ids.append(blend.id)
             blend_path.unlink()
-    return deleted_blend_ids
+
+    deleted_generation_ids: list[str] = []
+    generation_root = GENERATION_ROOT.resolve()
+    for metadata_path in sorted(GENERATION_ROOT.glob("*.json")):
+        result = GenerationResult.model_validate_json(metadata_path.read_text(encoding="utf-8"))
+        if profile_id not in result.source_profile_ids:
+            continue
+
+        audio_path = Path(result.audio_path).resolve()
+        if generation_root in (audio_path, *audio_path.parents) and audio_path.exists():
+            audio_path.unlink()
+        metadata_path.unlink()
+        deleted_generation_ids.append(result.id)
+
+    return VoiceProfileDeleteResult(
+        deleted_blend_ids=deleted_blend_ids,
+        deleted_generation_ids=deleted_generation_ids,
+    )
 
 
 def save_blend(blend: VoiceBlend) -> VoiceBlend:
