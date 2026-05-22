@@ -18,6 +18,7 @@ from app.tts.qwen import QwenTtsAdapter
 QWEN_VERIFICATION_REPORT_PATH = Path("data") / "qwen-runtime-verification-report.json"
 AGENT_PROVIDER_VERIFICATION_REPORT_PATH = Path("data") / "agent-provider-verification-report.json"
 RESEARCH_REVIEW_PATH = Path("docs") / "research-review.md"
+REQUIRED_VOICE_USE = "private_agent_voice"
 
 
 def get_qwen_verification_report() -> QwenVerificationReport:
@@ -174,6 +175,11 @@ def _qwen_verification_status(report: QwenVerificationReport, output_exists: boo
             "passed": False,
             "detail": "Qwen verification report includes a source profile without reference text.",
         }
+    if not _details_allow_private_agent_voice(report.source_profile_details):
+        return {
+            "passed": False,
+            "detail": "Qwen verification report includes a source profile not allowed for private agent voice use.",
+        }
     return {
         "passed": True,
         "detail": _qwen_verification_detail(report, output_exists),
@@ -323,6 +329,11 @@ def _qwen_mixed_generation_status(
             }
         if not all(detail.reference_text_present for detail in generation.source_profile_details):
             continue
+        if not _details_allow_private_agent_voice(generation.source_profile_details):
+            return {
+                "passed": False,
+                "detail": "Qwen mixed voice clips include a source profile not allowed for private agent voice use.",
+            }
         if generation.agent_trace is None:
             return {
                 "passed": False,
@@ -387,6 +398,10 @@ def _qwen_verification_runtime_config(report: QwenVerificationReport) -> dict[st
 
 def _same_audio_path(left: str, right: str) -> bool:
     return Path(left).resolve(strict=False) == Path(right).resolve(strict=False)
+
+
+def _details_allow_private_agent_voice(details: list[object]) -> bool:
+    return all(REQUIRED_VOICE_USE in detail.allowed_uses for detail in details)
 
 
 def _launch_blocking_reasons(checks: list[LaunchReadinessCheck]) -> list[str]:
