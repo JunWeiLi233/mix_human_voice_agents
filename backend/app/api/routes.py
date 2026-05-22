@@ -153,6 +153,7 @@ def launch_readiness_route() -> LaunchReadinessReport:
         and Path(qwen_verification.output_audio_path).exists()
     )
     research_review = _research_review_status()
+    qwen_generation = _qwen_mixed_generation_status(generations)
 
     checks = [
         LaunchReadinessCheck(
@@ -176,8 +177,8 @@ def launch_readiness_route() -> LaunchReadinessReport:
         LaunchReadinessCheck(
             id="generated_audio",
             label="Generated audio",
-            passed=len(generations) >= 1,
-            detail=f"{len(generations)} generated clips",
+            passed=qwen_generation["passed"],
+            detail=qwen_generation["detail"],
         ),
         LaunchReadinessCheck(
             id="agent_provider",
@@ -318,12 +319,36 @@ def _resolve_research_review_path() -> Path:
     return cwd_path
 
 
+def _qwen_mixed_generation_status(generations: list[GenerationResult]) -> dict[str, object]:
+    for generation in generations:
+        if generation.tts_backend != "qwen3_tts":
+            continue
+        if generation.blend_strategy != "multi_reference_prompt":
+            continue
+        if len(generation.source_profile_details) < 2:
+            continue
+        if not all(detail.reference_text_present for detail in generation.source_profile_details):
+            continue
+        if not Path(generation.audio_path).exists():
+            continue
+        return {
+            "passed": True,
+            "detail": f"Qwen mixed voice generated: {generation.id}",
+        }
+
+    qwen_count = sum(1 for generation in generations if generation.tts_backend == "qwen3_tts")
+    return {
+        "passed": False,
+        "detail": f"{qwen_count} Qwen mixed voice clips with imported source details",
+    }
+
+
 def _launch_blocking_reasons(checks: list[LaunchReadinessCheck]) -> list[str]:
     reasons = {
         "research_review": "Review docs/research-review.md before launch.",
         "imported_voices": "Import at least two consented voice profiles.",
         "saved_blend": "Create and save a mixed voice blend.",
-        "generated_audio": "Generate at least one disclosed synthetic voice clip.",
+        "generated_audio": "Generate at least one Qwen3-TTS mixed voice clip from imported profiles.",
         "agent_provider": "Test the selected agent provider successfully before launch.",
         "qwen_runtime": "Install and load the Qwen3-TTS runtime before launch.",
         "qwen_verification": "Run Qwen runtime verification successfully before launch.",
