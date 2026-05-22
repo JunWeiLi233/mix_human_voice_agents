@@ -259,6 +259,11 @@ def _imported_voices_status(voices: list[object], verification: QwenVerification
             "passed": False,
             "detail": "Imported verified voices must still allow private agent voice use.",
         }
+    if not all(_voice_has_reference_text(imported_by_id[voice_id]) for voice_id in verification.voice_profile_ids):
+        return {
+            "passed": False,
+            "detail": "Imported verified voices must still include reference transcripts.",
+        }
     return {
         "passed": True,
         "detail": f"{len(voices)} imported voices",
@@ -416,6 +421,10 @@ def _voice_allows_private_agent_voice(voice: object) -> bool:
     if not getattr(consent, "synthetic_voice_allowed", False):
         return False
     return REQUIRED_VOICE_USE in getattr(consent, "allowed_uses", [])
+
+
+def _voice_has_reference_text(voice: object) -> bool:
+    return bool(getattr(voice, "reference_text", "").strip())
 
 
 def _launch_blocking_reasons(checks: list[LaunchReadinessCheck]) -> list[str]:
