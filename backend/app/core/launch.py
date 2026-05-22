@@ -185,6 +185,11 @@ def _qwen_verification_status(report: QwenVerificationReport, output_exists: boo
             "passed": False,
             "detail": "Qwen verification report did not use the multi-reference mixed voice strategy.",
         }
+    if not (report.text or "").strip():
+        return {
+            "passed": False,
+            "detail": "Qwen verification report must include the synthesized verification text.",
+        }
     if len(report.source_profile_details) < 2:
         return {
             "passed": False,

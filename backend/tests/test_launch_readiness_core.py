@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from app.core.launch import _qwen_mixed_generation_status, evaluate_launch_readiness
+from app.core.launch import _qwen_mixed_generation_status, _qwen_verification_status, evaluate_launch_readiness
 from app.models.schemas import (
     AgentProviderVerificationReport,
     AgentTrace,
@@ -44,6 +44,45 @@ def test_core_launch_readiness_blocks_passed_agent_provider_report_without_provi
     agent_provider_check = next(check for check in report.checks if check.id == "agent_provider")
     assert agent_provider_check.passed is False
     assert agent_provider_check.detail == "Agent provider verification report is missing provider, model, or reply."
+
+
+def test_core_launch_readiness_blocks_passed_qwen_verification_without_text(tmp_path):
+    output_path = tmp_path / "qwen_verify.wav"
+    output_path.write_bytes(b"fake-qwen-wav")
+    report = QwenVerificationReport(
+        status="passed",
+        report_path="data/qwen-runtime-verification-report.json",
+        voice_profile_ids=["voice_a", "voice_b"],
+        tts_backend="qwen3_tts",
+        blend_strategy="multi_reference_prompt",
+        source_profile_details=[
+            SourceProfileDetail(
+                voice_profile_id="voice_a",
+                display_name="Alice",
+                weight=0.5,
+                consent_confirmed_by="local_user",
+                allowed_uses=["private_agent_voice", "local_audio_export"],
+                reference_text_present=True,
+            ),
+            SourceProfileDetail(
+                voice_profile_id="voice_b",
+                display_name="Bob",
+                weight=0.5,
+                consent_confirmed_by="local_user",
+                allowed_uses=["private_agent_voice", "local_audio_export"],
+                reference_text_present=True,
+            ),
+        ],
+        output_audio_path=str(output_path),
+        text="   ",
+    )
+
+    status = _qwen_verification_status(report, output_exists=True)
+
+    assert status == {
+        "passed": False,
+        "detail": "Qwen verification report must include the synthesized verification text.",
+    }
 
 
 def test_core_launch_readiness_blocks_qwen_generation_without_synthetic_disclosure_metadata(tmp_path):
