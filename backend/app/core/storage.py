@@ -44,3 +44,11 @@ def list_voice_profiles() -> list[VoiceProfile]:
     for profile_path in sorted(VOICE_ROOT.glob("*/profile.json")):
         profiles.append(VoiceProfile.model_validate_json(profile_path.read_text(encoding="utf-8")))
     return profiles
+
+
+def get_voice_profiles_by_ids(profile_ids: list[str]) -> dict[str, VoiceProfile]:
+    profiles = {profile.id: profile for profile in list_voice_profiles()}
+    missing = [profile_id for profile_id in profile_ids if profile_id not in profiles]
+    if missing:
+        raise FileNotFoundError(f"Missing voice profiles: {', '.join(missing)}")
+    return {profile_id: profiles[profile_id] for profile_id in profile_ids}

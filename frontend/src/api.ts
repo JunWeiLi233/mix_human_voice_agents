@@ -1,4 +1,4 @@
-import type { AgentConfig, AgentReply, GenerationResult, VoiceBlend, VoiceProfile } from "./types";
+import type { AgentConfig, AgentReply, GenerationResult, TtsBackend, VoiceBlend, VoiceProfile } from "./types";
 
 export async function listVoices(): Promise<VoiceProfile[]> {
   const response = await fetch("/api/voices");
@@ -8,7 +8,7 @@ export async function listVoices(): Promise<VoiceProfile[]> {
   return response.json();
 }
 
-export async function createBlend(voices: VoiceProfile[]): Promise<VoiceBlend> {
+export async function createBlend(voices: VoiceProfile[], ttsBackend: TtsBackend): Promise<VoiceBlend> {
   const selected = voices.slice(0, Math.max(2, voices.length));
   const weight = selected.length > 0 ? 1 : 0;
   const response = await fetch("/api/blends", {
@@ -17,7 +17,7 @@ export async function createBlend(voices: VoiceProfile[]): Promise<VoiceBlend> {
     body: JSON.stringify({
       name: selected.map((voice) => voice.display_name).join(" + "),
       profiles: selected.map((voice) => ({ voice_profile_id: voice.id, weight })),
-      strategy: "local_development_wav",
+      strategy: ttsBackend === "qwen3_tts" ? "multi_reference_prompt" : "local_development_wav",
     }),
   });
   if (!response.ok) {
@@ -38,7 +38,7 @@ export async function requestAgentReply(config: AgentConfig, prompt: string): Pr
   return response.json();
 }
 
-export async function generateClip(blend: VoiceBlend, agentReply: string): Promise<GenerationResult> {
+export async function generateClip(blend: VoiceBlend, agentReply: string, ttsBackend: TtsBackend): Promise<GenerationResult> {
   const response = await fetch("/api/generate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -46,6 +46,7 @@ export async function generateClip(blend: VoiceBlend, agentReply: string): Promi
       prompt: "Generate a disclosed synthetic assistant reply.",
       agent_reply: agentReply,
       blend,
+      tts_backend: ttsBackend,
     }),
   });
   if (!response.ok) {

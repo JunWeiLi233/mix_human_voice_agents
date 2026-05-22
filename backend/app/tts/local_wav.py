@@ -3,7 +3,7 @@ import math
 import struct
 import wave
 
-from app.models.schemas import VoiceBlend
+from app.models.schemas import VoiceBlend, VoiceProfile
 
 
 class LocalWavTtsAdapter:
@@ -13,7 +13,12 @@ class LocalWavTtsAdapter:
         self.output_root = output_root
         self.output_root.mkdir(parents=True, exist_ok=True)
 
-    def synthesize(self, text: str, blend: VoiceBlend) -> Path:
+    def synthesize(
+        self,
+        text: str,
+        blend: VoiceBlend,
+        voice_profiles: dict[str, VoiceProfile] | None = None,
+    ) -> Path:
         output_path = self.output_root / f"{blend.id}.wav"
         sample_rate = 16000
         duration_seconds = max(1.0, min(4.0, len(text) / 35.0))
@@ -29,4 +34,3 @@ class LocalWavTtsAdapter:
                 wav_file.writeframes(struct.pack("<h", value))
 
         return output_path
-

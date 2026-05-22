@@ -5,6 +5,7 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 
 ConsentType = Literal["self_or_written_permission"]
+TtsBackend = Literal["local_development_wav", "qwen3_tts"]
 BlendStrategy = Literal[
     "adapter_embedding_mix",
     "multi_reference_prompt",
@@ -73,6 +74,7 @@ class GenerationResult(BaseModel):
     synthetic_label: str
     source_profile_ids: list[str]
     blend_strategy: BlendStrategy
+    tts_backend: TtsBackend = "local_development_wav"
 
 
 AgentProviderKind = Literal["openai_compatible", "ollama"]
@@ -95,4 +97,3 @@ class AgentReply(BaseModel):
     reply: str
     provider: AgentProviderKind
     model: str
-

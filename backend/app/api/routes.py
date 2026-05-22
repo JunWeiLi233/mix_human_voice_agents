@@ -9,7 +9,14 @@ from app.core.blends import BlendError, create_blend
 from app.core.consent import ConsentError, create_consent_record
 from app.core.generation import generate_agent_clip
 from app.core.safety import SafetyError
-from app.core.storage import GENERATION_ROOT, ensure_storage, list_voice_profiles, new_voice_profile_id, save_voice_profile
+from app.core.storage import (
+    GENERATION_ROOT,
+    ensure_storage,
+    get_voice_profiles_by_ids,
+    list_voice_profiles,
+    new_voice_profile_id,
+    save_voice_profile,
+)
 from app.models.schemas import (
     AgentReply,
     AgentReplyRequest,
@@ -17,10 +24,12 @@ from app.models.schemas import (
     BlendStrategy,
     ConsentRequest,
     GenerationResult,
+    TtsBackend,
     VoiceProfile,
     VoiceBlend,
 )
 from app.tts.local_wav import LocalWavTtsAdapter
+from app.tts.qwen import QwenTtsAdapter, QwenTtsNotConfigured
 
 router = APIRouter(prefix="/api")
 
@@ -35,6 +44,7 @@ class GenerateRequest(BaseModel):
     prompt: str
     agent_reply: str
     blend: VoiceBlend
+    tts_backend: TtsBackend = "local_development_wav"
 
 
 @router.get("/health")
@@ -57,15 +67,26 @@ def create_blend_route(request: CreateBlendRequest) -> VoiceBlend:
 @router.post("/generate", response_model=GenerationResult)
 def generate_route(request: GenerateRequest) -> GenerationResult:
     ensure_storage()
-    adapter = LocalWavTtsAdapter(output_root=Path(GENERATION_ROOT))
+    voice_profiles = None
+    if request.tts_backend == "qwen3_tts":
+        source_ids = [profile.voice_profile_id for profile in request.blend.profiles]
+        try:
+            voice_profiles = get_voice_profiles_by_ids(source_ids)
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        adapter = QwenTtsAdapter.from_pretrained(output_root=Path(GENERATION_ROOT))
+    else:
+        adapter = LocalWavTtsAdapter(output_root=Path(GENERATION_ROOT))
     try:
         return generate_agent_clip(
             prompt=request.prompt,
             agent_reply=request.agent_reply,
             blend=request.blend,
             adapter=adapter,
+            voice_profiles=voice_profiles,
+            tts_backend=request.tts_backend,
         )
-    except SafetyError as exc:
+    except (QwenTtsNotConfigured, SafetyError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 

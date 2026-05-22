@@ -1,4 +1,5 @@
-export type BlendStrategy = "local_development_wav";
+export type BlendStrategy = "local_development_wav" | "multi_reference_prompt";
+export type TtsBackend = "local_development_wav" | "qwen3_tts";
 
 export type BlendProfile = {
   voice_profile_id: string;
@@ -20,6 +21,7 @@ export type GenerationResult = {
   synthetic_label: string;
   source_profile_ids: string[];
   blend_strategy: BlendStrategy;
+  tts_backend: TtsBackend;
 };
 
 export type AgentProviderKind = "openai_compatible" | "ollama";
