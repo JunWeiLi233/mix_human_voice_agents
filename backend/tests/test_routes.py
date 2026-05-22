@@ -384,6 +384,7 @@ def test_launch_readiness_reports_ready_after_full_qwen_verification(tmp_path: P
             "message": "qwen-tts package is importable.",
         }
     )
+    monkeypatch.setattr("app.core.launch.QwenTtsAdapter.runtime_status", FakeQwenAdapter.runtime_status)
 
     response = client.get("/api/launch/readiness")
 
@@ -498,6 +499,7 @@ def test_launch_readiness_blocks_when_qwen_verification_lacks_source_details(tmp
             "message": "qwen-tts package is importable.",
         }
     )
+    monkeypatch.setattr("app.core.launch.QwenTtsAdapter.runtime_status", FakeQwenAdapter.runtime_status)
 
     response = client.get("/api/launch/readiness")
 
@@ -607,7 +609,7 @@ def test_launch_readiness_blocks_when_only_local_preview_audio_exists(tmp_path: 
         encoding="utf-8",
     )
     monkeypatch.setattr(
-        "app.api.routes.QwenTtsAdapter.runtime_status",
+        "app.core.launch.QwenTtsAdapter.runtime_status",
         lambda: {
             "backend": "qwen3_tts",
             "available": True,

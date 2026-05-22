@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Sequence
 
-from app.api.routes import launch_readiness_route
+from app.core.launch import evaluate_launch_readiness as evaluate_core_launch_readiness
 from app.models.schemas import LaunchReadinessReport
 
 
@@ -26,7 +26,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def evaluate_launch_readiness() -> LaunchReadinessReport:
-    return launch_readiness_route()
+    return evaluate_core_launch_readiness()
 
 
 if __name__ == "__main__":
