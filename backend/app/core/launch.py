@@ -248,11 +248,16 @@ def _imported_voices_status(voices: list[object], verification: QwenVerification
             "detail": f"{len(voices)} imported voices",
         }
 
-    imported_ids = {voice.id for voice in voices if hasattr(voice, "id")}
-    if not set(verification.voice_profile_ids).issubset(imported_ids):
+    imported_by_id = {voice.id: voice for voice in voices if hasattr(voice, "id")}
+    if not set(verification.voice_profile_ids).issubset(imported_by_id):
         return {
             "passed": False,
             "detail": "Imported voices do not include all verified Qwen voice ids.",
+        }
+    if not all(_voice_allows_private_agent_voice(imported_by_id[voice_id]) for voice_id in verification.voice_profile_ids):
+        return {
+            "passed": False,
+            "detail": "Imported verified voices must still allow private agent voice use.",
         }
     return {
         "passed": True,
@@ -402,6 +407,15 @@ def _same_audio_path(left: str, right: str) -> bool:
 
 def _details_allow_private_agent_voice(details: list[object]) -> bool:
     return all(REQUIRED_VOICE_USE in detail.allowed_uses for detail in details)
+
+
+def _voice_allows_private_agent_voice(voice: object) -> bool:
+    consent = getattr(voice, "consent", None)
+    if consent is None:
+        return False
+    if not getattr(consent, "synthetic_voice_allowed", False):
+        return False
+    return REQUIRED_VOICE_USE in getattr(consent, "allowed_uses", [])
 
 
 def _launch_blocking_reasons(checks: list[LaunchReadinessCheck]) -> list[str]:
