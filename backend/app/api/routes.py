@@ -352,13 +352,9 @@ def list_blends_route() -> list[VoiceBlend]:
 @router.post("/generate", response_model=GenerationResult)
 def generate_route(request: GenerateRequest) -> GenerationResult:
     ensure_storage()
-    voice_profiles = None
+    source_ids = [profile.voice_profile_id for profile in request.blend.profiles]
+    voice_profiles = _load_voice_profiles_for_generation(source_ids, strict=request.tts_backend == "qwen3_tts")
     if request.tts_backend == "qwen3_tts":
-        source_ids = [profile.voice_profile_id for profile in request.blend.profiles]
-        try:
-            voice_profiles = get_voice_profiles_by_ids(source_ids)
-        except FileNotFoundError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
         adapter = QwenTtsAdapter.from_pretrained(output_root=Path(GENERATION_ROOT))
     else:
         adapter = LocalWavTtsAdapter(output_root=Path(GENERATION_ROOT))
@@ -374,6 +370,15 @@ def generate_route(request: GenerateRequest) -> GenerationResult:
         )
     except (BlendError, QwenTtsNotConfigured, SafetyError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+def _load_voice_profiles_for_generation(profile_ids: list[str], strict: bool) -> dict[str, VoiceProfile] | None:
+    try:
+        return get_voice_profiles_by_ids(profile_ids)
+    except FileNotFoundError as exc:
+        if strict:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return None
 
 
 @router.get("/generations", response_model=list[GenerationResult])

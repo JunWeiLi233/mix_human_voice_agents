@@ -434,6 +434,75 @@ def test_generate_endpoint_returns_audio_metadata(tmp_path: Path, monkeypatch):
     ]
 
 
+def test_generate_endpoint_records_imported_voice_details_for_local_preview(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    sample_path = tmp_path / "sample.wav"
+    write_reference_wav(sample_path)
+    voices = []
+
+    for name in ("Alice", "Bob"):
+        with sample_path.open("rb") as sample:
+            response = client.post(
+                "/api/voices",
+                data={
+                    "speaker_display_name": name,
+                    "consent_type": "self_or_written_permission",
+                    "allowed_uses": "private_agent_voice,local_audio_export",
+                    "confirmed_by": "Junwei",
+                    "notes": "approved for local preview traceability",
+                    "reference_text": f"{name} reads a clean reference sentence for Qwen cloning.",
+                },
+                files={"file": ("sample.wav", sample, "audio/wav")},
+            )
+        voices.append(response.json())
+
+    blend = client.post(
+        "/api/blends",
+        json={
+            "name": "Local Traceable Pair",
+            "profiles": [
+                {"voice_profile_id": voices[0]["id"], "weight": 3},
+                {"voice_profile_id": voices[1]["id"], "weight": 1},
+            ],
+            "strategy": "local_development_wav",
+        },
+    ).json()
+
+    response = client.post(
+        "/api/generate",
+        json={
+            "prompt": "Say hello as a disclosed synthetic assistant.",
+            "agent_reply": "Hello from a traceable local mixed voice.",
+            "blend": blend,
+            "tts_backend": "local_development_wav",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["source_profile_details"] == [
+        {
+            "voice_profile_id": voices[0]["id"],
+            "display_name": "Alice",
+            "weight": 0.75,
+            "consent_confirmed_by": "Junwei",
+            "allowed_uses": ["private_agent_voice", "local_audio_export"],
+            "reference_text_present": True,
+        },
+        {
+            "voice_profile_id": voices[1]["id"],
+            "display_name": "Bob",
+            "weight": 0.25,
+            "consent_confirmed_by": "Junwei",
+            "allowed_uses": ["private_agent_voice", "local_audio_export"],
+            "reference_text_present": True,
+        },
+    ]
+
+    metadata = client.get(f"/api/generations/{payload['id']}/metadata").json()
+    assert metadata["source_profile_details"] == payload["source_profile_details"]
+
+
 def test_generate_endpoint_rejects_duplicate_voice_profile_ids(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
 
