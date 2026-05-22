@@ -446,10 +446,11 @@ def _qwen_mixed_generation_status(
                 "passed": False,
                 "detail": "Qwen mixed voice metadata is missing.",
             }
-        if not _generation_metadata_matches(generation):
+        metadata_status = _generation_metadata_status(generation)
+        if not metadata_status["passed"]:
             return {
                 "passed": False,
-                "detail": "Qwen mixed voice metadata does not match generated audio.",
+                "detail": metadata_status["detail"],
             }
         if not Path(generation.audio_path).exists():
             continue
@@ -482,12 +483,26 @@ def _same_audio_path(left: str, right: str) -> bool:
     return Path(left).resolve(strict=False) == Path(right).resolve(strict=False)
 
 
-def _generation_metadata_matches(generation: GenerationResult) -> bool:
-    payload = json.loads(Path(generation.metadata_path).read_text(encoding="utf-8"))
-    return payload.get("id") == generation.id and _same_audio_path(
+def _generation_metadata_status(generation: GenerationResult) -> dict[str, object]:
+    try:
+        payload = json.loads(Path(generation.metadata_path).read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {
+            "passed": False,
+            "detail": "Qwen mixed voice metadata is invalid.",
+        }
+    if payload.get("id") != generation.id or not _same_audio_path(
         payload.get("audio_path", ""),
         generation.audio_path,
-    )
+    ):
+        return {
+            "passed": False,
+            "detail": "Qwen mixed voice metadata does not match generated audio.",
+        }
+    return {
+        "passed": True,
+        "detail": "Qwen mixed voice metadata matches generated audio.",
+    }
 
 
 def _path_is_under(path: Path, root: Path) -> bool:
