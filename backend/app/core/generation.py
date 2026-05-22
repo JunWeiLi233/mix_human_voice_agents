@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+from app.core.blends import validate_blend
 from app.core.safety import check_generation_request
 from app.models.schemas import GenerationResult, TtsBackend, VoiceBlend, VoiceProfile
 from app.tts.base import TtsAdapter
@@ -14,6 +15,7 @@ def generate_agent_clip(
     voice_profiles: dict[str, VoiceProfile] | None = None,
     tts_backend: TtsBackend = "local_development_wav",
 ) -> GenerationResult:
+    validate_blend(blend)
     check_generation_request(prompt)
     check_generation_request(agent_reply)
 

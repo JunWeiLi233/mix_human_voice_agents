@@ -184,7 +184,7 @@ def generate_route(request: GenerateRequest) -> GenerationResult:
             voice_profiles=voice_profiles,
             tts_backend=request.tts_backend,
         )
-    except (QwenTtsNotConfigured, SafetyError) as exc:
+    except (BlendError, QwenTtsNotConfigured, SafetyError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 

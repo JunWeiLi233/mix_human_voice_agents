@@ -249,6 +249,31 @@ def test_generate_endpoint_returns_audio_metadata(tmp_path: Path, monkeypatch):
     assert audio_response.content.startswith(b"RIFF")
 
 
+def test_generate_endpoint_rejects_duplicate_voice_profile_ids(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    response = client.post(
+        "/api/generate",
+        json={
+            "prompt": "Say hello as a disclosed synthetic assistant.",
+            "agent_reply": "Hello from a synthetic mixed voice.",
+            "blend": {
+                "id": "blend_duplicate",
+                "name": "Duplicate",
+                "strategy": "local_development_wav",
+                "synthetic_label": "synthetic mixed voice",
+                "profiles": [
+                    {"voice_profile_id": "voice_a", "weight": 0.5},
+                    {"voice_profile_id": "voice_a", "weight": 0.5},
+                ],
+            },
+        },
+    )
+
+    assert response.status_code == 400
+    assert "distinct" in response.json()["detail"]
+
+
 def test_list_generations_returns_persisted_metadata(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     blend_response = client.post(
