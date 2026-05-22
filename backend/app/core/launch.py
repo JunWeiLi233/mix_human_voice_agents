@@ -59,7 +59,7 @@ def evaluate_launch_readiness() -> LaunchReadinessReport:
     )
     qwen_verification_status = _qwen_verification_status(qwen_verification, qwen_output_exists)
     research_review = _research_review_status()
-    qwen_generation = _qwen_mixed_generation_status(generations)
+    qwen_generation = _qwen_mixed_generation_status(generations, agent_provider_verification)
 
     checks = [
         LaunchReadinessCheck(
@@ -191,7 +191,10 @@ def _resolve_research_review_path() -> Path:
     return cwd_path
 
 
-def _qwen_mixed_generation_status(generations: list[GenerationResult]) -> dict[str, object]:
+def _qwen_mixed_generation_status(
+    generations: list[GenerationResult],
+    agent_provider_verification: AgentProviderVerificationReport,
+) -> dict[str, object]:
     for generation in generations:
         if generation.tts_backend != "qwen3_tts":
             continue
@@ -201,6 +204,27 @@ def _qwen_mixed_generation_status(generations: list[GenerationResult]) -> dict[s
             continue
         if not all(detail.reference_text_present for detail in generation.source_profile_details):
             continue
+        if generation.agent_trace is None:
+            return {
+                "passed": False,
+                "detail": "Qwen mixed voice clips must include an agent provider trace.",
+            }
+        if (
+            agent_provider_verification.status == "passed"
+            and (
+                generation.agent_trace.provider != agent_provider_verification.provider
+                or generation.agent_trace.model != agent_provider_verification.model
+            )
+        ):
+            return {
+                "passed": False,
+                "detail": (
+                    "Qwen mixed voice clip uses "
+                    f"{generation.agent_trace.provider} / {generation.agent_trace.model}, "
+                    "but verified provider is "
+                    f"{agent_provider_verification.provider} / {agent_provider_verification.model}."
+                ),
+            }
         if not Path(generation.audio_path).exists():
             continue
         return {
