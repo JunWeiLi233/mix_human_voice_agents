@@ -5,9 +5,11 @@ type Props = {
   status: TtsRuntimeStatus | null;
   verification: QwenVerificationReport | null;
   voices: VoiceProfile[];
+  selectedVerificationVoiceIds: string[];
   verificationText: string;
   verificationBusy: boolean;
   onChange: (backend: TtsBackend) => void;
+  onToggleVerificationVoice: (voiceProfileId: string) => void;
   onVerificationTextChange: (text: string) => void;
   onRunVerification: () => void;
 };
@@ -17,13 +19,15 @@ export function VoiceEngineSettings({
   status,
   verification,
   voices,
+  selectedVerificationVoiceIds,
   verificationText,
   verificationBusy,
   onChange,
+  onToggleVerificationVoice,
   onVerificationTextChange,
   onRunVerification,
 }: Props) {
-  const verificationDisabled = voices.length < 2 || verificationBusy;
+  const verificationDisabled = selectedVerificationVoiceIds.length < 2 || verificationBusy;
 
   return (
     <section className="panel">
@@ -83,6 +87,21 @@ export function VoiceEngineSettings({
           onChange={(event) => onVerificationTextChange(event.target.value)}
         />
       </label>
+      {voices.length ? (
+        <div className="verification-voices">
+          {voices.map((voice) => (
+            <label className="checkbox-row" key={voice.id}>
+              <input
+                aria-label={`Include ${voice.display_name} in Qwen verification`}
+                type="checkbox"
+                checked={selectedVerificationVoiceIds.includes(voice.id)}
+                onChange={() => onToggleVerificationVoice(voice.id)}
+              />
+              <span>{voice.display_name}</span>
+            </label>
+          ))}
+        </div>
+      ) : null}
       <button type="button" disabled={verificationDisabled} onClick={onRunVerification}>
         {verificationBusy ? "Running Qwen verification" : "Run Qwen verification"}
       </button>

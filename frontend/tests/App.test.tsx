@@ -227,6 +227,11 @@ describe("App", () => {
       target: { value: "Bob reads a clean reference sentence for Qwen cloning." },
     });
     await importNamedVoice("Bob");
+    fireEvent.change(screen.getByLabelText("Reference transcript"), {
+      target: { value: "Cara reads a clean reference sentence for Qwen cloning." },
+    });
+    await importNamedVoice("Cara");
+    fireEvent.click(screen.getByLabelText("Include Cara in Qwen verification"));
     fireEvent.change(screen.getByLabelText("Alice blend weight"), { target: { value: "0.7" } });
     fireEvent.change(screen.getByLabelText("Bob blend weight"), { target: { value: "0.3" } });
     fireEvent.change(screen.getByLabelText("Qwen verification text"), {
@@ -242,13 +247,13 @@ describe("App", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Create blend from imported voices" }));
-    await screen.findByRole("button", { name: "Alice + Bob" });
+    await screen.findByRole("button", { name: "Alice + Bob + Cara" });
 
     const prompt = "Tell me the launch status using the mixed voice.";
     fireEvent.change(screen.getByLabelText("Agent prompt text"), { target: { value: prompt } });
     fireEvent.click(screen.getByRole("button", { name: "Generate AI Voice" }));
 
-    await screen.findByText("synthetic mixed voice using voice_alice + voice_bob");
+    await screen.findByText("synthetic mixed voice using voice_alice + voice_bob + voice_cara");
     expect(screen.getAllByLabelText("Play synthetic mixed voice")[0]).toHaveAttribute(
       "src",
       "/api/generations/generation_1/audio",
@@ -267,11 +272,12 @@ describe("App", () => {
 
     const blendCall = requestJson(fetchMock, "/api/blends");
     expect(blendCall).toMatchObject({
-      name: "Alice + Bob",
+      name: "Alice + Bob + Cara",
       strategy: "multi_reference_prompt",
       profiles: [
         { voice_profile_id: "voice_alice", weight: 0.7 },
         { voice_profile_id: "voice_bob", weight: 0.3 },
+        { voice_profile_id: "voice_cara", weight: 1 },
       ],
     });
 

@@ -53,9 +53,10 @@ npm run dev -- --host 127.0.0.1 --port 5173
 After importing at least two consented profiles, use the `Voice Engine` panel:
 
 1. Select `Qwen3-TTS`.
-2. Edit `Qwen verification text` if needed.
-3. Click `Run Qwen verification`.
-4. Confirm the panel shows `Verification passed` and the verified output path exists.
+2. Select at least two imported voices to include in the verification run.
+3. Edit `Qwen verification text` if needed.
+4. Click `Run Qwen verification`.
+5. Confirm the panel shows `Verification passed` and the verified output path exists.
 
 The studio writes the same report file as the CLI at `data/qwen-runtime-verification-report.json`.
 

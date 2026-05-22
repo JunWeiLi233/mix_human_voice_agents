@@ -49,6 +49,7 @@ export default function App() {
   const [qwenVerificationText, setQwenVerificationText] = useState(
     "This is a disclosed synthetic mixed voice runtime verification.",
   );
+  const [qwenVerificationVoiceIds, setQwenVerificationVoiceIds] = useState<string[]>([]);
   const [qwenVerificationBusy, setQwenVerificationBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,10 +58,12 @@ export default function App() {
       .then((profiles) => {
         setVoices(profiles);
         setBlendProfiles(toBlendDrafts(profiles, []));
+        setQwenVerificationVoiceIds(profiles.map((profile) => profile.id));
       })
       .catch(() => {
         setVoices([]);
         setBlendProfiles([]);
+        setQwenVerificationVoiceIds([]);
       });
   }, []);
 
@@ -125,6 +128,7 @@ export default function App() {
     const next = [...voices, profile];
     setVoices(next);
     setBlendProfiles((currentProfiles) => toBlendDrafts(next, currentProfiles));
+    setQwenVerificationVoiceIds((currentIds) => [...currentIds, profile.id]);
     setBlend(null);
   }
 
@@ -135,6 +139,9 @@ export default function App() {
       setVoices((current) => current.filter((voice) => voice.id !== result.deleted_voice_profile_id));
       setBlendProfiles((current) =>
         current.filter((profile) => profile.voice_profile_id !== result.deleted_voice_profile_id),
+      );
+      setQwenVerificationVoiceIds((current) =>
+        current.filter((voiceProfileId) => voiceProfileId !== result.deleted_voice_profile_id),
       );
       setSavedBlends((current) => current.filter((savedBlend) => !result.deleted_blend_ids.includes(savedBlend.id)));
       setGenerations((current) =>
@@ -179,7 +186,7 @@ export default function App() {
     setQwenVerificationBusy(true);
     try {
       const report = await runQwenVerification(
-        voices.map((voice) => voice.id),
+        qwenVerificationVoiceIds,
         qwenVerificationText,
       );
       setQwenVerification(report);
@@ -208,9 +215,17 @@ export default function App() {
           status={qwenStatus}
           verification={qwenVerification}
           voices={voices}
+          selectedVerificationVoiceIds={qwenVerificationVoiceIds}
           verificationText={qwenVerificationText}
           verificationBusy={qwenVerificationBusy}
           onChange={setTtsBackend}
+          onToggleVerificationVoice={(voiceProfileId) => {
+            setQwenVerificationVoiceIds((currentIds) =>
+              currentIds.includes(voiceProfileId)
+                ? currentIds.filter((id) => id !== voiceProfileId)
+                : [...currentIds, voiceProfileId],
+            );
+          }}
           onVerificationTextChange={setQwenVerificationText}
           onRunVerification={handleRunQwenVerification}
         />
