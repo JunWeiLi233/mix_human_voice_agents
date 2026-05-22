@@ -39,7 +39,7 @@ def generate_agent_clip(
         synthetic_label=blend.synthetic_label,
         source_profile_ids=[profile.voice_profile_id for profile in blend.profiles],
         source_profiles=blend.profiles,
-        source_profile_details=_build_source_profile_details(blend.profiles, voice_profiles),
+        source_profile_details=build_source_profile_details(blend.profiles, voice_profiles),
         blend_strategy=blend.strategy,
         tts_backend=tts_backend,
         agent_trace=agent_trace,
@@ -55,7 +55,7 @@ def generate_agent_clip(
     return result
 
 
-def _build_source_profile_details(
+def build_source_profile_details(
     blend_profiles: list[BlendProfile],
     voice_profiles: dict[str, VoiceProfile] | None,
 ) -> list[SourceProfileDetail]:

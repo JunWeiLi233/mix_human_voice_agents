@@ -117,6 +117,7 @@ class QwenVerificationReport(BaseModel):
     tts_backend: TtsBackend = "qwen3_tts"
     report_path: str
     voice_profile_ids: list[str] = []
+    source_profile_details: list[SourceProfileDetail] = Field(default_factory=list)
     blend_id: str | None = None
     blend_strategy: BlendStrategy | None = None
     output_audio_path: str | None = None

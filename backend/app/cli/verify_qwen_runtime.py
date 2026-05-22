@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Sequence
 
 from app.core.blends import create_blend
+from app.core.generation import build_source_profile_details
 from app.core.storage import GENERATION_ROOT, get_voice_profiles_by_ids
 from app.models.schemas import BlendProfileInput
 from app.tts.qwen import QwenTtsAdapter, QwenTtsNotConfigured
@@ -69,6 +70,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         {
             "status": "passed",
             "voice_profile_ids": profile_ids,
+            "source_profile_details": [
+                detail.model_dump(mode="json")
+                for detail in build_source_profile_details(blend.profiles, voice_profiles)
+            ],
             "blend_id": blend.id,
             "blend_strategy": blend.strategy,
             "tts_backend": "qwen3_tts",

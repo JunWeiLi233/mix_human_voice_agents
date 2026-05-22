@@ -10,6 +10,7 @@ from app.core.audio import AudioQualityError, analyze_audio_sample
 from app.core.blends import BlendError, create_blend
 from app.core.consent import ConsentError, create_consent_record
 from app.core.generation import generate_agent_clip
+from app.core.generation import build_source_profile_details
 from app.core.safety import SafetyError
 from app.core.storage import (
     GENERATION_ROOT,
@@ -242,6 +243,10 @@ def run_qwen_verification_route(request: RunQwenVerificationRequest) -> QwenVeri
         {
             "status": "passed",
             "voice_profile_ids": profile_ids,
+            "source_profile_details": [
+                detail.model_dump(mode="json")
+                for detail in build_source_profile_details(blend.profiles, voice_profiles)
+            ],
             "blend_id": blend.id,
             "blend_strategy": blend.strategy,
             "tts_backend": "qwen3_tts",
