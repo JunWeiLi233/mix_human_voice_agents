@@ -23,6 +23,29 @@ def test_core_launch_readiness_evaluator_reports_missing_requirements(tmp_path, 
     assert "Run Qwen runtime verification successfully before launch." in report.blocking_reasons
 
 
+def test_core_launch_readiness_blocks_passed_agent_provider_report_without_provider_details(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "agent-provider-verification-report.json").write_text(
+        """
+        {
+          "status": "passed",
+          "reply": "Provider ready.",
+          "report_path": "data/agent-provider-verification-report.json"
+        }
+        """,
+        encoding="utf-8",
+    )
+
+    report = evaluate_launch_readiness()
+
+    agent_provider_check = next(check for check in report.checks if check.id == "agent_provider")
+    assert agent_provider_check.passed is False
+    assert agent_provider_check.detail == "Agent provider verification report is missing provider, model, or reply."
+
+
 def test_core_launch_readiness_blocks_qwen_generation_without_synthetic_disclosure_metadata(tmp_path):
     audio_path = tmp_path / "mixed.wav"
     audio_path.write_bytes(b"fake-qwen-wav")

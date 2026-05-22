@@ -70,6 +70,7 @@ def evaluate_launch_readiness() -> LaunchReadinessReport:
         agent_provider_verification,
         qwen_verification,
     )
+    agent_provider = _agent_provider_verification_status(agent_provider_verification)
 
     checks = [
         LaunchReadinessCheck(
@@ -99,8 +100,8 @@ def evaluate_launch_readiness() -> LaunchReadinessReport:
         LaunchReadinessCheck(
             id="agent_provider",
             label="Agent provider",
-            passed=agent_provider_verification.status == "passed",
-            detail=_agent_provider_verification_detail(agent_provider_verification),
+            passed=agent_provider["passed"],
+            detail=agent_provider["detail"],
         ),
         LaunchReadinessCheck(
             id="qwen_runtime",
@@ -129,6 +130,23 @@ def _agent_provider_verification_detail(report: AgentProviderVerificationReport)
     if report.error:
         return report.error
     return "No passed agent provider verification report."
+
+
+def _agent_provider_verification_status(report: AgentProviderVerificationReport) -> dict[str, object]:
+    if report.status != "passed":
+        return {
+            "passed": False,
+            "detail": _agent_provider_verification_detail(report),
+        }
+    if not report.provider or not report.model or not (report.reply or "").strip():
+        return {
+            "passed": False,
+            "detail": "Agent provider verification report is missing provider, model, or reply.",
+        }
+    return {
+        "passed": True,
+        "detail": _agent_provider_verification_detail(report),
+    }
 
 
 def _qwen_verification_detail(report: QwenVerificationReport, output_exists: bool) -> str:
