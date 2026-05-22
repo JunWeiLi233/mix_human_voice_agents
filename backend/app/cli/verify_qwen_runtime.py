@@ -1,0 +1,88 @@
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+from typing import Sequence
+
+from app.core.blends import create_blend
+from app.core.storage import GENERATION_ROOT, get_voice_profiles_by_ids
+from app.models.schemas import BlendProfileInput
+from app.tts.qwen import QwenTtsAdapter, QwenTtsNotConfigured
+
+
+DEFAULT_VERIFY_TEXT = "This is a disclosed synthetic mixed voice runtime verification."
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Verify Qwen3-TTS mixed voice synthesis with imported profiles.")
+    parser.add_argument(
+        "--voice-profile-id",
+        action="append",
+        default=[],
+        help="Imported voice profile id to include in the verification blend. Provide at least two.",
+    )
+    parser.add_argument("--text", default=DEFAULT_VERIFY_TEXT, help="Text to synthesize during verification.")
+    parser.add_argument(
+        "--report",
+        default="data/qwen-runtime-verification-report.json",
+        help="Path to write the JSON verification report.",
+    )
+    args = parser.parse_args(argv)
+
+    profile_ids = list(args.voice_profile_id)
+    if len(profile_ids) < 2:
+        _write_report(
+            Path(args.report),
+            {
+                "status": "failed",
+                "error": "Qwen runtime verification requires at least two voice profile ids.",
+                "voice_profile_ids": profile_ids,
+                "tts_backend": "qwen3_tts",
+            },
+        )
+        return 2
+
+    try:
+        voice_profiles = get_voice_profiles_by_ids(profile_ids)
+        blend = create_blend(
+            name="Qwen runtime verification blend",
+            profiles=[BlendProfileInput(voice_profile_id=profile_id, weight=1) for profile_id in profile_ids],
+            strategy="multi_reference_prompt",
+        )
+        adapter = QwenTtsAdapter.from_pretrained(output_root=Path(GENERATION_ROOT))
+        output_path = adapter.synthesize(args.text, blend, voice_profiles=voice_profiles)
+    except (FileNotFoundError, QwenTtsNotConfigured, ValueError) as exc:
+        _write_report(
+            Path(args.report),
+            {
+                "status": "failed",
+                "error": str(exc),
+                "voice_profile_ids": profile_ids,
+                "tts_backend": "qwen3_tts",
+            },
+        )
+        return 1
+
+    _write_report(
+        Path(args.report),
+        {
+            "status": "passed",
+            "voice_profile_ids": profile_ids,
+            "blend_id": blend.id,
+            "blend_strategy": blend.strategy,
+            "tts_backend": "qwen3_tts",
+            "output_audio_path": str(output_path),
+            "text": args.text,
+        },
+    )
+    return 0
+
+
+def _write_report(report_path: Path, payload: dict[str, object]) -> None:
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -48,6 +48,20 @@ npm run dev -- --host 127.0.0.1 --port 5173
 
 9. Listen to the generated audio and confirm it reflects the selected imported voices.
 
+## CLI Verification
+
+After importing two or more consented profiles, run this from `backend/` to exercise the real Qwen adapter and write a verification report:
+
+```powershell
+.\.venv\Scripts\python -m app.cli.verify_qwen_runtime `
+  --voice-profile-id voice_a `
+  --voice-profile-id voice_b `
+  --text "This is a disclosed synthetic mixed voice runtime verification." `
+  --report data/qwen-runtime-verification-report.json
+```
+
+The report must contain `"status": "passed"`, `"tts_backend": "qwen3_tts"`, and an `output_audio_path` that exists before claiming real Qwen mixed-voice synthesis is verified.
+
 If Qwen generation fails with a missing reference text error, re-import the voice sample with the matching transcript. The transcript should describe the words spoken in the reference clip, not the speaker's name.
 
 ## Safety Gate

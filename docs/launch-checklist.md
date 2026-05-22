@@ -34,5 +34,7 @@
 - Configure `QwenTtsAdapter.from_pretrained()` with the desired model id.
 - Import two clean 5-30 second consented WAV samples and paste transcripts that match each sample.
 - Create a blend using `multi_reference_prompt`.
+- Run `cd backend && .\.venv\Scripts\python -m app.cli.verify_qwen_runtime --voice-profile-id <id-a> --voice-profile-id <id-b> --report data/qwen-runtime-verification-report.json`.
 - Generate a short reply and confirm the output WAV is produced by Qwen3-TTS rather than the local development adapter.
+- Confirm `data/qwen-runtime-verification-report.json` contains `"status": "passed"` and an existing `output_audio_path`.
 - Follow `docs/qwen-runtime-verification.md` before claiming real acoustic cloning/mixing is verified on a target machine.
