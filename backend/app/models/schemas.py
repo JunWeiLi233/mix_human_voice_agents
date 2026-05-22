@@ -40,6 +40,7 @@ class AudioQuality(BaseModel):
 class VoiceProfile(BaseModel):
     id: str
     display_name: str
+    reference_text: str = ""
     consent: ConsentRecord
     source_audio_path: str
     cleaned_audio_path: str

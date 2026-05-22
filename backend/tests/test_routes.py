@@ -262,6 +262,7 @@ def test_import_voice_requires_consent_fields(tmp_path: Path, monkeypatch):
                 "allowed_uses": "private_agent_voice,local_audio_export",
                 "confirmed_by": "local_user",
                 "notes": "approved for local prototype",
+                "reference_text": "This is Alice reading a consented reference sample.",
             },
             files={"file": ("sample.wav", sample, "audio/wav")},
         )
@@ -269,6 +270,7 @@ def test_import_voice_requires_consent_fields(tmp_path: Path, monkeypatch):
     assert response.status_code == 200
     payload = response.json()
     assert payload["display_name"] == "Alice"
+    assert payload["reference_text"] == "This is Alice reading a consented reference sample."
     assert payload["consent"]["synthetic_voice_allowed"] is True
     assert Path(payload["source_audio_path"]).exists()
     assert payload["quality"]["duration_seconds"] == 5

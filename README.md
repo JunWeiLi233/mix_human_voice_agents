@@ -4,7 +4,7 @@ Local-first prototype for an AI voice agent that imports multiple consented voic
 
 ## What It Does
 
-- Imports 5-30 second WAV voice samples only after explicit self or written-permission consent confirmation.
+- Imports 5-30 second WAV voice samples and matching reference transcripts only after explicit self or written-permission consent confirmation.
 - Lists imported voice profiles from local storage.
 - Builds a mixed voice from two or more imported profiles with user-controlled weights.
 - Deletes imported voice profiles, saved blends, and generated clips that depend on deleted voices.
@@ -71,7 +71,7 @@ Open `http://127.0.0.1:5173`.
 2. Configure the agent provider:
    - `Local`: Ollama-compatible endpoint such as `http://127.0.0.1:11434`.
    - `API`: OpenAI-compatible base URL, model, and API key.
-3. For each voice, enter who confirmed consent, add consent notes, check the consent confirmation box, and import a clean 5-30 second WAV sample where the speaker is you or has given written permission.
+3. For each voice, enter who confirmed consent, add consent notes, paste the reference transcript, check the consent confirmation box, and import a clean 5-30 second WAV sample where the speaker is you or has given written permission.
 4. Adjust each voice's blend weight in `Blend Mixer`.
 5. Select `Local preview` or `Qwen3-TTS` in `Voice Engine`.
 6. Create the blend.
@@ -89,7 +89,7 @@ If the selected model requires GPU acceleration, install the appropriate PyTorch
 
 ## Research Notes
 
-Current voice-agent practice splits into realtime speech-to-speech agents and chained STT/LLM/TTS pipelines. OpenAI's voice-agent docs recommend the Realtime API for low-latency speech-to-speech and chained pipelines when the application needs more control over each stage. LiveKit and Pipecat follow the same pipeline pattern for production voice agents. Qwen3-TTS voice cloning takes reference audio plus reference text for cloned synthesis, so this app keeps imported voice profiles, blend metadata, and TTS adapters separate instead of assuming a realtime model can directly own multi-person voice blending.
+Current voice-agent practice splits into realtime speech-to-speech agents and chained STT/LLM/TTS pipelines. OpenAI's voice-agent docs recommend the Realtime API for low-latency speech-to-speech and chained pipelines when the application needs more control over each stage. LiveKit and Pipecat follow the same pipeline pattern for production voice agents. Qwen3-TTS voice cloning takes reference audio plus its transcript as reference text for cloned synthesis, so this app keeps imported voice profiles, transcripts, blend metadata, and TTS adapters separate instead of assuming a realtime model can directly own multi-person voice blending.
 
 ## Tests
 
@@ -112,7 +112,7 @@ npm run build
 
 - Do not import public figures, celebrities, politicians, or third-party voices without explicit permission.
 - Do not import a voice until the UI consent confirmation is checked and the consent record describes who confirmed permission.
-- Do not import malformed, non-WAV, shorter-than-5-second, or longer-than-30-second reference audio.
+- Do not import malformed, non-WAV, shorter-than-5-second, or longer-than-30-second reference audio, and keep each reference transcript matched to the uploaded sample.
 - Do not use generated audio for impersonation, payment authorization, identity verification, fraud, or deception.
 - Keep generated audio disclosed as synthetic.
 - Treat `local_development_wav` as a preview adapter only; it does not clone voices.

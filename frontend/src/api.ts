@@ -113,6 +113,7 @@ export async function importVoice(
   form.set("allowed_uses", "private_agent_voice,local_audio_export");
   form.set("confirmed_by", consent.confirmed_by);
   form.set("notes", consent.notes);
+  form.set("reference_text", consent.reference_text);
   form.set("file", file);
 
   const response = await fetch("/api/voices", {

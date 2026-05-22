@@ -54,6 +54,7 @@ export type TtsRuntimeStatus = {
 export type VoiceProfile = {
   id: string;
   display_name: string;
+  reference_text: string;
   source_audio_path: string;
   cleaned_audio_path: string;
   consent: {
@@ -73,4 +74,5 @@ export type DeleteVoiceResult = {
 export type VoiceConsentInput = {
   confirmed_by: string;
   notes: string;
+  reference_text: string;
 };

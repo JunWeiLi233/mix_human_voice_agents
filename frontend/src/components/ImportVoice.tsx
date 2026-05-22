@@ -11,10 +11,11 @@ export function ImportVoice({ onImported }: Props) {
   const [displayName, setDisplayName] = useState("Alice");
   const [confirmedBy, setConfirmedBy] = useState("local_user");
   const [notes, setNotes] = useState("Confirmed self or written permission for private synthetic voice use.");
+  const [referenceText, setReferenceText] = useState("");
   const [consentConfirmed, setConsentConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const canImport = consentConfirmed && confirmedBy.trim().length > 0;
+  const canImport = consentConfirmed && confirmedBy.trim().length > 0 && referenceText.trim().length > 0;
 
   async function handleFile(file: File | undefined) {
     if (!file) return;
@@ -28,6 +29,7 @@ export function ImportVoice({ onImported }: Props) {
       const profile = await importVoice(file, displayName, {
         confirmed_by: confirmedBy,
         notes,
+        reference_text: referenceText,
       });
       onImported?.(profile);
     } catch (err) {
@@ -51,6 +53,10 @@ export function ImportVoice({ onImported }: Props) {
       <label>
         Consent notes
         <textarea value={notes} onChange={(event) => setNotes(event.target.value)} />
+      </label>
+      <label>
+        Reference transcript
+        <textarea value={referenceText} onChange={(event) => setReferenceText(event.target.value)} />
       </label>
       <label className="checkbox-row">
         <input
@@ -77,7 +83,7 @@ export function ImportVoice({ onImported }: Props) {
           {error}
         </p>
       ) : null}
-      <p>Import a 5-30 second WAV sample with self or written permission before blending.</p>
+      <p>Import a 5-30 second WAV sample and transcript with self or written permission before blending.</p>
     </section>
   );
 }

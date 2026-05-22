@@ -101,9 +101,13 @@ describe("App", () => {
         if (form.get("notes") !== "Written consent captured for local private mixed voice testing.") {
           return new Response("missing consent notes", { status: 400 });
         }
+        if (form.get("reference_text") !== `${displayName} reads a clean reference sentence for Qwen cloning.`) {
+          return new Response("missing reference text", { status: 400 });
+        }
         return jsonResponse({
           id: `voice_${displayName.toLowerCase()}`,
           display_name: displayName,
+          reference_text: `${displayName} reads a clean reference sentence for Qwen cloning.`,
           consent: {
             speaker_display_name: displayName,
             consent_type: "self_or_written_permission",
@@ -176,9 +180,15 @@ describe("App", () => {
     fireEvent.change(screen.getByLabelText("Consent notes"), {
       target: { value: "Written consent captured for local private mixed voice testing." },
     });
+    fireEvent.change(screen.getByLabelText("Reference transcript"), {
+      target: { value: "Alice reads a clean reference sentence for Qwen cloning." },
+    });
     fireEvent.click(screen.getByLabelText("Confirm voice consent"));
 
     await importNamedVoice("Alice");
+    fireEvent.change(screen.getByLabelText("Reference transcript"), {
+      target: { value: "Bob reads a clean reference sentence for Qwen cloning." },
+    });
     await importNamedVoice("Bob");
     fireEvent.change(screen.getByLabelText("Alice blend weight"), { target: { value: "0.7" } });
     fireEvent.change(screen.getByLabelText("Bob blend weight"), { target: { value: "0.3" } });
@@ -347,6 +357,7 @@ function voiceProfile(id: string, displayName: string) {
     display_name: displayName,
     source_audio_path: `data/voices/${id}/sample.wav`,
     cleaned_audio_path: `data/voices/${id}/sample.wav`,
+    reference_text: `${displayName} reads a clean reference sentence for Qwen cloning.`,
     consent: {
       voice_profile_id: id,
       speaker_display_name: displayName,

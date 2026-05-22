@@ -3,7 +3,7 @@
 This project supports two voice engines:
 
 - `local_development_wav`: deterministic preview audio for development.
-- `qwen3_tts`: real imported-voice synthesis using Qwen3-TTS, then weighted waveform mixing across the selected imported profiles.
+- `qwen3_tts`: real imported-voice synthesis using Qwen3-TTS reference audio plus transcript, then weighted waveform mixing across the selected imported profiles.
 
 ## Install Runtime Dependencies
 
@@ -33,7 +33,7 @@ npm run dev -- --host 127.0.0.1 --port 5173
 
 3. Open `http://127.0.0.1:5173`.
 4. In `Voice Engine`, select `Qwen3-TTS`.
-5. Import at least two clean 5-30 second voice samples with consent.
+5. Import at least two clean 5-30 second voice samples with consent and paste the transcript that matches each uploaded sample.
 6. Create a blend from the imported voices.
 7. Generate the agent reply.
 8. Confirm the generated metadata includes:
@@ -48,7 +48,8 @@ npm run dev -- --host 127.0.0.1 --port 5173
 
 9. Listen to the generated audio and confirm it reflects the selected imported voices.
 
+If Qwen generation fails with a missing reference text error, re-import the voice sample with the matching transcript. The transcript should describe the words spoken in the reference clip, not the speaker's name.
+
 ## Safety Gate
 
 Only use samples where the speaker is the user or has provided written permission. Do not use public figures, celebrities, politicians, or third-party voices without consent.
-

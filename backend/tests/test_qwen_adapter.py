@@ -34,11 +34,12 @@ class FakeQwenModel:
         return [np.full(1600, value, dtype=np.float32)], 16000
 
 
-def profile(profile_id: str, audio_path: Path) -> VoiceProfile:
+def profile(profile_id: str, audio_path: Path, reference_text: str = "") -> VoiceProfile:
     return VoiceProfile.model_validate(
         {
             "id": profile_id,
             "display_name": profile_id,
+            "reference_text": reference_text,
             "consent": {
                 "voice_profile_id": profile_id,
                 "speaker_display_name": profile_id,
@@ -81,8 +82,8 @@ def test_qwen_adapter_mixes_each_source_profile_by_weight(tmp_path: Path):
         text="Hello from a cloned blend.",
         blend=blend,
         voice_profiles={
-            "voice_a": profile("voice_a", audio_a),
-            "voice_b": profile("voice_b", audio_b),
+            "voice_a": profile("voice_a", audio_a, "Alice reference transcript."),
+            "voice_b": profile("voice_b", audio_b, "Bob reference transcript."),
         },
     )
 
@@ -94,3 +95,34 @@ def test_qwen_adapter_mixes_each_source_profile_by_weight(tmp_path: Path):
     assert fake_model.generate_calls[0]["voice_clone_prompt"]["prompt"] == "a"
     assert fake_model.generate_calls[1]["voice_clone_prompt"]["prompt"] == "b"
     assert float(mixed[0]) == np.float32(0.625)
+
+
+def test_qwen_adapter_uses_imported_reference_text_for_clone_prompt(tmp_path: Path):
+    audio_a = tmp_path / "a.wav"
+    audio_b = tmp_path / "b.wav"
+    audio_a.write_bytes(b"fake-audio-a")
+    audio_b.write_bytes(b"fake-audio-b")
+    fake_model = FakeQwenModel()
+    adapter = QwenTtsAdapter(model=fake_model, output_root=tmp_path)
+    blend = create_blend(
+        name="Pair",
+        profiles=[
+            BlendProfileInput(voice_profile_id="voice_a", weight=1),
+            BlendProfileInput(voice_profile_id="voice_b", weight=1),
+        ],
+        strategy="multi_reference_prompt",
+    )
+
+    adapter.synthesize(
+        text="Hello from a cloned blend.",
+        blend=blend,
+        voice_profiles={
+            "voice_a": profile("voice_a", audio_a, "Alice says the first reference sentence."),
+            "voice_b": profile("voice_b", audio_b, "Bob says the second reference sentence."),
+        },
+    )
+
+    assert [call["ref_text"] for call in fake_model.prompt_calls] == [
+        "Alice says the first reference sentence.",
+        "Bob says the second reference sentence.",
+    ]

@@ -86,9 +86,14 @@ class QwenTtsAdapter:
         sample_rate: int | None = None
         for blend_profile in blend.profiles:
             profile = voice_profiles[blend_profile.voice_profile_id]
+            reference_text = profile.reference_text.strip()
+            if not reference_text and not self.x_vector_only_mode:
+                raise QwenTtsNotConfigured(
+                    f"Qwen synthesis requires reference text for voice profile {profile.id}."
+                )
             prompt = self.model.create_voice_clone_prompt(
                 ref_audio=profile.cleaned_audio_path,
-                ref_text=profile.display_name,
+                ref_text=reference_text,
                 x_vector_only_mode=self.x_vector_only_mode,
             )
             wavs, generated_sample_rate = self.model.generate_voice_clone(

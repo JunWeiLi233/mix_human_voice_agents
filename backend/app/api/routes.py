@@ -143,6 +143,7 @@ async def import_voice_route(
     allowed_uses: str = Form(...),
     confirmed_by: str = Form(...),
     notes: str = Form(""),
+    reference_text: str = Form(""),
     file: UploadFile = File(...),
 ) -> VoiceProfile:
     voice_id = new_voice_profile_id()
@@ -172,6 +173,7 @@ async def import_voice_route(
     profile = VoiceProfile(
         id=voice_id,
         display_name=speaker_display_name,
+        reference_text=reference_text,
         consent=consent,
         source_audio_path="",
         cleaned_audio_path="",
