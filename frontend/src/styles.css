@@ -141,6 +141,13 @@ input {
   font-size: 13px;
 }
 
+.voice-preview {
+  display: block;
+  height: 32px;
+  max-width: 260px;
+  width: 100%;
+}
+
 .voice-warnings {
   color: #812828;
   font-size: 13px;

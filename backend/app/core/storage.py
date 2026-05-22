@@ -61,6 +61,22 @@ def get_voice_profiles_by_ids(profile_ids: list[str]) -> dict[str, VoiceProfile]
     return {profile_id: profiles[profile_id] for profile_id in profile_ids}
 
 
+def get_voice_audio_path(profile_id: str) -> Path:
+    ensure_storage()
+    voice_dir = (VOICE_ROOT / profile_id).resolve()
+    profile_path = voice_dir / "profile.json"
+    if not profile_path.exists():
+        raise FileNotFoundError(f"Voice profile not found: {profile_id}")
+
+    profile = VoiceProfile.model_validate_json(profile_path.read_text(encoding="utf-8"))
+    audio_path = Path(profile.source_audio_path).resolve()
+    if voice_dir not in (audio_path, *audio_path.parents):
+        raise FileNotFoundError(f"Voice audio is outside voice storage: {profile_id}")
+    if not audio_path.exists():
+        raise FileNotFoundError(f"Voice audio is missing: {profile_id}")
+    return audio_path
+
+
 def delete_voice_profile(profile_id: str) -> VoiceProfileDeleteResult:
     ensure_storage()
     voice_dir = VOICE_ROOT / profile_id

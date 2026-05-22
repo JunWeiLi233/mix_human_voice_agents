@@ -21,6 +21,12 @@ export function VoiceLibrary({ voices, onDeleteVoice }: Props) {
                   <span>{voice.consent.synthetic_voice_allowed ? "Consent ready" : "Consent missing"}</span>
                 </div>
                 <div className="voice-quality">{formatQuality(voice)}</div>
+                <audio
+                  aria-label={`Preview ${voice.display_name} voice sample`}
+                  className="voice-preview"
+                  controls
+                  src={`/api/voices/${voice.id}/audio`}
+                />
                 {voice.quality.warnings.length > 0 ? (
                   <ul className="voice-warnings">
                     {voice.quality.warnings.map((warning) => (

@@ -17,6 +17,7 @@ from app.core.storage import (
     ensure_storage,
     get_generation_audio_path,
     get_generation_metadata_path,
+    get_voice_audio_path,
     get_voice_profiles_by_ids,
     list_blends,
     list_generation_results,
@@ -273,6 +274,15 @@ async def import_voice_route(
 @router.get("/voices", response_model=list[VoiceProfile])
 def list_voices_route() -> list[VoiceProfile]:
     return list_voice_profiles()
+
+
+@router.get("/voices/{voice_profile_id}/audio")
+def voice_audio_route(voice_profile_id: str) -> FileResponse:
+    try:
+        audio_path = get_voice_audio_path(voice_profile_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return FileResponse(audio_path, media_type="audio/wav", filename=f"{voice_profile_id}.wav")
 
 
 @router.delete("/voices/{voice_profile_id}", response_model=DeleteVoiceResponse)

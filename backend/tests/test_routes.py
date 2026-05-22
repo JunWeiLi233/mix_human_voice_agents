@@ -602,6 +602,40 @@ def test_list_voices_returns_imported_profiles(tmp_path: Path, monkeypatch):
     assert payload[0]["display_name"] == "Alice"
 
 
+def test_voice_audio_endpoint_returns_imported_source_sample(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    sample_path = tmp_path / "sample.wav"
+    write_reference_wav(sample_path)
+
+    with sample_path.open("rb") as sample:
+        import_response = client.post(
+            "/api/voices",
+            data={
+                "speaker_display_name": "Alice",
+                "consent_type": "self_or_written_permission",
+                "allowed_uses": "private_agent_voice,local_audio_export",
+                "confirmed_by": "local_user",
+                "notes": "approved for local prototype",
+                "reference_text": "Alice reads a clean reference sentence for Qwen cloning.",
+            },
+            files={"file": ("sample.wav", sample, "audio/wav")},
+        )
+
+    response = client.get(f"/api/voices/{import_response.json()['id']}/audio")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "audio/wav"
+    assert response.content.startswith(b"RIFF")
+
+
+def test_voice_audio_endpoint_returns_not_found_for_missing_profile(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    response = client.get("/api/voices/voice_missing/audio")
+
+    assert response.status_code == 404
+
+
 def test_delete_voice_removes_profile_and_dependent_blends(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     sample_path = tmp_path / "sample.wav"
