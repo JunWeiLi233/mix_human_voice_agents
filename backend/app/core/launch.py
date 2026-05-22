@@ -217,6 +217,11 @@ def _qwen_mixed_generation_status(
             continue
         if len(generation.source_profile_details) < 2:
             continue
+        if {detail.voice_profile_id for detail in generation.source_profile_details} != set(generation.source_profile_ids):
+            return {
+                "passed": False,
+                "detail": "Qwen mixed voice source details do not match generated source ids.",
+            }
         if not all(detail.reference_text_present for detail in generation.source_profile_details):
             continue
         if generation.agent_trace is None:
