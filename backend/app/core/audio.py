@@ -63,6 +63,14 @@ def analyze_audio_sample(path: Path) -> AudioQuality:
     )
 
 
+def is_parseable_wav(path: Path) -> bool:
+    try:
+        with wave.open(str(path), "rb") as wav_file:
+            return wav_file.getnchannels() > 0 and wav_file.getframerate() > 0 and wav_file.getnframes() > 0
+    except (wave.Error, EOFError, OSError):
+        return False
+
+
 def _peak_pcm_amplitude(pcm: bytes, sample_width: int) -> int:
     if not pcm or sample_width <= 0:
         return 0

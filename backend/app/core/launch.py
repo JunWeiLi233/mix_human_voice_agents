@@ -5,6 +5,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
+from app.core.audio import is_parseable_wav
 from app.core.generation import METADATA_WATERMARK_DISCLOSURE
 from app.core.storage import GENERATION_ROOT, list_blends, list_generation_results, list_voice_profiles
 from app.models.schemas import (
@@ -191,11 +192,6 @@ def _qwen_verification_status(report: QwenVerificationReport, output_exists: boo
             "passed": False,
             "detail": "Qwen verification output must be stored under data/generations.",
         }
-    if not _path_is_non_empty(report.output_audio_path or ""):
-        return {
-            "passed": False,
-            "detail": "Qwen verification output audio must be non-empty.",
-        }
     if report.tts_backend != "qwen3_tts":
         return {
             "passed": False,
@@ -235,6 +231,16 @@ def _qwen_verification_status(report: QwenVerificationReport, output_exists: boo
         return {
             "passed": False,
             "detail": "Qwen verification report includes a source profile not allowed for private agent voice use.",
+        }
+    if not _path_is_non_empty(report.output_audio_path or ""):
+        return {
+            "passed": False,
+            "detail": "Qwen verification output audio must be non-empty.",
+        }
+    if not is_parseable_wav(Path(report.output_audio_path or "")):
+        return {
+            "passed": False,
+            "detail": "Qwen verification output audio must be a parseable WAV file.",
         }
     return {
         "passed": True,
@@ -507,6 +513,11 @@ def _qwen_mixed_generation_status(
             return {
                 "passed": False,
                 "detail": "Qwen mixed voice audio must be non-empty.",
+            }
+        if not is_parseable_wav(Path(generation.audio_path)):
+            return {
+                "passed": False,
+                "detail": "Qwen mixed voice audio must be a parseable WAV file.",
             }
         return {
             "passed": True,
