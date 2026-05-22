@@ -1,7 +1,16 @@
 from types import SimpleNamespace
 
-from app.core.launch import evaluate_launch_readiness
-from app.models.schemas import AgentTrace, BlendProfile, GenerationResult, SourceProfileDetail, VoiceBlend
+from app.core.launch import _qwen_mixed_generation_status, evaluate_launch_readiness
+from app.models.schemas import (
+    AgentProviderVerificationReport,
+    AgentTrace,
+    BlendProfile,
+    GenerationResult,
+    MetadataWatermark,
+    QwenVerificationReport,
+    SourceProfileDetail,
+    VoiceBlend,
+)
 
 
 def test_core_launch_readiness_evaluator_reports_missing_requirements(tmp_path, monkeypatch):
@@ -12,6 +21,63 @@ def test_core_launch_readiness_evaluator_reports_missing_requirements(tmp_path, 
     assert report.status == "blocked"
     assert "Import at least two consented voice profiles." in report.blocking_reasons
     assert "Run Qwen runtime verification successfully before launch." in report.blocking_reasons
+
+
+def test_core_launch_readiness_blocks_qwen_generation_without_synthetic_disclosure_metadata(tmp_path):
+    audio_path = tmp_path / "mixed.wav"
+    audio_path.write_bytes(b"fake-qwen-wav")
+    generation = GenerationResult(
+        audio_path=str(audio_path),
+        metadata_path=str(tmp_path / "mixed.json"),
+        prompt="Say hello as a disclosed synthetic assistant.",
+        agent_reply="Hello from a launch-ready mixed voice.",
+        synthetic_label="natural voice",
+        source_profile_ids=["voice_a", "voice_b"],
+        source_profile_details=[
+            SourceProfileDetail(
+                voice_profile_id="voice_a",
+                display_name="Alice",
+                weight=0.5,
+                consent_confirmed_by="local_user",
+                allowed_uses=["private_agent_voice", "local_audio_export"],
+                reference_text_present=True,
+            ),
+            SourceProfileDetail(
+                voice_profile_id="voice_b",
+                display_name="Bob",
+                weight=0.5,
+                consent_confirmed_by="local_user",
+                allowed_uses=["private_agent_voice", "local_audio_export"],
+                reference_text_present=True,
+            ),
+        ],
+        blend_strategy="multi_reference_prompt",
+        tts_backend="qwen3_tts",
+        watermark=MetadataWatermark(label="natural voice", disclosure=""),
+        agent_trace=AgentTrace(provider="openai", model="gpt-4.1-mini"),
+    )
+    provider_report = AgentProviderVerificationReport(
+        status="passed",
+        provider="openai",
+        model="gpt-4.1-mini",
+        reply="Provider ready.",
+        report_path="data/agent-provider-verification-report.json",
+    )
+    qwen_report = QwenVerificationReport(
+        status="passed",
+        report_path="data/qwen-runtime-verification-report.json",
+        voice_profile_ids=["voice_a", "voice_b"],
+        tts_backend="qwen3_tts",
+        blend_strategy="multi_reference_prompt",
+        output_audio_path=str(tmp_path / "qwen_verify.wav"),
+    )
+
+    status = _qwen_mixed_generation_status([generation], provider_report, qwen_report)
+
+    assert status == {
+        "passed": False,
+        "detail": "Qwen mixed voice clips must include synthetic disclosure metadata.",
+    }
 
 
 def test_core_launch_readiness_blocks_when_generation_trace_differs_from_verified_provider(tmp_path, monkeypatch):

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from app.core.generation import METADATA_WATERMARK_DISCLOSURE
 from app.core.storage import list_blends, list_generation_results, list_voice_profiles
 from app.models.schemas import (
     AgentProviderVerificationReport,
@@ -19,6 +20,7 @@ QWEN_VERIFICATION_REPORT_PATH = Path("data") / "qwen-runtime-verification-report
 AGENT_PROVIDER_VERIFICATION_REPORT_PATH = Path("data") / "agent-provider-verification-report.json"
 RESEARCH_REVIEW_PATH = Path("docs") / "research-review.md"
 REQUIRED_VOICE_USE = "private_agent_voice"
+REQUIRED_SYNTHETIC_LABEL = "synthetic mixed voice"
 
 
 def get_qwen_verification_report() -> QwenVerificationReport:
@@ -396,6 +398,11 @@ def _qwen_mixed_generation_status(
                 "passed": False,
                 "detail": "Qwen mixed voice clips must include the agent prompt and spoken reply transcript.",
             }
+        if not _generation_has_synthetic_disclosure(generation):
+            return {
+                "passed": False,
+                "detail": "Qwen mixed voice clips must include synthetic disclosure metadata.",
+            }
         if not Path(generation.audio_path).exists():
             continue
         return {
@@ -429,6 +436,14 @@ def _same_audio_path(left: str, right: str) -> bool:
 
 def _details_allow_private_agent_voice(details: list[object]) -> bool:
     return all(REQUIRED_VOICE_USE in detail.allowed_uses for detail in details)
+
+
+def _generation_has_synthetic_disclosure(generation: GenerationResult) -> bool:
+    return (
+        generation.synthetic_label == REQUIRED_SYNTHETIC_LABEL
+        and generation.watermark.label == REQUIRED_SYNTHETIC_LABEL
+        and generation.watermark.disclosure == METADATA_WATERMARK_DISCLOSURE
+    )
 
 
 def _voice_allows_private_agent_voice(voice: object) -> bool:
