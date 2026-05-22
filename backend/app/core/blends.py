@@ -13,6 +13,10 @@ def create_blend(
     if len(profiles) < 2:
         raise BlendError("A mixed voice blend requires at least two profiles.")
 
+    profile_ids = [profile.voice_profile_id for profile in profiles]
+    if len(set(profile_ids)) < 2:
+        raise BlendError("A mixed voice blend requires at least two distinct profiles.")
+
     total = sum(profile.weight for profile in profiles)
     if total <= 0:
         raise BlendError("Blend weights must sum to a positive number.")
@@ -25,4 +29,3 @@ def create_blend(
         for profile in profiles
     ]
     return VoiceBlend(name=name, profiles=normalized, strategy=strategy)
-

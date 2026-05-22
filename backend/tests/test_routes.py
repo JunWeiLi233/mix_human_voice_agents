@@ -154,6 +154,21 @@ def test_qwen_verification_route_requires_two_profiles(tmp_path: Path, monkeypat
     assert "at least two" in response.json()["detail"]
 
 
+def test_qwen_verification_route_requires_distinct_profiles(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    response = client.post(
+        "/api/tts/qwen/verification",
+        json={
+            "voice_profile_ids": ["voice_a", "voice_a"],
+            "text": "This is a studio Qwen verification.",
+        },
+    )
+
+    assert response.status_code == 400
+    assert "distinct" in response.json()["detail"]
+
+
 def test_create_blend_endpoint_normalizes_weights():
     response = client.post(
         "/api/blends",

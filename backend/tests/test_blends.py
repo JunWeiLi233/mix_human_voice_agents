@@ -13,6 +13,18 @@ def test_blend_requires_two_profiles():
         )
 
 
+def test_blend_requires_two_distinct_profiles():
+    with pytest.raises(BlendError, match="distinct"):
+        create_blend(
+            name="Duplicate",
+            profiles=[
+                BlendProfileInput(voice_profile_id="voice_a", weight=1),
+                BlendProfileInput(voice_profile_id="voice_a", weight=1),
+            ],
+            strategy="local_development_wav",
+        )
+
+
 def test_blend_normalizes_weights():
     blend = create_blend(
         name="Pair",
@@ -26,4 +38,3 @@ def test_blend_normalizes_weights():
     assert blend.profiles[0].weight == pytest.approx(0.666666, rel=1e-5)
     assert blend.profiles[1].weight == pytest.approx(0.333333, rel=1e-5)
     assert blend.synthetic_label == "synthetic mixed voice"
-

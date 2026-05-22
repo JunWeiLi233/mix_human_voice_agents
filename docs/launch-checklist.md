@@ -10,7 +10,8 @@
 - Imported profile metadata records `confirmed_by` and consent notes from user input.
 - Imported profile metadata records the user-provided reference transcript used by Qwen voice cloning.
 - Malformed, non-WAV, shorter-than-5-second, and longer-than-30-second samples are rejected.
-- Blend creation with two profiles succeeds and weights normalize to 100%.
+- Blend creation with two distinct profiles succeeds and weights normalize to 100%.
+- Blend creation and Qwen verification reject duplicate voice profile IDs.
 - Agent provider settings accept either an OpenAI-compatible API configuration or an Ollama-compatible local endpoint.
 - Agent reply generation succeeds through the selected provider before TTS synthesis.
 - Audio generation creates a `.wav` file and adjacent `.json` metadata file.
@@ -34,7 +35,7 @@
 
 - Install Qwen dependencies with `cd backend && .\.venv\Scripts\python -m pip install -e ".[qwen]"`.
 - Configure `QwenTtsAdapter.from_pretrained()` with the desired model id.
-- Import two clean 5-30 second consented WAV samples and paste transcripts that match each sample.
+- Import two clean 5-30 second consented WAV samples from distinct speakers and paste transcripts that match each sample.
 - Create a blend using `multi_reference_prompt`.
 - Select the imported voices for verification, run Qwen verification from the Voice Engine panel, and confirm the verified output path exists.
 - Run `cd backend && .\.venv\Scripts\python -m app.cli.verify_qwen_runtime --voice-profile-id <id-a> --voice-profile-id <id-b> --report data/qwen-runtime-verification-report.json`.

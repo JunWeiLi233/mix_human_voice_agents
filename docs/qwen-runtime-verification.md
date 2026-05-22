@@ -50,10 +50,10 @@ npm run dev -- --host 127.0.0.1 --port 5173
 
 ## Studio Verification
 
-After importing at least two consented profiles, use the `Voice Engine` panel:
+After importing at least two consented profiles from distinct speakers, use the `Voice Engine` panel:
 
 1. Select `Qwen3-TTS`.
-2. Select at least two imported voices to include in the verification run.
+2. Select at least two distinct imported voices to include in the verification run.
 3. Edit `Qwen verification text` if needed.
 4. Click `Run Qwen verification`.
 5. Confirm the panel shows `Verification passed` and the verified output path exists.
