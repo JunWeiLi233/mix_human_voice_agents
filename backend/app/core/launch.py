@@ -155,6 +155,11 @@ def _qwen_verification_status(report: QwenVerificationReport, output_exists: boo
             "passed": False,
             "detail": "Qwen verification report was not produced by the Qwen3-TTS backend.",
         }
+    if len(set(report.voice_profile_ids)) < 2:
+        return {
+            "passed": False,
+            "detail": "Qwen verification requires at least two distinct imported voice ids.",
+        }
     if report.blend_strategy != "multi_reference_prompt":
         return {
             "passed": False,

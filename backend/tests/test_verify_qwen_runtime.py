@@ -104,6 +104,30 @@ def test_verify_qwen_runtime_requires_two_profiles(tmp_path: Path):
     assert exit_code == 2
 
 
+def test_verify_qwen_runtime_requires_two_distinct_profiles(tmp_path: Path, monkeypatch):
+    def fail_if_profiles_load(profile_ids):
+        raise AssertionError("duplicate profile ids should be rejected before loading profiles")
+
+    monkeypatch.setattr("app.cli.verify_qwen_runtime.get_voice_profiles_by_ids", fail_if_profiles_load)
+    report_path = tmp_path / "report.json"
+
+    exit_code = main(
+        [
+            "--voice-profile-id",
+            "voice_a",
+            "--voice-profile-id",
+            "voice_a",
+            "--report",
+            str(report_path),
+        ]
+    )
+
+    assert exit_code == 2
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["status"] == "failed"
+    assert report["error"] == "Qwen runtime verification requires at least two distinct voice profile ids."
+
+
 def profile(profile_id: str, display_name: str, reference_text: str) -> VoiceProfile:
     return VoiceProfile.model_validate(
         {
