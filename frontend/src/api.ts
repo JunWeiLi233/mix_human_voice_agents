@@ -4,6 +4,7 @@ import type {
   BlendDraftProfile,
   DeleteVoiceResult,
   GenerationResult,
+  LaunchReadinessReport,
   QwenVerificationReport,
   TtsBackend,
   TtsRuntimeStatus,
@@ -69,6 +70,14 @@ export async function listGenerations(): Promise<GenerationResult[]> {
 
 export async function listBlends(): Promise<VoiceBlend[]> {
   const response = await fetch("/api/blends");
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  return response.json();
+}
+
+export async function getLaunchReadiness(): Promise<LaunchReadinessReport> {
+  const response = await fetch("/api/launch/readiness");
   if (!response.ok) {
     throw new Error(await response.text());
   }

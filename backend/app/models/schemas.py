@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 ConsentType = Literal["self_or_written_permission"]
 TtsBackend = Literal["local_development_wav", "qwen3_tts"]
 VerificationStatus = Literal["missing", "passed", "failed"]
+LaunchReadinessStatus = Literal["ready", "blocked"]
 BlendStrategy = Literal[
     "adapter_embedding_mix",
     "multi_reference_prompt",
@@ -99,6 +100,19 @@ class QwenVerificationReport(BaseModel):
     output_audio_path: str | None = None
     text: str | None = None
     error: str | None = None
+
+
+class LaunchReadinessCheck(BaseModel):
+    id: str
+    label: str
+    passed: bool
+    detail: str
+
+
+class LaunchReadinessReport(BaseModel):
+    status: LaunchReadinessStatus
+    checks: list[LaunchReadinessCheck]
+    blocking_reasons: list[str]
 
 
 AgentProviderKind = Literal["openai_compatible", "ollama"]

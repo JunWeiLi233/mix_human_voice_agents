@@ -64,6 +64,19 @@ export type QwenVerificationReport = {
   error?: string | null;
 };
 
+export type LaunchReadinessCheck = {
+  id: string;
+  label: string;
+  passed: boolean;
+  detail: string;
+};
+
+export type LaunchReadinessReport = {
+  status: "ready" | "blocked";
+  checks: LaunchReadinessCheck[];
+  blocking_reasons: string[];
+};
+
 export type VoiceProfile = {
   id: string;
   display_name: string;

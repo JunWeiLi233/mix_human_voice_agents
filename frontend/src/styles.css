@@ -216,6 +216,59 @@ audio {
   text-decoration: none;
 }
 
+.launch-readiness {
+  border-color: #cfc5a6;
+}
+
+.readiness-ready,
+.readiness-blocked {
+  font-weight: 700;
+  margin: 0;
+}
+
+.readiness-ready {
+  color: #2d6a3b;
+}
+
+.readiness-blocked {
+  color: #8a4f15;
+}
+
+.readiness-reasons,
+.readiness-checks {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding-left: 18px;
+}
+
+.readiness-checks {
+  list-style: none;
+  padding-left: 0;
+}
+
+.readiness-checks li {
+  align-items: start;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 82px 1fr;
+}
+
+.readiness-checks span {
+  color: #596052;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.readiness-checks div {
+  display: grid;
+  gap: 2px;
+}
+
+.readiness-checks small {
+  color: #596052;
+}
+
 .error {
   border: 1px solid #a93d3d;
   background: #fff0f0;

@@ -33,6 +33,8 @@ from app.models.schemas import (
     BlendStrategy,
     ConsentRequest,
     GenerationResult,
+    LaunchReadinessCheck,
+    LaunchReadinessReport,
     QwenVerificationReport,
     TtsRuntimeStatus,
     TtsBackend,
@@ -94,6 +96,58 @@ def qwen_verification_route() -> QwenVerificationReport:
     return QwenVerificationReport.model_validate(payload)
 
 
+@router.get("/launch/readiness", response_model=LaunchReadinessReport)
+def launch_readiness_route() -> LaunchReadinessReport:
+    voices = list_voice_profiles()
+    blends = list_blends()
+    generations = list_generation_results()
+    qwen_status = TtsRuntimeStatus.model_validate(QwenTtsAdapter.runtime_status())
+    qwen_verification = qwen_verification_route()
+    qwen_output_exists = bool(
+        qwen_verification.output_audio_path
+        and Path(qwen_verification.output_audio_path).exists()
+    )
+
+    checks = [
+        LaunchReadinessCheck(
+            id="imported_voices",
+            label="Imported voices",
+            passed=len(voices) >= 2,
+            detail=f"{len(voices)} imported voices",
+        ),
+        LaunchReadinessCheck(
+            id="saved_blend",
+            label="Saved blend",
+            passed=len(blends) >= 1,
+            detail=f"{len(blends)} saved blends",
+        ),
+        LaunchReadinessCheck(
+            id="generated_audio",
+            label="Generated audio",
+            passed=len(generations) >= 1,
+            detail=f"{len(generations)} generated clips",
+        ),
+        LaunchReadinessCheck(
+            id="qwen_runtime",
+            label="Qwen runtime",
+            passed=qwen_status.available,
+            detail=qwen_status.message,
+        ),
+        LaunchReadinessCheck(
+            id="qwen_verification",
+            label="Qwen verification",
+            passed=qwen_verification.status == "passed" and qwen_output_exists,
+            detail=_qwen_verification_detail(qwen_verification, qwen_output_exists),
+        ),
+    ]
+    blocking_reasons = _launch_blocking_reasons(checks)
+    return LaunchReadinessReport(
+        status="ready" if not blocking_reasons else "blocked",
+        checks=checks,
+        blocking_reasons=blocking_reasons,
+    )
+
+
 @router.post("/tts/qwen/verification", response_model=QwenVerificationReport)
 def run_qwen_verification_route(request: RunQwenVerificationRequest) -> QwenVerificationReport:
     profile_ids = request.voice_profile_ids
@@ -144,6 +198,27 @@ def _write_qwen_verification_report(payload: dict[str, object]) -> QwenVerificat
     payload["report_path"] = str(report_path)
     report_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return QwenVerificationReport.model_validate(payload)
+
+
+def _qwen_verification_detail(report: QwenVerificationReport, output_exists: bool) -> str:
+    if report.status == "passed" and output_exists:
+        return f"Verification passed: {report.output_audio_path}"
+    if report.status == "passed":
+        return "Verification report passed, but verified output audio is missing."
+    if report.error:
+        return report.error
+    return "No passed Qwen runtime verification report."
+
+
+def _launch_blocking_reasons(checks: list[LaunchReadinessCheck]) -> list[str]:
+    reasons = {
+        "imported_voices": "Import at least two consented voice profiles.",
+        "saved_blend": "Create and save a mixed voice blend.",
+        "generated_audio": "Generate at least one disclosed synthetic voice clip.",
+        "qwen_runtime": "Install and load the Qwen3-TTS runtime before launch.",
+        "qwen_verification": "Run Qwen runtime verification successfully before launch.",
+    }
+    return [reasons[check.id] for check in checks if not check.passed]
 
 
 @router.post("/blends", response_model=VoiceBlend)

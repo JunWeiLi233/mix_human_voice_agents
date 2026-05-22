@@ -3,6 +3,7 @@ import {
   createBlend,
   deleteVoice,
   generateClip,
+  getLaunchReadiness,
   getQwenRuntimeStatus,
   getQwenVerificationReport,
   listBlends,
@@ -16,12 +17,14 @@ import { AgentProviderSettings } from "./components/AgentProviderSettings";
 import { BlendMixer } from "./components/BlendMixer";
 import { GenerationHistory } from "./components/GenerationHistory";
 import { ImportVoice } from "./components/ImportVoice";
+import { LaunchReadiness } from "./components/LaunchReadiness";
 import { VoiceLibrary } from "./components/VoiceLibrary";
 import { VoiceEngineSettings } from "./components/VoiceEngineSettings";
 import type {
   AgentConfig,
   BlendDraftProfile,
   GenerationResult,
+  LaunchReadinessReport,
   QwenVerificationReport,
   TtsBackend,
   TtsRuntimeStatus,
@@ -44,6 +47,7 @@ export default function App() {
   const [savedBlends, setSavedBlends] = useState<VoiceBlend[]>([]);
   const [blend, setBlend] = useState<VoiceBlend | null>(null);
   const [generations, setGenerations] = useState<GenerationResult[]>([]);
+  const [launchReadiness, setLaunchReadiness] = useState<LaunchReadinessReport | null>(null);
   const [qwenStatus, setQwenStatus] = useState<TtsRuntimeStatus | null>(null);
   const [qwenVerification, setQwenVerification] = useState<QwenVerificationReport | null>(null);
   const [qwenVerificationText, setQwenVerificationText] = useState(
@@ -113,12 +117,25 @@ export default function App() {
       });
   }, []);
 
+  useEffect(() => {
+    void refreshLaunchReadiness();
+  }, []);
+
+  async function refreshLaunchReadiness() {
+    try {
+      setLaunchReadiness(await getLaunchReadiness());
+    } catch {
+      setLaunchReadiness(null);
+    }
+  }
+
   async function handleCreateBlend() {
     setError(null);
     try {
       const created = await createBlend(blendProfiles, ttsBackend);
       setBlend(created);
       setSavedBlends((current) => [created, ...current.filter((item) => item.id !== created.id)]);
+      void refreshLaunchReadiness();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Blend creation failed");
     }
@@ -130,6 +147,7 @@ export default function App() {
     setBlendProfiles((currentProfiles) => toBlendDrafts(next, currentProfiles));
     setQwenVerificationVoiceIds((currentIds) => [...currentIds, profile.id]);
     setBlend(null);
+    void refreshLaunchReadiness();
   }
 
   async function handleDeleteVoice(voiceProfileId: string) {
@@ -155,6 +173,7 @@ export default function App() {
         );
         return deletedActiveBlend || referencesDeletedVoice ? null : current;
       });
+      void refreshLaunchReadiness();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Voice deletion failed");
     }
@@ -176,6 +195,7 @@ export default function App() {
       const agentReply = await requestAgentReply(agentConfig, prompt);
       const result = await generateClip(blend, agentReply.reply, ttsBackend, prompt);
       setGenerations((current) => [result, ...current]);
+      void refreshLaunchReadiness();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed");
     }
@@ -190,6 +210,7 @@ export default function App() {
         qwenVerificationText,
       );
       setQwenVerification(report);
+      void refreshLaunchReadiness();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Qwen verification failed");
     } finally {
@@ -229,6 +250,7 @@ export default function App() {
           onVerificationTextChange={setQwenVerificationText}
           onRunVerification={handleRunQwenVerification}
         />
+        <LaunchReadiness readiness={launchReadiness} />
         <VoiceLibrary voices={voices} onDeleteVoice={handleDeleteVoice} />
         <ImportVoice onImported={handleImported} />
         <BlendMixer

@@ -37,6 +37,29 @@ describe("App", () => {
           error: "Run python -m app.cli.verify_qwen_runtime with two consented voice profile ids.",
         });
       }
+      if (url === "/api/launch/readiness") {
+        return jsonResponse({
+          status: "blocked",
+          blocking_reasons: [
+            "Import at least two consented voice profiles.",
+            "Run Qwen runtime verification successfully before launch.",
+          ],
+          checks: [
+            {
+              id: "imported_voices",
+              label: "Imported voices",
+              passed: false,
+              detail: "0 imported voices",
+            },
+            {
+              id: "qwen_verification",
+              label: "Qwen verification",
+              passed: false,
+              detail: "No passed Qwen runtime verification report",
+            },
+          ],
+        });
+      }
       return new Response("not found", { status: 404 });
     });
 
@@ -44,6 +67,9 @@ describe("App", () => {
 
     expect(screen.getByText("Mixed Voice Agent Studio")).toBeInTheDocument();
     expect(screen.getByText("Voice Library")).toBeInTheDocument();
+    expect(await screen.findByText("Launch Readiness")).toBeInTheDocument();
+    expect(screen.getByText("Blocked before launch")).toBeInTheDocument();
+    expect(screen.getByText("Run Qwen runtime verification successfully before launch.")).toBeInTheDocument();
     expect(screen.getByText("Blend Mixer")).toBeInTheDocument();
     expect(screen.getByText("Agent Provider")).toBeInTheDocument();
     expect(screen.getByText("Voice Engine")).toBeInTheDocument();
@@ -123,6 +149,27 @@ describe("App", () => {
           blend_strategy: "multi_reference_prompt",
           output_audio_path: "data/generations/qwen_verify.wav",
           text: "verification text",
+        });
+      }
+
+      if (url === "/api/launch/readiness" && !init) {
+        return jsonResponse({
+          status: "blocked",
+          blocking_reasons: ["Run Qwen runtime verification successfully before launch."],
+          checks: [
+            {
+              id: "imported_voices",
+              label: "Imported voices",
+              passed: false,
+              detail: "0 imported voices",
+            },
+            {
+              id: "qwen_verification",
+              label: "Qwen verification",
+              passed: true,
+              detail: "Verification passed",
+            },
+          ],
         });
       }
 
@@ -215,7 +262,7 @@ describe("App", () => {
     render(<App />);
     await waitFor(() => expect(screen.getByText("No imported voices yet.")).toBeInTheDocument());
     await screen.findByText("Installed");
-    await screen.findByText("Verification passed");
+    expect((await screen.findAllByText("Verification passed")).length).toBeGreaterThan(0);
     expect(screen.getByText("data/generations/qwen_verify.wav")).toBeInTheDocument();
     await screen.findByRole("button", { name: "Saved Alice + Bob" });
     expect(screen.getByRole("button", { name: "Generate AI Voice" })).toBeEnabled();
@@ -395,6 +442,27 @@ describe("App", () => {
           report_path: "data/qwen-runtime-verification-report.json",
           voice_profile_ids: ["voice_alice", "voice_bob"],
           error: "Qwen runtime failed.",
+        });
+      }
+
+      if (url === "/api/launch/readiness" && !init) {
+        return jsonResponse({
+          status: "blocked",
+          blocking_reasons: ["Run Qwen runtime verification successfully before launch."],
+          checks: [
+            {
+              id: "imported_voices",
+              label: "Imported voices",
+              passed: true,
+              detail: "3 imported voices",
+            },
+            {
+              id: "qwen_verification",
+              label: "Qwen verification",
+              passed: false,
+              detail: "Verification failed",
+            },
+          ],
         });
       }
 

@@ -171,6 +171,99 @@ def test_qwen_verification_route_requires_distinct_profiles(tmp_path: Path, monk
     assert "distinct" in response.json()["detail"]
 
 
+def test_launch_readiness_reports_blockers_when_requirements_are_missing(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    response = client.get("/api/launch/readiness")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "blocked"
+    assert "Import at least two consented voice profiles." in payload["blocking_reasons"]
+    assert "Run Qwen runtime verification successfully before launch." in payload["blocking_reasons"]
+    assert {check["id"]: check["passed"] for check in payload["checks"]} == {
+        "imported_voices": False,
+        "saved_blend": False,
+        "generated_audio": False,
+        "qwen_runtime": False,
+        "qwen_verification": False,
+    }
+
+
+def test_launch_readiness_reports_ready_after_full_qwen_verification(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    sample_path = tmp_path / "sample.wav"
+    write_reference_wav(sample_path)
+    voices = []
+
+    for name in ("Alice", "Bob"):
+        with sample_path.open("rb") as sample:
+            response = client.post(
+                "/api/voices",
+                data={
+                    "speaker_display_name": name,
+                    "consent_type": "self_or_written_permission",
+                    "allowed_uses": "private_agent_voice,local_audio_export",
+                    "confirmed_by": "local_user",
+                    "notes": "approved for launch readiness",
+                    "reference_text": f"{name} reads a clean reference sentence for Qwen cloning.",
+                },
+                files={"file": ("sample.wav", sample, "audio/wav")},
+            )
+        voices.append(response.json())
+
+    blend = client.post(
+        "/api/blends",
+        json={
+            "name": "Launch Pair",
+            "profiles": [
+                {"voice_profile_id": voices[0]["id"], "weight": 1},
+                {"voice_profile_id": voices[1]["id"], "weight": 1},
+            ],
+            "strategy": "multi_reference_prompt",
+        },
+    ).json()
+    generated = client.post(
+        "/api/generate",
+        json={
+            "prompt": "Say hello as a disclosed synthetic assistant.",
+            "agent_reply": "Hello from a launch-ready mixed voice.",
+            "blend": blend,
+        },
+    ).json()
+    report_path = tmp_path / "data" / "qwen-runtime-verification-report.json"
+    report_path.write_text(
+        json.dumps(
+            {
+                "status": "passed",
+                "voice_profile_ids": [voices[0]["id"], voices[1]["id"]],
+                "tts_backend": "qwen3_tts",
+                "blend_strategy": "multi_reference_prompt",
+                "output_audio_path": generated["audio_path"],
+                "text": "Launch readiness verification.",
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        "app.api.routes.QwenTtsAdapter.runtime_status",
+        lambda: {
+            "backend": "qwen3_tts",
+            "available": True,
+            "model_id": "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+            "message": "qwen-tts package is importable.",
+        },
+    )
+
+    response = client.get("/api/launch/readiness")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "ready"
+    assert payload["blocking_reasons"] == []
+    assert all(check["passed"] for check in payload["checks"])
+
+
 def test_create_blend_endpoint_normalizes_weights():
     response = client.post(
         "/api/blends",
