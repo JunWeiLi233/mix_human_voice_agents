@@ -169,6 +169,22 @@ def run_qwen_verification_route(request: RunQwenVerificationRequest) -> QwenVeri
             output_root=Path(GENERATION_ROOT),
         )
         output_path = adapter.synthesize(request.text, blend, voice_profiles=voice_profiles)
+        output_error = _qwen_generated_audio_error(Path(output_path), "Qwen verification output audio")
+        if output_error:
+            return _write_qwen_verification_report(
+                {
+                    "status": "failed",
+                    "error": output_error,
+                    "voice_profile_ids": profile_ids,
+                    "model_id": request.model_id,
+                    "device_map": request.device_map,
+                    "dtype": request.dtype,
+                    "attn_implementation": request.attn_implementation,
+                    "tts_backend": "qwen3_tts",
+                    "text": request.text,
+                    "output_audio_path": str(output_path),
+                }
+            )
     except (FileNotFoundError, QwenTtsNotConfigured, ValueError) as exc:
         return _write_qwen_verification_report(
             {
@@ -211,6 +227,16 @@ def _write_qwen_verification_report(payload: dict[str, object]) -> QwenVerificat
     payload["report_path"] = str(report_path)
     report_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return QwenVerificationReport.model_validate(payload)
+
+
+def _qwen_generated_audio_error(path: Path, label: str) -> str | None:
+    if not path.exists():
+        return f"{label} must exist."
+    if path.stat().st_size <= 0:
+        return f"{label} must be non-empty."
+    if not is_parseable_wav(path):
+        return f"{label} must be a parseable WAV file."
+    return None
 
 
 def _write_agent_provider_verification_report(payload: dict[str, object]) -> AgentProviderVerificationReport:

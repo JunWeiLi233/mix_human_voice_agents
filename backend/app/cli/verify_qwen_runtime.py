@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from typing import Sequence
 
+from app.core.audio import is_parseable_wav
 from app.core.blends import create_blend
 from app.core.generation import build_source_profile_details
 from app.core.qwen_profiles import validate_qwen_voice_profiles
@@ -100,6 +101,24 @@ def main(argv: Sequence[str] | None = None) -> int:
             output_root=Path(GENERATION_ROOT),
         )
         output_path = adapter.synthesize(args.text, blend, voice_profiles=voice_profiles)
+        output_error = _qwen_generated_audio_error(Path(output_path), "Qwen verification output audio")
+        if output_error:
+            _write_report(
+                Path(args.report),
+                {
+                    "status": "failed",
+                    "error": output_error,
+                    "voice_profile_ids": profile_ids,
+                    "model_id": args.model_id,
+                    "device_map": args.device_map,
+                    "dtype": args.dtype,
+                    "attn_implementation": args.attn_implementation,
+                    "tts_backend": "qwen3_tts",
+                    "output_audio_path": str(output_path),
+                    "text": args.text,
+                },
+            )
+            return 1
     except (FileNotFoundError, QwenTtsNotConfigured, ValueError) as exc:
         _write_report(
             Path(args.report),
@@ -137,6 +156,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         },
     )
     return 0
+
+
+def _qwen_generated_audio_error(path: Path, label: str) -> str | None:
+    if not path.exists():
+        return f"{label} must exist."
+    if path.stat().st_size <= 0:
+        return f"{label} must be non-empty."
+    if not is_parseable_wav(path):
+        return f"{label} must be a parseable WAV file."
+    return None
 
 
 def _write_report(report_path: Path, payload: dict[str, object]) -> None:

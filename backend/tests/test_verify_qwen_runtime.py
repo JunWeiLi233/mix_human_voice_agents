@@ -1,5 +1,8 @@
 from pathlib import Path
 import json
+import math
+import struct
+import wave
 
 from app.cli.verify_qwen_runtime import main
 from app.models.schemas import VoiceProfile
@@ -41,7 +44,7 @@ def test_verify_qwen_runtime_generates_report_with_selected_profiles(tmp_path: P
             seen["blend"] = blend
             seen["voice_profiles"] = voice_profiles
             output = tmp_path / "qwen_verify.wav"
-            output.write_bytes(b"RIFFfake")
+            write_reference_wav(output)
             return output
 
     monkeypatch.setattr("app.cli.verify_qwen_runtime.get_voice_profiles_by_ids", fake_get_profiles)
@@ -103,6 +106,61 @@ def test_verify_qwen_runtime_generates_report_with_selected_profiles(tmp_path: P
             "reference_text_present": True,
         },
     ]
+
+
+def test_verify_qwen_runtime_writes_failed_report_when_output_is_invalid_wav(
+    tmp_path: Path, monkeypatch
+):
+    def fake_get_profiles(profile_ids):
+        voice_a_audio = tmp_path / "voice_a.wav"
+        voice_b_audio = tmp_path / "voice_b.wav"
+        write_reference_wav(voice_a_audio)
+        write_reference_wav(voice_b_audio)
+        return {
+            "voice_a": profile(
+                "voice_a",
+                "Alice",
+                "Alice reads the reference text.",
+                cleaned_audio_path=str(voice_a_audio),
+            ),
+            "voice_b": profile(
+                "voice_b",
+                "Bob",
+                "Bob reads the reference text.",
+                cleaned_audio_path=str(voice_b_audio),
+            ),
+        }
+
+    class InvalidQwenAdapter:
+        @classmethod
+        def from_pretrained(cls, output_root=None, **kwargs):
+            return cls()
+
+        def synthesize(self, text, blend, voice_profiles=None):
+            output = tmp_path / "qwen_verify.wav"
+            output.write_bytes(b"not-a-wav")
+            return output
+
+    monkeypatch.setattr("app.cli.verify_qwen_runtime.get_voice_profiles_by_ids", fake_get_profiles)
+    monkeypatch.setattr("app.cli.verify_qwen_runtime.QwenTtsAdapter", InvalidQwenAdapter)
+    report_path = tmp_path / "report.json"
+
+    exit_code = main(
+        [
+            "--voice-profile-id",
+            "voice_a",
+            "--voice-profile-id",
+            "voice_b",
+            "--report",
+            str(report_path),
+        ]
+    )
+
+    assert exit_code == 1
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["status"] == "failed"
+    assert report["error"] == "Qwen verification output audio must be a parseable WAV file."
+    assert report["output_audio_path"] == str(tmp_path / "qwen_verify.wav")
 
 
 def test_verify_qwen_runtime_requires_two_profiles(tmp_path: Path):
@@ -218,3 +276,16 @@ def profile(
             },
         }
     )
+
+
+def write_reference_wav(path: Path, duration_seconds: int = 1, sample_rate: int = 16000) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with wave.open(str(path), "wb") as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(sample_rate)
+        frames = b"".join(
+            struct.pack("<h", int(12000 * math.sin(2 * math.pi * 440 * index / sample_rate)))
+            for index in range(sample_rate * duration_seconds)
+        )
+        wav_file.writeframes(frames)

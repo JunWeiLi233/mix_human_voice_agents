@@ -167,7 +167,7 @@ def test_qwen_verification_route_runs_with_selected_imported_profiles(tmp_path: 
             self.__class__.seen_text = text
             self.__class__.seen_profile_ids = sorted((voice_profiles or {}).keys())
             output = self.__class__.output_root / f"{blend.id}_qwen.wav"
-            output.write_bytes(b"fake-qwen-wav")
+            write_reference_wav(output, duration_seconds=1)
             return output
 
     monkeypatch.setattr("app.api.routes.QwenTtsAdapter", FakeQwenAdapter)
@@ -226,6 +226,63 @@ def test_qwen_verification_route_runs_with_selected_imported_profiles(tmp_path: 
     assert saved_report["status"] == "passed"
     assert saved_report["output_audio_path"] == payload["output_audio_path"]
     assert saved_report["source_profile_details"] == payload["source_profile_details"]
+
+
+def test_qwen_verification_route_writes_failed_report_when_qwen_output_is_invalid_wav(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    sample_path = tmp_path / "sample.wav"
+    write_reference_wav(sample_path)
+    voices = []
+
+    for name in ("Alice", "Bob"):
+        with sample_path.open("rb") as sample:
+            response = client.post(
+                "/api/voices",
+                data={
+                    "speaker_display_name": name,
+                    "consent_type": "self_or_written_permission",
+                    "allowed_uses": "private_agent_voice,local_audio_export",
+                    "confirmed_by": "local_user",
+                    "notes": "approved for qwen verification",
+                    "reference_text": f"{name} reads a clean reference sentence for Qwen cloning.",
+                },
+                files={"file": ("sample.wav", sample, "audio/wav")},
+            )
+        voices.append(response.json())
+
+    class InvalidQwenAdapter:
+        @classmethod
+        def from_pretrained(cls, output_root=None, **kwargs):
+            cls.output_root = Path(output_root)
+            cls.output_root.mkdir(parents=True, exist_ok=True)
+            return cls()
+
+        def synthesize(self, text, blend, voice_profiles=None):
+            output = self.__class__.output_root / f"{blend.id}_qwen.wav"
+            output.write_bytes(b"not-a-wav")
+            return output
+
+    monkeypatch.setattr("app.api.routes.QwenTtsAdapter", InvalidQwenAdapter)
+
+    response = client.post(
+        "/api/tts/qwen/verification",
+        json={
+            "voice_profile_ids": [voices[0]["id"], voices[1]["id"]],
+            "text": "This is a studio Qwen verification.",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "failed"
+    assert payload["error"] == "Qwen verification output audio must be a parseable WAV file."
+    assert payload["output_audio_path"].endswith("_qwen.wav")
+
+    saved_report = client.get("/api/tts/qwen/verification").json()
+    assert saved_report["status"] == "failed"
+    assert saved_report["error"] == "Qwen verification output audio must be a parseable WAV file."
 
 
 def test_qwen_verification_route_requires_two_profiles(tmp_path: Path, monkeypatch):
