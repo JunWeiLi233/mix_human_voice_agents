@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from app.core.generation import METADATA_WATERMARK_DISCLOSURE
-from app.core.storage import list_blends, list_generation_results, list_voice_profiles
+from app.core.storage import GENERATION_ROOT, list_blends, list_generation_results, list_voice_profiles
 from app.models.schemas import (
     AgentProviderVerificationReport,
     GenerationResult,
@@ -169,6 +169,11 @@ def _qwen_verification_status(report: QwenVerificationReport, output_exists: boo
         return {
             "passed": False,
             "detail": _qwen_verification_detail(report, output_exists),
+        }
+    if not _path_is_under(Path(report.output_audio_path or ""), GENERATION_ROOT):
+        return {
+            "passed": False,
+            "detail": "Qwen verification output must be stored under data/generations.",
         }
     if report.tts_backend != "qwen3_tts":
         return {
@@ -455,6 +460,12 @@ def _qwen_verification_runtime_config(report: QwenVerificationReport) -> dict[st
 
 def _same_audio_path(left: str, right: str) -> bool:
     return Path(left).resolve(strict=False) == Path(right).resolve(strict=False)
+
+
+def _path_is_under(path: Path, root: Path) -> bool:
+    resolved_path = path.resolve(strict=False)
+    resolved_root = root.resolve(strict=False)
+    return resolved_root in (resolved_path, *resolved_path.parents)
 
 
 def _details_allow_private_agent_voice(details: list[object]) -> bool:

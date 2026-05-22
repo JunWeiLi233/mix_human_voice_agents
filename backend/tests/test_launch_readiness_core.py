@@ -46,8 +46,10 @@ def test_core_launch_readiness_blocks_passed_agent_provider_report_without_provi
     assert agent_provider_check.detail == "Agent provider verification report is missing provider, model, or reply."
 
 
-def test_core_launch_readiness_blocks_passed_qwen_verification_without_text(tmp_path):
-    output_path = tmp_path / "qwen_verify.wav"
+def test_core_launch_readiness_blocks_passed_qwen_verification_without_text(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    output_path = tmp_path / "data" / "generations" / "qwen_verify.wav"
+    output_path.parent.mkdir(parents=True)
     output_path.write_bytes(b"fake-qwen-wav")
     report = QwenVerificationReport(
         status="passed",
@@ -82,6 +84,48 @@ def test_core_launch_readiness_blocks_passed_qwen_verification_without_text(tmp_
     assert status == {
         "passed": False,
         "detail": "Qwen verification report must include the synthesized verification text.",
+    }
+
+
+def test_core_launch_readiness_blocks_passed_qwen_verification_output_outside_generation_storage(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    output_path = tmp_path / "qwen_verify.wav"
+    output_path.write_bytes(b"fake-qwen-wav")
+    report = QwenVerificationReport(
+        status="passed",
+        report_path="data/qwen-runtime-verification-report.json",
+        voice_profile_ids=["voice_a", "voice_b"],
+        tts_backend="qwen3_tts",
+        blend_strategy="multi_reference_prompt",
+        source_profile_details=[
+            SourceProfileDetail(
+                voice_profile_id="voice_a",
+                display_name="Alice",
+                weight=0.5,
+                consent_confirmed_by="local_user",
+                allowed_uses=["private_agent_voice", "local_audio_export"],
+                reference_text_present=True,
+            ),
+            SourceProfileDetail(
+                voice_profile_id="voice_b",
+                display_name="Bob",
+                weight=0.5,
+                consent_confirmed_by="local_user",
+                allowed_uses=["private_agent_voice", "local_audio_export"],
+                reference_text_present=True,
+            ),
+        ],
+        output_audio_path=str(output_path),
+        text="This is a disclosed synthetic mixed voice runtime verification.",
+    )
+
+    status = _qwen_verification_status(report, output_exists=True)
+
+    assert status == {
+        "passed": False,
+        "detail": "Qwen verification output must be stored under data/generations.",
     }
 
 
