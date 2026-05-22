@@ -1,15 +1,22 @@
 import type { AgentConfig, AgentReply, GenerationResult, VoiceBlend, VoiceProfile } from "./types";
 
-export async function createBlend(): Promise<VoiceBlend> {
+export async function listVoices(): Promise<VoiceProfile[]> {
+  const response = await fetch("/api/voices");
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  return response.json();
+}
+
+export async function createBlend(voices: VoiceProfile[]): Promise<VoiceBlend> {
+  const selected = voices.slice(0, Math.max(2, voices.length));
+  const weight = selected.length > 0 ? 1 : 0;
   const response = await fetch("/api/blends", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      name: "Demo Pair",
-      profiles: [
-        { voice_profile_id: "voice_a", weight: 1 },
-        { voice_profile_id: "voice_b", weight: 1 },
-      ],
+      name: selected.map((voice) => voice.display_name).join(" + "),
+      profiles: selected.map((voice) => ({ voice_profile_id: voice.id, weight })),
       strategy: "local_development_wav",
     }),
   });

@@ -1,12 +1,12 @@
-import { useState } from "react";
-import { createBlend, generateClip, requestAgentReply } from "./api";
+import { useEffect, useState } from "react";
+import { createBlend, generateClip, listVoices, requestAgentReply } from "./api";
 import { AgentChat } from "./components/AgentChat";
 import { AgentProviderSettings } from "./components/AgentProviderSettings";
 import { BlendMixer } from "./components/BlendMixer";
 import { GenerationHistory } from "./components/GenerationHistory";
 import { ImportVoice } from "./components/ImportVoice";
 import { VoiceLibrary } from "./components/VoiceLibrary";
-import type { AgentConfig, GenerationResult, VoiceBlend } from "./types";
+import type { AgentConfig, GenerationResult, VoiceBlend, VoiceProfile } from "./types";
 import "./styles.css";
 
 export default function App() {
@@ -17,17 +17,31 @@ export default function App() {
     api_key: "",
     system_prompt: "You are a disclosed synthetic mixed-voice assistant.",
   });
+  const [voices, setVoices] = useState<VoiceProfile[]>([]);
   const [blend, setBlend] = useState<VoiceBlend | null>(null);
   const [generations, setGenerations] = useState<GenerationResult[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    void listVoices()
+      .then(setVoices)
+      .catch(() => {
+        setVoices([]);
+      });
+  }, []);
+
   async function handleCreateBlend() {
     setError(null);
     try {
-      setBlend(await createBlend());
+      setBlend(await createBlend(voices));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Blend creation failed");
     }
+  }
+
+  function handleImported(profile: VoiceProfile) {
+    setVoices((current) => [...current, profile]);
+    setBlend(null);
   }
 
   async function handleGenerate(prompt: string) {
@@ -55,13 +69,12 @@ export default function App() {
       ) : null}
       <div className="layout">
         <AgentProviderSettings value={agentConfig} onChange={setAgentConfig} />
-        <VoiceLibrary />
-        <ImportVoice />
-        <BlendMixer blend={blend} onCreateBlend={handleCreateBlend} />
+        <VoiceLibrary voices={voices} />
+        <ImportVoice onImported={handleImported} />
+        <BlendMixer blend={blend} voices={voices} onCreateBlend={handleCreateBlend} />
         <AgentChat blend={blend} onGenerate={handleGenerate} />
         <GenerationHistory generations={generations} />
       </div>
     </main>
   );
 }
-

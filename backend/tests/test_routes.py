@@ -116,3 +116,29 @@ def test_import_voice_requires_consent_fields(tmp_path: Path, monkeypatch):
     assert payload["display_name"] == "Alice"
     assert payload["consent"]["synthetic_voice_allowed"] is True
     assert Path(payload["source_audio_path"]).exists()
+
+
+def test_list_voices_returns_imported_profiles(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    sample_path = tmp_path / "sample.wav"
+    sample_path.write_bytes(b"not a real wav but enough for storage")
+
+    with sample_path.open("rb") as sample:
+        import_response = client.post(
+            "/api/voices",
+            data={
+                "speaker_display_name": "Alice",
+                "consent_type": "self_or_written_permission",
+                "allowed_uses": "private_agent_voice,local_audio_export",
+                "confirmed_by": "local_user",
+                "notes": "approved for local prototype",
+            },
+            files={"file": ("sample.wav", sample, "audio/wav")},
+        )
+
+    response = client.get("/api/voices")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert [voice["id"] for voice in payload] == [import_response.json()["id"]]
+    assert payload[0]["display_name"] == "Alice"

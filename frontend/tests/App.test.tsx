@@ -9,6 +9,7 @@ describe("App", () => {
     expect(screen.getByText("Voice Library")).toBeInTheDocument();
     expect(screen.getByText("Blend Mixer")).toBeInTheDocument();
     expect(screen.getByText("Agent Provider")).toBeInTheDocument();
+    expect(screen.getByText("No imported voices yet.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create blend from imported voices" })).toBeDisabled();
   });
 });
-

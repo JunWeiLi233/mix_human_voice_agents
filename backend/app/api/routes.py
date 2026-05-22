@@ -9,7 +9,7 @@ from app.core.blends import BlendError, create_blend
 from app.core.consent import ConsentError, create_consent_record
 from app.core.generation import generate_agent_clip
 from app.core.safety import SafetyError
-from app.core.storage import GENERATION_ROOT, ensure_storage, new_voice_profile_id, save_voice_profile
+from app.core.storage import GENERATION_ROOT, ensure_storage, list_voice_profiles, new_voice_profile_id, save_voice_profile
 from app.models.schemas import (
     AgentReply,
     AgentReplyRequest,
@@ -116,3 +116,8 @@ async def import_voice_route(
         quality=quality,
     )
     return save_voice_profile(profile, source_bytes, file.filename or "sample.wav")
+
+
+@router.get("/voices", response_model=list[VoiceProfile])
+def list_voices_route() -> list[VoiceProfile]:
+    return list_voice_profiles()

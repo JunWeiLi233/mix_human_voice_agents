@@ -36,3 +36,11 @@ def save_voice_profile(profile: VoiceProfile, source_bytes: bytes, file_name: st
         encoding="utf-8",
     )
     return updated
+
+
+def list_voice_profiles() -> list[VoiceProfile]:
+    ensure_storage()
+    profiles: list[VoiceProfile] = []
+    for profile_path in sorted(VOICE_ROOT.glob("*/profile.json")):
+        profiles.append(VoiceProfile.model_validate_json(profile_path.read_text(encoding="utf-8")))
+    return profiles
