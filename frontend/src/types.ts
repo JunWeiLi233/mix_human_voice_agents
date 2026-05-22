@@ -54,6 +54,15 @@ export type AgentReply = {
   model: string;
 };
 
+export type AgentProviderVerificationReport = {
+  status: "missing" | "passed" | "failed";
+  report_path: string;
+  provider?: AgentProviderKind | null;
+  model?: string | null;
+  reply?: string | null;
+  error?: string | null;
+};
+
 export type TtsRuntimeStatus = {
   backend: TtsBackend;
   available: boolean;

@@ -77,6 +77,55 @@ def test_qwen_verification_report_returns_saved_report(tmp_path: Path, monkeypat
     assert payload["output_audio_path"] == "data/generations/qwen_verify.wav"
 
 
+def test_agent_provider_verification_report_returns_missing_when_no_report(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    response = client.get("/api/agent/provider-verification")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "missing"
+    assert payload["report_path"] == str(Path("data") / "agent-provider-verification-report.json")
+
+
+def test_agent_provider_verification_route_persists_passed_report(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    def fake_reply_record(prompt, config):
+        return {
+            "reply": f"Provider ready: {prompt}",
+            "provider": config.provider,
+            "model": config.model,
+        }
+
+    monkeypatch.setattr("app.api.routes.generate_agent_reply_record", fake_reply_record)
+
+    response = client.post(
+        "/api/agent/provider-verification",
+        json={
+            "prompt": "Reply with one short sentence confirming this provider is connected.",
+            "config": {
+                "provider": "anthropic",
+                "model": "claude-sonnet-4-5",
+                "base_url": "https://api.anthropic.com",
+                "api_key": "sk-test",
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "passed"
+    assert payload["provider"] == "anthropic"
+    assert payload["model"] == "claude-sonnet-4-5"
+    assert payload["reply"].startswith("Provider ready:")
+    assert Path(payload["report_path"]).exists()
+
+    saved_report = client.get("/api/agent/provider-verification").json()
+    assert saved_report["status"] == "passed"
+    assert saved_report["provider"] == "anthropic"
+
+
 def test_qwen_verification_route_runs_with_selected_imported_profiles(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     sample_path = tmp_path / "sample.wav"
@@ -180,11 +229,13 @@ def test_launch_readiness_reports_blockers_when_requirements_are_missing(tmp_pat
     payload = response.json()
     assert payload["status"] == "blocked"
     assert "Import at least two consented voice profiles." in payload["blocking_reasons"]
+    assert "Test the selected agent provider successfully before launch." in payload["blocking_reasons"]
     assert "Run Qwen runtime verification successfully before launch." in payload["blocking_reasons"]
     assert {check["id"]: check["passed"] for check in payload["checks"]} == {
         "imported_voices": False,
         "saved_blend": False,
         "generated_audio": False,
+        "agent_provider": False,
         "qwen_runtime": False,
         "qwen_verification": False,
     }
@@ -231,6 +282,19 @@ def test_launch_readiness_reports_ready_after_full_qwen_verification(tmp_path: P
             "blend": blend,
         },
     ).json()
+    provider_report_path = tmp_path / "data" / "agent-provider-verification-report.json"
+    provider_report_path.write_text(
+        json.dumps(
+            {
+                "status": "passed",
+                "provider": "openai",
+                "model": "gpt-4.1-mini",
+                "reply": "Provider ready.",
+                "report_path": str(Path("data") / "agent-provider-verification-report.json"),
+            }
+        ),
+        encoding="utf-8",
+    )
     report_path = tmp_path / "data" / "qwen-runtime-verification-report.json"
     report_path.write_text(
         json.dumps(

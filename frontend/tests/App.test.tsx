@@ -430,12 +430,14 @@ describe("App", () => {
           checks: [],
         });
       }
-      if (url === "/api/agent/reply" && init?.method === "POST") {
+      if (url === "/api/agent/provider-verification" && init?.method === "POST") {
         const body = JSON.parse(init.body?.toString() ?? "{}");
         return jsonResponse({
+          status: "passed",
           reply: "Provider test reply",
           provider: body.config.provider,
           model: body.config.model,
+          report_path: "data/agent-provider-verification-report.json",
         });
       }
       return new Response("not found", { status: 404 });
@@ -449,7 +451,7 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Test provider" }));
 
     expect(await screen.findByText("Provider test reply")).toBeInTheDocument();
-    expect(requestJson(fetchMock, "/api/agent/reply")).toMatchObject({
+    expect(requestJson(fetchMock, "/api/agent/provider-verification")).toMatchObject({
       prompt: "Reply with one short sentence confirming this provider is connected.",
       config: {
         provider: "anthropic",

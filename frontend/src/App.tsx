@@ -10,6 +10,7 @@ import {
   listGenerations,
   listVoices,
   requestAgentReply,
+  runAgentProviderVerification,
   runQwenVerification,
 } from "./api";
 import { AgentChat } from "./components/AgentChat";
@@ -208,11 +209,16 @@ export default function App() {
     setAgentProviderTestReply(null);
     setAgentProviderTesting(true);
     try {
-      const reply = await requestAgentReply(
+      const report = await runAgentProviderVerification(
         agentConfig,
         "Reply with one short sentence confirming this provider is connected.",
       );
-      setAgentProviderTestReply(reply.reply);
+      if (report.status === "passed" && report.reply) {
+        setAgentProviderTestReply(report.reply);
+        void refreshLaunchReadiness();
+      } else {
+        throw new Error(report.error ?? "Agent provider test failed");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Agent provider test failed");
     } finally {

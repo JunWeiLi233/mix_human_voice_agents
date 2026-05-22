@@ -27,6 +27,7 @@ from app.core.storage import (
     save_voice_profile,
 )
 from app.models.schemas import (
+    AgentProviderVerificationReport,
     AgentReply,
     AgentReplyRequest,
     AgentTrace,
@@ -47,6 +48,7 @@ from app.tts.qwen import QwenTtsAdapter, QwenTtsNotConfigured
 
 router = APIRouter(prefix="/api")
 QWEN_VERIFICATION_REPORT_PATH = Path("data") / "qwen-runtime-verification-report.json"
+AGENT_PROVIDER_VERIFICATION_REPORT_PATH = Path("data") / "agent-provider-verification-report.json"
 
 
 class CreateBlendRequest(BaseModel):
@@ -98,12 +100,52 @@ def qwen_verification_route() -> QwenVerificationReport:
     return QwenVerificationReport.model_validate(payload)
 
 
+@router.get("/agent/provider-verification", response_model=AgentProviderVerificationReport)
+def agent_provider_verification_route() -> AgentProviderVerificationReport:
+    report_path = AGENT_PROVIDER_VERIFICATION_REPORT_PATH
+    if not report_path.exists():
+        return AgentProviderVerificationReport(
+            status="missing",
+            report_path=str(report_path),
+            error="Run the Agent Provider Test provider preflight before launch.",
+        )
+    payload = json.loads(report_path.read_text(encoding="utf-8"))
+    payload.setdefault("report_path", str(report_path))
+    return AgentProviderVerificationReport.model_validate(payload)
+
+
+@router.post("/agent/provider-verification", response_model=AgentProviderVerificationReport)
+def run_agent_provider_verification_route(request: AgentReplyRequest) -> AgentProviderVerificationReport:
+    try:
+        reply = generate_agent_reply_record(prompt=request.prompt, config=request.config)
+    except (AgentProviderError, SafetyError) as exc:
+        return _write_agent_provider_verification_report(
+            {
+                "status": "failed",
+                "provider": request.config.provider,
+                "model": request.config.model,
+                "error": str(exc),
+            }
+        )
+
+    verified_reply = AgentReply.model_validate(reply)
+    return _write_agent_provider_verification_report(
+        {
+            "status": "passed",
+            "provider": verified_reply.provider,
+            "model": verified_reply.model,
+            "reply": verified_reply.reply,
+        }
+    )
+
+
 @router.get("/launch/readiness", response_model=LaunchReadinessReport)
 def launch_readiness_route() -> LaunchReadinessReport:
     voices = list_voice_profiles()
     blends = list_blends()
     generations = list_generation_results()
     qwen_status = TtsRuntimeStatus.model_validate(QwenTtsAdapter.runtime_status())
+    agent_provider_verification = agent_provider_verification_route()
     qwen_verification = qwen_verification_route()
     qwen_output_exists = bool(
         qwen_verification.output_audio_path
@@ -128,6 +170,12 @@ def launch_readiness_route() -> LaunchReadinessReport:
             label="Generated audio",
             passed=len(generations) >= 1,
             detail=f"{len(generations)} generated clips",
+        ),
+        LaunchReadinessCheck(
+            id="agent_provider",
+            label="Agent provider",
+            passed=agent_provider_verification.status == "passed",
+            detail=_agent_provider_verification_detail(agent_provider_verification),
         ),
         LaunchReadinessCheck(
             id="qwen_runtime",
@@ -202,6 +250,23 @@ def _write_qwen_verification_report(payload: dict[str, object]) -> QwenVerificat
     return QwenVerificationReport.model_validate(payload)
 
 
+def _write_agent_provider_verification_report(payload: dict[str, object]) -> AgentProviderVerificationReport:
+    report_path = AGENT_PROVIDER_VERIFICATION_REPORT_PATH
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    payload["report_path"] = str(report_path)
+    report = AgentProviderVerificationReport.model_validate(payload)
+    report_path.write_text(json.dumps(report.model_dump(mode="json"), indent=2), encoding="utf-8")
+    return report
+
+
+def _agent_provider_verification_detail(report: AgentProviderVerificationReport) -> str:
+    if report.status == "passed":
+        return f"Provider verified: {report.provider} / {report.model}"
+    if report.error:
+        return report.error
+    return "No passed agent provider verification report."
+
+
 def _qwen_verification_detail(report: QwenVerificationReport, output_exists: bool) -> str:
     if report.status == "passed" and output_exists:
         return f"Verification passed: {report.output_audio_path}"
@@ -217,6 +282,7 @@ def _launch_blocking_reasons(checks: list[LaunchReadinessCheck]) -> list[str]:
         "imported_voices": "Import at least two consented voice profiles.",
         "saved_blend": "Create and save a mixed voice blend.",
         "generated_audio": "Generate at least one disclosed synthetic voice clip.",
+        "agent_provider": "Test the selected agent provider successfully before launch.",
         "qwen_runtime": "Install and load the Qwen3-TTS runtime before launch.",
         "qwen_verification": "Run Qwen runtime verification successfully before launch.",
     }

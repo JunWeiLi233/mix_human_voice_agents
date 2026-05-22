@@ -1,5 +1,6 @@
 import type {
   AgentConfig,
+  AgentProviderVerificationReport,
   AgentReply,
   BlendDraftProfile,
   DeleteVoiceResult,
@@ -103,6 +104,21 @@ export async function createBlend(profiles: BlendDraftProfile[], ttsBackend: Tts
 
 export async function requestAgentReply(config: AgentConfig, prompt: string): Promise<AgentReply> {
   const response = await fetch("/api/agent/reply", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ config, prompt }),
+  });
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  return response.json();
+}
+
+export async function runAgentProviderVerification(
+  config: AgentConfig,
+  prompt: string,
+): Promise<AgentProviderVerificationReport> {
+  const response = await fetch("/api/agent/provider-verification", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ config, prompt }),

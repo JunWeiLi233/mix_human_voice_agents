@@ -146,3 +146,13 @@ class AgentReply(BaseModel):
     reply: str
     provider: AgentProviderKind
     model: str
+
+
+class AgentProviderVerificationReport(BaseModel):
+    status: VerificationStatus
+    report_path: str
+    provider: AgentProviderKind | None = None
+    model: str | None = None
+    reply: str | None = None
+    error: str | None = None
+    checked_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
