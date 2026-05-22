@@ -330,10 +330,12 @@ def _qwen_mixed_generation_status(
             continue
         if len(generation.source_profile_details) < 2:
             continue
-        if {detail.voice_profile_id for detail in generation.source_profile_details} != set(generation.source_profile_ids):
+        if sorted(detail.voice_profile_id for detail in generation.source_profile_details) != sorted(
+            generation.source_profile_ids
+        ):
             return {
                 "passed": False,
-                "detail": "Qwen mixed voice source details do not match generated source ids.",
+                "detail": "Qwen mixed voice source details do not match each generated source id exactly once.",
             }
         if (
             qwen_verification.status == "passed"
