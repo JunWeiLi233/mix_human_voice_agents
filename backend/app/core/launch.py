@@ -339,11 +339,11 @@ def _qwen_mixed_generation_status(
             }
         if (
             qwen_verification.status == "passed"
-            and set(generation.source_profile_ids) != set(qwen_verification.voice_profile_ids)
+            and sorted(generation.source_profile_ids) != sorted(qwen_verification.voice_profile_ids)
         ):
             return {
                 "passed": False,
-                "detail": "Qwen mixed voice generation does not match the verified Qwen voice ids.",
+                "detail": "Qwen mixed voice generation does not match each verified Qwen voice id exactly once.",
             }
         if (
             qwen_verification.status == "passed"
