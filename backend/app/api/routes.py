@@ -153,6 +153,7 @@ def launch_readiness_route() -> LaunchReadinessReport:
         qwen_verification.output_audio_path
         and Path(qwen_verification.output_audio_path).exists()
     )
+    qwen_verification_status = _qwen_verification_status(qwen_verification, qwen_output_exists)
     research_review = _research_review_status()
     qwen_generation = _qwen_mixed_generation_status(generations)
 
@@ -196,8 +197,8 @@ def launch_readiness_route() -> LaunchReadinessReport:
         LaunchReadinessCheck(
             id="qwen_verification",
             label="Qwen verification",
-            passed=qwen_verification.status == "passed" and qwen_output_exists,
-            detail=_qwen_verification_detail(qwen_verification, qwen_output_exists),
+            passed=qwen_verification_status["passed"],
+            detail=qwen_verification_status["detail"],
         ),
     ]
     blocking_reasons = _launch_blocking_reasons(checks)
@@ -289,6 +290,33 @@ def _qwen_verification_detail(report: QwenVerificationReport, output_exists: boo
     if report.error:
         return report.error
     return "No passed Qwen runtime verification report."
+
+
+def _qwen_verification_status(report: QwenVerificationReport, output_exists: bool) -> dict[str, object]:
+    if report.status != "passed":
+        return {
+            "passed": False,
+            "detail": _qwen_verification_detail(report, output_exists),
+        }
+    if not output_exists:
+        return {
+            "passed": False,
+            "detail": _qwen_verification_detail(report, output_exists),
+        }
+    if len(report.source_profile_details) < 2:
+        return {
+            "passed": False,
+            "detail": "Qwen verification report lacks imported source profile details.",
+        }
+    if not all(detail.reference_text_present for detail in report.source_profile_details):
+        return {
+            "passed": False,
+            "detail": "Qwen verification report includes a source profile without reference text.",
+        }
+    return {
+        "passed": True,
+        "detail": _qwen_verification_detail(report, output_exists),
+    }
 
 
 def _research_review_status() -> dict[str, object]:
