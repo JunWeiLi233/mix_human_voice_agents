@@ -441,6 +441,11 @@ def _qwen_mixed_generation_status(
                 "passed": False,
                 "detail": "Qwen mixed voice metadata must be stored under data/generations.",
             }
+        if not Path(generation.metadata_path).exists():
+            return {
+                "passed": False,
+                "detail": "Qwen mixed voice metadata is missing.",
+            }
         if not Path(generation.audio_path).exists():
             continue
         return {
