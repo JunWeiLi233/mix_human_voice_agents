@@ -1087,6 +1087,50 @@ def test_generate_endpoint_rejects_qwen_profile_without_reference_text_before_lo
     assert response.json()["detail"] == "Voice profile voice_a must include reference text for Qwen synthesis."
 
 
+def test_generate_endpoint_rejects_qwen_profile_with_quality_warnings_before_loading_runtime(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+
+    def fail_if_qwen_loads(**kwargs):
+        raise AssertionError("quality warnings should be rejected before loading Qwen")
+
+    monkeypatch.setattr("app.api.routes.QwenTtsAdapter.from_pretrained", fail_if_qwen_loads)
+    monkeypatch.setattr(
+        "app.api.routes.get_voice_profiles_by_ids",
+        lambda profile_ids: {
+            "voice_a": voice_profile(
+                "voice_a",
+                "Alice",
+                quality_warnings=["Reference audio appears clipped; record a cleaner sample."],
+            ),
+            "voice_b": voice_profile("voice_b", "Bob"),
+        },
+    )
+
+    response = client.post(
+        "/api/generate",
+        json={
+            "prompt": "Say hello as a disclosed synthetic assistant.",
+            "agent_reply": "Hello from a synthetic mixed voice.",
+            "tts_backend": "qwen3_tts",
+            "blend": {
+                "id": "blend_warning",
+                "name": "Warning",
+                "strategy": "multi_reference_prompt",
+                "synthetic_label": "synthetic mixed voice",
+                "profiles": [
+                    {"voice_profile_id": "voice_a", "weight": 0.5},
+                    {"voice_profile_id": "voice_b", "weight": 0.5},
+                ],
+            },
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Voice profile voice_a must not have audio quality warnings for Qwen synthesis."
+
+
 def test_list_generations_returns_persisted_metadata(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     blend_response = client.post(
@@ -1569,10 +1613,12 @@ def voice_profile(
     display_name: str,
     synthetic_voice_allowed: bool = True,
     reference_text: str | None = None,
+    quality_warnings: list[str] | None = None,
 ) -> VoiceProfile:
     resolved_reference_text = (
         f"{display_name} reads a clean reference sentence." if reference_text is None else reference_text
     )
+    resolved_quality_warnings = [] if quality_warnings is None else quality_warnings
     return VoiceProfile.model_validate(
         {
             "id": profile_id,
@@ -1596,7 +1642,7 @@ def voice_profile(
                 "duration_seconds": 5,
                 "sample_rate_hz": 16000,
                 "channel_count": 1,
-                "warnings": [],
+                "warnings": resolved_quality_warnings,
             },
         }
     )

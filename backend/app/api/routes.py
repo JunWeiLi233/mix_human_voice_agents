@@ -295,6 +295,11 @@ def _validate_qwen_voice_profiles(voice_profiles: dict[str, VoiceProfile]) -> No
                 status_code=400,
                 detail=f"Voice profile {profile.id} must include reference text for Qwen synthesis.",
             )
+        if profile.quality.warnings:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Voice profile {profile.id} must not have audio quality warnings for Qwen synthesis.",
+            )
 
 
 def _qwen_runtime_config_from_request(request: GenerateRequest) -> dict[str, str | None] | None:
