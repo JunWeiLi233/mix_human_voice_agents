@@ -5,7 +5,8 @@
 - Backend tests pass with `cd backend && .\.venv\Scripts\python -m pytest -v`.
 - Frontend tests pass with `cd frontend && npm test`.
 - Frontend production build passes with `cd frontend && npm run build`.
-- Manual import of at least two consented voice samples succeeds.
+- Manual import of at least two valid 5-30 second consented WAV samples succeeds.
+- Malformed, non-WAV, shorter-than-5-second, and longer-than-30-second samples are rejected.
 - Blend creation with two profiles succeeds and weights normalize to 100%.
 - Agent provider settings accept either an OpenAI-compatible API configuration or an Ollama-compatible local endpoint.
 - Agent reply generation succeeds through the selected provider before TTS synthesis.

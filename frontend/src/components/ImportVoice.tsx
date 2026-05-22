@@ -10,13 +10,17 @@ type Props = {
 export function ImportVoice({ onImported }: Props) {
   const [displayName, setDisplayName] = useState("Alice");
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleFile(file: File | undefined) {
     if (!file) return;
     setBusy(true);
+    setError(null);
     try {
       const profile = await importVoice(file, displayName);
       onImported?.(profile);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Voice import failed");
     } finally {
       setBusy(false);
     }
@@ -40,7 +44,12 @@ export function ImportVoice({ onImported }: Props) {
           onChange={(event) => void handleFile(event.target.files?.[0])}
         />
       </label>
-      <p>Every imported sample requires self or written permission before blending.</p>
+      {error ? (
+        <p className="inline-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <p>Import a 5-30 second WAV sample with self or written permission before blending.</p>
     </section>
   );
 }

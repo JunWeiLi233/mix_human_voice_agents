@@ -4,7 +4,12 @@ import wave
 from app.models.schemas import AudioQuality
 
 
-SUPPORTED_EXTENSIONS = {".wav", ".mp3", ".m4a", ".flac", ".ogg"}
+MIN_REFERENCE_SECONDS = 5
+MAX_REFERENCE_SECONDS = 30
+
+
+class AudioQualityError(ValueError):
+    pass
 
 
 def analyze_audio_sample(path: Path) -> AudioQuality:
@@ -13,26 +18,27 @@ def analyze_audio_sample(path: Path) -> AudioQuality:
 
     suffix = path.suffix.lower()
     warnings: list[str] = []
-    if suffix not in SUPPORTED_EXTENSIONS:
-        warnings.append(f"Unsupported extension {suffix}; convert to wav before synthesis.")
+    if suffix != ".wav":
+        raise AudioQualityError("Reference audio must be a WAV file.")
 
     duration_seconds: float | None = None
-    if suffix == ".wav":
-        try:
-            with wave.open(str(path), "rb") as wav_file:
-                frames = wav_file.getnframes()
-                rate = wav_file.getframerate()
-                duration_seconds = frames / float(rate) if rate else None
-        except wave.Error:
-            warnings.append("WAV header could not be parsed.")
+    try:
+        with wave.open(str(path), "rb") as wav_file:
+            frames = wav_file.getnframes()
+            rate = wav_file.getframerate()
+            duration_seconds = frames / float(rate) if rate else None
+    except wave.Error as exc:
+        raise AudioQualityError("WAV header could not be parsed.") from exc
 
     size_bytes = path.stat().st_size
     if size_bytes == 0:
-        warnings.append("Audio file is empty.")
-    if duration_seconds is not None and duration_seconds < 3:
-        warnings.append("Reference audio is shorter than 3 seconds.")
-    if duration_seconds is not None and duration_seconds > 30:
-        warnings.append("Reference audio is longer than 30 seconds.")
+        raise AudioQualityError("Audio file is empty.")
+    if duration_seconds is None:
+        raise AudioQualityError("WAV sample rate could not be read.")
+    if duration_seconds < MIN_REFERENCE_SECONDS:
+        raise AudioQualityError(f"Reference audio must be at least {MIN_REFERENCE_SECONDS} seconds.")
+    if duration_seconds > MAX_REFERENCE_SECONDS:
+        raise AudioQualityError(f"Reference audio must be {MAX_REFERENCE_SECONDS} seconds or shorter.")
 
     return AudioQuality(
         file_name=path.name,
@@ -41,4 +47,3 @@ def analyze_audio_sample(path: Path) -> AudioQuality:
         duration_seconds=duration_seconds,
         warnings=warnings,
     )
-

@@ -4,7 +4,7 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from app.core.agent import AgentProviderError, generate_agent_reply_record
-from app.core.audio import analyze_audio_sample
+from app.core.audio import AudioQualityError, analyze_audio_sample
 from app.core.blends import BlendError, create_blend
 from app.core.consent import ConsentError, create_consent_record
 from app.core.generation import generate_agent_clip
@@ -132,7 +132,10 @@ async def import_voice_route(
     temp_dir.mkdir(parents=True, exist_ok=True)
     temp_path = temp_dir / (file.filename or "sample.wav")
     temp_path.write_bytes(source_bytes)
-    quality = analyze_audio_sample(temp_path)
+    try:
+        quality = analyze_audio_sample(temp_path)
+    except AudioQualityError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     profile = VoiceProfile(
         id=voice_id,

@@ -136,6 +136,10 @@ input {
   margin-bottom: 16px;
 }
 
+.inline-error {
+  color: #812828;
+}
+
 @media (max-width: 820px) {
   main {
     padding: 20px;

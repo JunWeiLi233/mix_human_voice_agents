@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 from pathlib import Path
+import wave
 
 from app.main import app
 
@@ -87,7 +88,7 @@ def test_generate_endpoint_returns_audio_metadata(tmp_path: Path, monkeypatch):
 def test_generate_endpoint_can_use_qwen_with_imported_profiles(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     sample_path = tmp_path / "sample.wav"
-    sample_path.write_bytes(b"not a real wav but enough for storage")
+    write_reference_wav(sample_path)
     voices = []
 
     for name in ("Alice", "Bob"):
@@ -183,7 +184,7 @@ def test_agent_reply_route_accepts_local_llm_config(monkeypatch):
 def test_import_voice_requires_consent_fields(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     sample_path = tmp_path / "sample.wav"
-    sample_path.write_bytes(b"not a real wav but enough for storage")
+    write_reference_wav(sample_path)
 
     with sample_path.open("rb") as sample:
         response = client.post(
@@ -203,12 +204,35 @@ def test_import_voice_requires_consent_fields(tmp_path: Path, monkeypatch):
     assert payload["display_name"] == "Alice"
     assert payload["consent"]["synthetic_voice_allowed"] is True
     assert Path(payload["source_audio_path"]).exists()
+    assert payload["quality"]["duration_seconds"] == 5
+
+
+def test_import_voice_rejects_invalid_wav(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    sample_path = tmp_path / "sample.wav"
+    sample_path.write_bytes(b"not a real wav")
+
+    with sample_path.open("rb") as sample:
+        response = client.post(
+            "/api/voices",
+            data={
+                "speaker_display_name": "Alice",
+                "consent_type": "self_or_written_permission",
+                "allowed_uses": "private_agent_voice,local_audio_export",
+                "confirmed_by": "local_user",
+                "notes": "approved for local prototype",
+            },
+            files={"file": ("sample.wav", sample, "audio/wav")},
+        )
+
+    assert response.status_code == 400
+    assert "WAV header" in response.json()["detail"]
 
 
 def test_list_voices_returns_imported_profiles(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     sample_path = tmp_path / "sample.wav"
-    sample_path.write_bytes(b"not a real wav but enough for storage")
+    write_reference_wav(sample_path)
 
     with sample_path.open("rb") as sample:
         import_response = client.post(
@@ -229,3 +253,12 @@ def test_list_voices_returns_imported_profiles(tmp_path: Path, monkeypatch):
     payload = response.json()
     assert [voice["id"] for voice in payload] == [import_response.json()["id"]]
     assert payload[0]["display_name"] == "Alice"
+
+
+def write_reference_wav(path: Path, duration_seconds: int = 5, sample_rate: int = 16000) -> None:
+    frames = b"\x00\x00" * sample_rate * duration_seconds
+    with wave.open(str(path), "wb") as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(sample_rate)
+        wav_file.writeframes(frames)
