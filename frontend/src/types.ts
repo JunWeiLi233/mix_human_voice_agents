@@ -46,6 +46,7 @@ export type GenerationResult = {
   agent_trace?: {
     provider: AgentProviderKind;
     model: string;
+    base_url?: string | null;
   } | null;
 };
 
@@ -63,6 +64,7 @@ export type AgentReply = {
   reply: string;
   provider: AgentProviderKind;
   model: string;
+  base_url?: string | null;
 };
 
 export type AgentProviderVerificationReport = {
@@ -70,6 +72,7 @@ export type AgentProviderVerificationReport = {
   report_path: string;
   provider?: AgentProviderKind | null;
   model?: string | null;
+  base_url?: string | null;
   reply?: string | null;
   error?: string | null;
 };

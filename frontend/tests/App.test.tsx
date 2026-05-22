@@ -299,6 +299,7 @@ describe("App", () => {
           reply: `API reply to ${body.prompt}`,
           provider: body.config.provider,
           model: body.config.model,
+          base_url: body.config.base_url,
         });
       }
 
@@ -489,6 +490,7 @@ describe("App", () => {
       agent_trace: {
         provider: "openai",
         model: "custom-voice-agent-model",
+        base_url: "https://llm.example.test/v1",
       },
       tts_backend: "qwen3_tts",
       qwen_runtime_config: {

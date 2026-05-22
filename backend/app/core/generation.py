@@ -53,7 +53,7 @@ def generate_agent_clip(
         ),
     )
     metadata_path.write_text(
-        json.dumps(result.model_dump(mode="json"), indent=2),
+        json.dumps(result.model_dump(mode="json", exclude_none=True), indent=2),
         encoding="utf-8",
     )
     return result

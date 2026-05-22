@@ -89,6 +89,7 @@ class MetadataWatermark(BaseModel):
 class AgentTrace(BaseModel):
     provider: AgentProviderKind
     model: str
+    base_url: str | None = None
 
 
 class GenerationResult(BaseModel):
@@ -162,6 +163,7 @@ class AgentReply(BaseModel):
     reply: str
     provider: AgentProviderKind
     model: str
+    base_url: str | None = None
 
 
 class AgentProviderVerificationReport(BaseModel):
@@ -169,6 +171,7 @@ class AgentProviderVerificationReport(BaseModel):
     report_path: str
     provider: AgentProviderKind | None = None
     model: str | None = None
+    base_url: str | None = None
     reply: str | None = None
     error: str | None = None
     checked_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

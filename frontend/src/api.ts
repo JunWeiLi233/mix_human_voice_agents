@@ -154,6 +154,7 @@ export async function generateClip(
       agent_trace: {
         provider: agentReply.provider,
         model: agentReply.model,
+        base_url: agentReply.base_url ?? null,
       },
       blend,
       tts_backend: ttsBackend,

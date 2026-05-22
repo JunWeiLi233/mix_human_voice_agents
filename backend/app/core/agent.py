@@ -125,4 +125,4 @@ def generate_agent_reply(
 
 def generate_agent_reply_record(prompt: str, config: AgentConfig) -> AgentReply:
     reply = generate_agent_reply(prompt=prompt, config=config)
-    return AgentReply(reply=reply, provider=config.provider, model=config.model)
+    return AgentReply(reply=reply, provider=config.provider, model=config.model, base_url=config.base_url.rstrip("/"))

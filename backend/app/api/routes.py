@@ -120,6 +120,7 @@ def run_agent_provider_verification_route(request: AgentReplyRequest) -> AgentPr
                 "status": "failed",
                 "provider": request.config.provider,
                 "model": request.config.model,
+                "base_url": request.config.base_url.rstrip("/"),
                 "error": str(exc),
             }
         )
@@ -130,6 +131,7 @@ def run_agent_provider_verification_route(request: AgentReplyRequest) -> AgentPr
             "status": "passed",
             "provider": verified_reply.provider,
             "model": verified_reply.model,
+            "base_url": request.config.base_url.rstrip("/"),
             "reply": verified_reply.reply,
         }
     )
@@ -290,6 +292,11 @@ def _validate_qwen_agent_provider_preflight(agent_trace: AgentTrace | None) -> N
     if report.status != "passed":
         raise HTTPException(status_code=400, detail="Agent provider preflight must pass before Qwen generation.")
     if report.provider != agent_trace.provider or report.model != agent_trace.model:
+        raise HTTPException(
+            status_code=400,
+            detail="Qwen generation agent trace must match the passed agent provider preflight.",
+        )
+    if report.base_url and report.base_url.rstrip("/") != (agent_trace.base_url or "").rstrip("/"):
         raise HTTPException(
             status_code=400,
             detail="Qwen generation agent trace must match the passed agent provider preflight.",

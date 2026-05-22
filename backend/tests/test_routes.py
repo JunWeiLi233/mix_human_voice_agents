@@ -119,12 +119,14 @@ def test_agent_provider_verification_route_persists_passed_report(tmp_path: Path
     assert payload["status"] == "passed"
     assert payload["provider"] == "anthropic"
     assert payload["model"] == "claude-sonnet-4-5"
+    assert payload["base_url"] == "https://api.anthropic.com"
     assert payload["reply"].startswith("Provider ready:")
     assert Path(payload["report_path"]).exists()
 
     saved_report = client.get("/api/agent/provider-verification").json()
     assert saved_report["status"] == "passed"
     assert saved_report["provider"] == "anthropic"
+    assert saved_report["base_url"] == "https://api.anthropic.com"
 
 
 def test_qwen_verification_route_runs_with_selected_imported_profiles(tmp_path: Path, monkeypatch):
@@ -1012,6 +1014,53 @@ def test_generate_endpoint_rejects_qwen_agent_trace_that_differs_from_provider_p
     assert response.json()["detail"] == "Qwen generation agent trace must match the passed agent provider preflight."
 
 
+def test_generate_endpoint_rejects_qwen_agent_trace_with_mismatched_provider_base_url(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    write_agent_provider_verification_report(
+        provider="openai_compatible",
+        model="custom-voice-agent-model",
+        base_url="https://llm.example.test/v1",
+    )
+
+    def fail_if_profiles_load(profile_ids):
+        raise AssertionError("mismatched provider endpoint should be rejected before loading voice profiles")
+
+    def fail_if_qwen_loads(**kwargs):
+        raise AssertionError("mismatched provider endpoint should be rejected before loading Qwen")
+
+    monkeypatch.setattr("app.api.routes.get_voice_profiles_by_ids", fail_if_profiles_load)
+    monkeypatch.setattr("app.api.routes.QwenTtsAdapter.from_pretrained", fail_if_qwen_loads)
+
+    response = client.post(
+        "/api/generate",
+        json={
+            "prompt": "Say hello as a disclosed synthetic assistant.",
+            "agent_reply": "Hello from a synthetic mixed voice.",
+            "tts_backend": "qwen3_tts",
+            "agent_trace": {
+                "provider": "openai_compatible",
+                "model": "custom-voice-agent-model",
+                "base_url": "http://127.0.0.1:11434",
+            },
+            "blend": {
+                "id": "blend_mismatched_provider_endpoint",
+                "name": "Mismatched provider endpoint",
+                "strategy": "multi_reference_prompt",
+                "synthetic_label": "synthetic mixed voice",
+                "profiles": [
+                    {"voice_profile_id": "voice_a", "weight": 0.5},
+                    {"voice_profile_id": "voice_b", "weight": 0.5},
+                ],
+            },
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Qwen generation agent trace must match the passed agent provider preflight."
+
+
 def test_generate_endpoint_rejects_qwen_without_runtime_verification_before_loading_profiles(
     tmp_path: Path, monkeypatch
 ):
@@ -1793,6 +1842,7 @@ def test_delete_voice_removes_profile_and_dependent_blends(tmp_path: Path, monke
 def write_agent_provider_verification_report(
     provider: str = "openai",
     model: str = "gpt-4.1-mini",
+    base_url: str | None = None,
 ) -> None:
     report_path = Path("data") / "agent-provider-verification-report.json"
     report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1802,6 +1852,7 @@ def write_agent_provider_verification_report(
                 "status": "passed",
                 "provider": provider,
                 "model": model,
+                "base_url": base_url,
                 "reply": "Provider ready.",
                 "report_path": str(report_path),
             }
