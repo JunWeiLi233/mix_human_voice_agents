@@ -59,6 +59,7 @@ def evaluate_launch_readiness() -> LaunchReadinessReport:
     )
     qwen_verification_status = _qwen_verification_status(qwen_verification, qwen_output_exists)
     qwen_runtime = _qwen_runtime_status(qwen_status, qwen_verification)
+    saved_blend = _saved_blend_status(blends, qwen_verification)
     research_review = _research_review_status()
     qwen_generation = _qwen_mixed_generation_status(
         generations,
@@ -82,8 +83,8 @@ def evaluate_launch_readiness() -> LaunchReadinessReport:
         LaunchReadinessCheck(
             id="saved_blend",
             label="Saved blend",
-            passed=len(blends) >= 1,
-            detail=f"{len(blends)} saved blends",
+            passed=saved_blend["passed"],
+            detail=saved_blend["detail"],
         ),
         LaunchReadinessCheck(
             id="generated_audio",
@@ -195,6 +196,36 @@ def _qwen_runtime_status(status: TtsRuntimeStatus, verification: QwenVerificatio
     return {
         "passed": True,
         "detail": status.message,
+    }
+
+
+def _saved_blend_status(blends: list[object], verification: QwenVerificationReport) -> dict[str, object]:
+    if not blends:
+        return {
+            "passed": False,
+            "detail": "0 saved blends",
+        }
+    if verification.status != "passed" or not verification.voice_profile_ids:
+        return {
+            "passed": True,
+            "detail": f"{len(blends)} saved blends",
+        }
+
+    verified_ids = set(verification.voice_profile_ids)
+    for blend in blends:
+        if not hasattr(blend, "profiles") or not hasattr(blend, "strategy"):
+            continue
+        if blend.strategy != "multi_reference_prompt":
+            continue
+        if {profile.voice_profile_id for profile in blend.profiles} == verified_ids:
+            return {
+                "passed": True,
+                "detail": f"Saved Qwen blend matches verified voices: {blend.id}",
+            }
+
+    return {
+        "passed": False,
+        "detail": "No saved multi-reference blend matches verified Qwen voice ids.",
     }
 
 

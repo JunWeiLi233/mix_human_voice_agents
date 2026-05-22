@@ -1,5 +1,5 @@
 from app.core.launch import evaluate_launch_readiness
-from app.models.schemas import AgentTrace, GenerationResult, SourceProfileDetail
+from app.models.schemas import AgentTrace, BlendProfile, GenerationResult, SourceProfileDetail, VoiceBlend
 
 
 def test_core_launch_readiness_evaluator_reports_missing_requirements(tmp_path, monkeypatch):
@@ -903,3 +903,122 @@ def test_core_launch_readiness_blocks_when_loaded_qwen_model_differs_from_verifi
         "Loaded Qwen model Qwen/Qwen3-TTS-12Hz-0.6B-Base does not match verified model "
         "Qwen/Qwen3-TTS-12Hz-1.7B-Base."
     )
+
+
+def test_core_launch_readiness_blocks_when_saved_blend_does_not_match_verified_qwen_voices(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    audio_path = tmp_path / "data" / "generations" / "mixed.wav"
+    audio_path.parent.mkdir(parents=True)
+    audio_path.write_bytes(b"fake-qwen-wav")
+    research_review_path = tmp_path / "docs" / "research-review.md"
+    research_review_path.parent.mkdir(parents=True)
+    research_review_path.write_text(
+        "# Mixed Voice Agent Research Review\n\n"
+        "## Sources Reviewed\n\n"
+        "- Qwen3-TTS\n",
+        encoding="utf-8",
+    )
+    source_details = [
+        SourceProfileDetail(
+            voice_profile_id="voice_a",
+            display_name="Alice",
+            weight=0.5,
+            consent_confirmed_by="local_user",
+            allowed_uses=["private_agent_voice", "local_audio_export"],
+            reference_text_present=True,
+        ),
+        SourceProfileDetail(
+            voice_profile_id="voice_b",
+            display_name="Bob",
+            weight=0.5,
+            consent_confirmed_by="local_user",
+            allowed_uses=["private_agent_voice", "local_audio_export"],
+            reference_text_present=True,
+        ),
+    ]
+    (tmp_path / "data" / "agent-provider-verification-report.json").write_text(
+        """
+        {
+          "status": "passed",
+          "provider": "openai",
+          "model": "gpt-4.1-mini",
+          "reply": "Provider ready.",
+          "report_path": "data/agent-provider-verification-report.json"
+        }
+        """,
+        encoding="utf-8",
+    )
+    (tmp_path / "data" / "qwen-runtime-verification-report.json").write_text(
+        """
+        {
+          "status": "passed",
+          "voice_profile_ids": ["voice_a", "voice_b"],
+          "source_profile_details": [
+            {
+              "voice_profile_id": "voice_a",
+              "display_name": "Alice",
+              "weight": 0.5,
+              "consent_confirmed_by": "local_user",
+              "allowed_uses": ["private_agent_voice", "local_audio_export"],
+              "reference_text_present": true
+            },
+            {
+              "voice_profile_id": "voice_b",
+              "display_name": "Bob",
+              "weight": 0.5,
+              "consent_confirmed_by": "local_user",
+              "allowed_uses": ["private_agent_voice", "local_audio_export"],
+              "reference_text_present": true
+            }
+          ],
+          "tts_backend": "qwen3_tts",
+          "blend_strategy": "multi_reference_prompt",
+          "output_audio_path": "data/generations/mixed.wav",
+          "text": "Launch readiness verification."
+        }
+        """,
+        encoding="utf-8",
+    )
+    unrelated_blend = VoiceBlend(
+        name="Unrelated blend",
+        profiles=[
+            BlendProfile(voice_profile_id="voice_c", weight=0.5),
+            BlendProfile(voice_profile_id="voice_d", weight=0.5),
+        ],
+        strategy="multi_reference_prompt",
+    )
+    monkeypatch.setattr("app.core.launch.list_voice_profiles", lambda: [object(), object()])
+    monkeypatch.setattr("app.core.launch.list_blends", lambda: [unrelated_blend])
+    monkeypatch.setattr(
+        "app.core.launch.list_generation_results",
+        lambda: [
+            GenerationResult(
+                audio_path=str(audio_path),
+                metadata_path=str(tmp_path / "data" / "generations" / "mixed.json"),
+                synthetic_label="synthetic mixed voice",
+                source_profile_ids=["voice_a", "voice_b"],
+                source_profile_details=source_details,
+                blend_strategy="multi_reference_prompt",
+                tts_backend="qwen3_tts",
+                agent_trace=AgentTrace(provider="openai", model="gpt-4.1-mini"),
+            )
+        ],
+    )
+    monkeypatch.setattr(
+        "app.core.launch.QwenTtsAdapter.runtime_status",
+        lambda: {
+            "backend": "qwen3_tts",
+            "available": True,
+            "model_id": "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+            "message": "qwen-tts package is importable.",
+        },
+    )
+
+    report = evaluate_launch_readiness()
+
+    assert report.status == "blocked"
+    saved_blend_check = next(check for check in report.checks if check.id == "saved_blend")
+    assert saved_blend_check.passed is False
+    assert saved_blend_check.detail == "No saved multi-reference blend matches verified Qwen voice ids."
