@@ -498,6 +498,15 @@ def _generation_metadata_status(generation: GenerationResult) -> dict[str, objec
         metadata.id != generation.id
         or not _same_audio_path(metadata.audio_path, generation.audio_path)
         or not _same_audio_path(metadata.metadata_path, generation.metadata_path)
+        or metadata.source_profile_ids != generation.source_profile_ids
+        or metadata.source_profile_details != generation.source_profile_details
+        or metadata.blend_strategy != generation.blend_strategy
+        or metadata.tts_backend != generation.tts_backend
+        or metadata.prompt != generation.prompt
+        or metadata.agent_reply != generation.agent_reply
+        or metadata.synthetic_label != generation.synthetic_label
+        or metadata.watermark != generation.watermark
+        or metadata.agent_trace != generation.agent_trace
     ):
         return {
             "passed": False,
