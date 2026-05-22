@@ -38,12 +38,17 @@ export async function requestAgentReply(config: AgentConfig, prompt: string): Pr
   return response.json();
 }
 
-export async function generateClip(blend: VoiceBlend, agentReply: string, ttsBackend: TtsBackend): Promise<GenerationResult> {
+export async function generateClip(
+  blend: VoiceBlend,
+  agentReply: string,
+  ttsBackend: TtsBackend,
+  prompt: string,
+): Promise<GenerationResult> {
   const response = await fetch("/api/generate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      prompt: "Generate a disclosed synthetic assistant reply.",
+      prompt,
       agent_reply: agentReply,
       blend,
       tts_backend: ttsBackend,

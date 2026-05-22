@@ -1,10 +1,18 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import App from "../src/App";
 
 describe("App", () => {
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
   it("renders the mixed voice studio", () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify([]), { status: 200 }));
+
     render(<App />);
+
     expect(screen.getByText("Mixed Voice Agent Studio")).toBeInTheDocument();
     expect(screen.getByText("Voice Library")).toBeInTheDocument();
     expect(screen.getByText("Blend Mixer")).toBeInTheDocument();
@@ -14,4 +22,145 @@ describe("App", () => {
     expect(screen.getByText("No imported voices yet.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Create blend from imported voices" })).toBeDisabled();
   });
+
+  it("lets the user configure an API model, import voices, blend them, and generate with Qwen", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = input.toString();
+
+      if (url === "/api/voices" && !init) {
+        return jsonResponse([]);
+      }
+
+      if (url === "/api/voices" && init?.method === "POST") {
+        const form = init.body as FormData;
+        const displayName = form.get("speaker_display_name")?.toString() ?? "Imported";
+        return jsonResponse({
+          id: `voice_${displayName.toLowerCase()}`,
+          display_name: displayName,
+          consent: {
+            speaker_display_name: displayName,
+            consent_type: "self_or_written_permission",
+            allowed_uses: ["private_agent_voice", "local_audio_export"],
+            confirmed_by: "local_user",
+            synthetic_voice_allowed: true,
+            notes: "Confirmed in local prototype UI.",
+          },
+          source_audio_path: `data/voices/${displayName}/source.wav`,
+          cleaned_audio_path: `data/voices/${displayName}/source.wav`,
+          quality: { duration_seconds: 8, sample_rate_hz: 24000, channel_count: 1, warnings: [] },
+        });
+      }
+
+      if (url === "/api/blends") {
+        const body = JSON.parse(init?.body?.toString() ?? "{}");
+        return jsonResponse({
+          id: "blend_1",
+          name: body.name,
+          strategy: body.strategy,
+          profiles: body.profiles,
+          synthetic_label: "synthetic mixed voice",
+        });
+      }
+
+      if (url === "/api/agent/reply") {
+        const body = JSON.parse(init?.body?.toString() ?? "{}");
+        return jsonResponse({
+          reply: `API reply to ${body.prompt}`,
+          provider: body.config.provider,
+          model: body.config.model,
+        });
+      }
+
+      if (url === "/api/generate") {
+        const body = JSON.parse(init?.body?.toString() ?? "{}");
+        return jsonResponse({
+          id: "generation_1",
+          prompt: body.prompt,
+          agent_reply: body.agent_reply,
+          blend_id: body.blend.id,
+          audio_path: "data/generations/generation_1.wav",
+          metadata_path: "data/generations/generation_1.json",
+          source_profile_ids: body.blend.profiles.map((profile: { voice_profile_id: string }) => profile.voice_profile_id),
+          synthetic_label: body.blend.synthetic_label,
+          tts_backend: body.tts_backend,
+        });
+      }
+
+      return new Response("not found", { status: 404 });
+    });
+
+    render(<App />);
+    await waitFor(() => expect(screen.getByText("No imported voices yet.")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "API" }));
+    fireEvent.change(screen.getByLabelText("Base URL"), { target: { value: "https://llm.example.test/v1" } });
+    fireEvent.change(screen.getByLabelText("Model"), { target: { value: "custom-voice-agent-model" } });
+    fireEvent.change(screen.getByLabelText("API key"), { target: { value: "sk-test" } });
+    fireEvent.click(screen.getByRole("button", { name: "Qwen3-TTS" }));
+
+    await importNamedVoice("Alice");
+    await importNamedVoice("Bob");
+
+    fireEvent.click(screen.getByRole("button", { name: "Create blend from imported voices" }));
+    await screen.findByText("Alice + Bob");
+
+    const prompt = "Tell me the launch status using the mixed voice.";
+    fireEvent.change(screen.getByLabelText("Agent prompt text"), { target: { value: prompt } });
+    fireEvent.click(screen.getByRole("button", { name: "Generate AI Voice" }));
+
+    await screen.findByText("synthetic mixed voice using voice_alice + voice_bob");
+
+    const agentCall = requestJson(fetchMock, "/api/agent/reply");
+    expect(agentCall).toMatchObject({
+      prompt,
+      config: {
+        provider: "openai_compatible",
+        base_url: "https://llm.example.test/v1",
+        model: "custom-voice-agent-model",
+        api_key: "sk-test",
+      },
+    });
+
+    const blendCall = requestJson(fetchMock, "/api/blends");
+    expect(blendCall).toMatchObject({
+      name: "Alice + Bob",
+      strategy: "multi_reference_prompt",
+      profiles: [
+        { voice_profile_id: "voice_alice", weight: 1 },
+        { voice_profile_id: "voice_bob", weight: 1 },
+      ],
+    });
+
+    const generationCall = requestJson(fetchMock, "/api/generate");
+    expect(generationCall).toMatchObject({
+      prompt,
+      agent_reply: `API reply to ${prompt}`,
+      tts_backend: "qwen3_tts",
+    });
+  });
 });
+
+async function importNamedVoice(name: string) {
+  fireEvent.change(screen.getByLabelText("Speaker name"), { target: { value: name } });
+  fireEvent.change(screen.getByLabelText("Import consented voice sample"), {
+    target: { files: [new File(["voice"], `${name}.wav`, { type: "audio/wav" })] },
+  });
+  await screen.findByText(name);
+}
+
+function jsonResponse(body: unknown) {
+  return Promise.resolve(
+    new Response(JSON.stringify(body), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }),
+  );
+}
+
+function requestJson(fetchMock: ReturnType<typeof vi.spyOn>, path: string) {
+  const call = fetchMock.mock.calls.find(([input, init]) => input.toString() === path && init?.method === "POST");
+  if (!call) {
+    throw new Error(`Missing ${path} request`);
+  }
+  return JSON.parse(call[1]?.body?.toString() ?? "{}");
+}

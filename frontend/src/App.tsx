@@ -51,7 +51,7 @@ export default function App() {
     setError(null);
     try {
       const agentReply = await requestAgentReply(agentConfig, prompt);
-      const result = await generateClip(blend, agentReply.reply, ttsBackend);
+      const result = await generateClip(blend, agentReply.reply, ttsBackend, prompt);
       setGenerations((current) => [result, ...current]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed");
