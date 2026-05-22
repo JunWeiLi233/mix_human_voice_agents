@@ -142,6 +142,16 @@ def _qwen_verification_status(report: QwenVerificationReport, output_exists: boo
             "passed": False,
             "detail": _qwen_verification_detail(report, output_exists),
         }
+    if report.tts_backend != "qwen3_tts":
+        return {
+            "passed": False,
+            "detail": "Qwen verification report was not produced by the Qwen3-TTS backend.",
+        }
+    if report.blend_strategy != "multi_reference_prompt":
+        return {
+            "passed": False,
+            "detail": "Qwen verification report did not use the multi-reference mixed voice strategy.",
+        }
     if len(report.source_profile_details) < 2:
         return {
             "passed": False,
