@@ -269,6 +269,11 @@ def _imported_voices_status(voices: list[object], verification: QwenVerification
             "passed": False,
             "detail": "Imported verified voices must still have reference audio files.",
         }
+    if not all(_voice_has_clean_quality(imported_by_id[voice_id]) for voice_id in verification.voice_profile_ids):
+        return {
+            "passed": False,
+            "detail": "Imported verified voices must not have audio quality warnings.",
+        }
     return {
         "passed": True,
         "detail": f"{len(voices)} imported voices",
@@ -435,6 +440,13 @@ def _voice_has_reference_text(voice: object) -> bool:
 def _voice_has_reference_audio(voice: object) -> bool:
     cleaned_audio_path = getattr(voice, "cleaned_audio_path", "")
     return bool(cleaned_audio_path) and Path(cleaned_audio_path).exists()
+
+
+def _voice_has_clean_quality(voice: object) -> bool:
+    quality = getattr(voice, "quality", None)
+    if quality is None:
+        return True
+    return not getattr(quality, "warnings", [])
 
 
 def _launch_blocking_reasons(checks: list[LaunchReadinessCheck]) -> list[str]:
