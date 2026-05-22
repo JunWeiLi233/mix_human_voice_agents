@@ -5,6 +5,7 @@ import type {
   GenerationResult,
   TtsBackend,
   TtsRuntimeStatus,
+  VoiceConsentInput,
   VoiceBlend,
   VoiceProfile,
 } from "./types";
@@ -76,13 +77,17 @@ export async function generateClip(
   return response.json();
 }
 
-export async function importVoice(file: File, displayName: string): Promise<VoiceProfile> {
+export async function importVoice(
+  file: File,
+  displayName: string,
+  consent: VoiceConsentInput,
+): Promise<VoiceProfile> {
   const form = new FormData();
   form.set("speaker_display_name", displayName);
   form.set("consent_type", "self_or_written_permission");
   form.set("allowed_uses", "private_agent_voice,local_audio_export");
-  form.set("confirmed_by", "local_user");
-  form.set("notes", "Confirmed in local prototype UI.");
+  form.set("confirmed_by", consent.confirmed_by);
+  form.set("notes", consent.notes);
   form.set("file", file);
 
   const response = await fetch("/api/voices", {

@@ -89,6 +89,19 @@ input {
   border-radius: 6px;
 }
 
+.checkbox-row {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 8px;
+  align-items: start;
+  margin-bottom: 12px;
+}
+
+.checkbox-row input {
+  width: auto;
+  margin: 3px 0 0;
+}
+
 .segmented {
   display: grid;
   grid-template-columns: 1fr 1fr;

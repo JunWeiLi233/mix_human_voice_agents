@@ -37,6 +37,7 @@ describe("App", () => {
     expect(screen.getByText("Not installed")).toBeInTheDocument();
     expect(screen.getByText("No imported voices yet.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Create blend from imported voices" })).toBeDisabled();
+    expect(screen.getByLabelText("Import consented voice sample")).toBeDisabled();
   });
 
   it("lets the user configure an API model, import voices, blend them, and generate with Qwen", async () => {
@@ -59,6 +60,12 @@ describe("App", () => {
       if (url === "/api/voices" && init?.method === "POST") {
         const form = init.body as FormData;
         const displayName = form.get("speaker_display_name")?.toString() ?? "Imported";
+        if (form.get("confirmed_by") !== "Junwei") {
+          return new Response("missing confirmed_by", { status: 400 });
+        }
+        if (form.get("notes") !== "Written consent captured for local private mixed voice testing.") {
+          return new Response("missing consent notes", { status: 400 });
+        }
         return jsonResponse({
           id: `voice_${displayName.toLowerCase()}`,
           display_name: displayName,
@@ -123,6 +130,11 @@ describe("App", () => {
     fireEvent.change(screen.getByLabelText("Model"), { target: { value: "custom-voice-agent-model" } });
     fireEvent.change(screen.getByLabelText("API key"), { target: { value: "sk-test" } });
     fireEvent.click(screen.getByRole("button", { name: "Qwen3-TTS" }));
+    fireEvent.change(screen.getByLabelText("Confirmed by"), { target: { value: "Junwei" } });
+    fireEvent.change(screen.getByLabelText("Consent notes"), {
+      target: { value: "Written consent captured for local private mixed voice testing." },
+    });
+    fireEvent.click(screen.getByLabelText("Confirm voice consent"));
 
     await importNamedVoice("Alice");
     await importNamedVoice("Bob");

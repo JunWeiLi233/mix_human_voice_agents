@@ -63,3 +63,8 @@ export type VoiceProfile = {
     allowed_uses: string[];
   };
 };
+
+export type VoiceConsentInput = {
+  confirmed_by: string;
+  notes: string;
+};

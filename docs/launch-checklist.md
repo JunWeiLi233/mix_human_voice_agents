@@ -6,6 +6,8 @@
 - Frontend tests pass with `cd frontend && npm test`.
 - Frontend production build passes with `cd frontend && npm run build`.
 - Manual import of at least two valid 5-30 second consented WAV samples succeeds.
+- Import is disabled until the user confirms self or written-permission consent in the UI.
+- Imported profile metadata records `confirmed_by` and consent notes from user input.
 - Malformed, non-WAV, shorter-than-5-second, and longer-than-30-second samples are rejected.
 - Blend creation with two profiles succeeds and weights normalize to 100%.
 - Agent provider settings accept either an OpenAI-compatible API configuration or an Ollama-compatible local endpoint.

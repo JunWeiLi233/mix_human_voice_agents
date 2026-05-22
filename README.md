@@ -4,7 +4,7 @@ Local-first prototype for an AI voice agent that imports multiple consented voic
 
 ## What It Does
 
-- Imports 5-30 second WAV voice samples with explicit self or written-permission consent metadata.
+- Imports 5-30 second WAV voice samples only after explicit self or written-permission consent confirmation.
 - Lists imported voice profiles from local storage.
 - Builds a mixed voice from two or more imported profiles with user-controlled weights.
 - Lets the user choose an OpenAI-compatible API provider or an Ollama-compatible local LLM endpoint.
@@ -70,7 +70,7 @@ Open `http://127.0.0.1:5173`.
 2. Configure the agent provider:
    - `Local`: Ollama-compatible endpoint such as `http://127.0.0.1:11434`.
    - `API`: OpenAI-compatible base URL, model, and API key.
-3. Import at least two clean 5-30 second WAV voice samples where the speaker is you or has given written permission.
+3. For each voice, enter who confirmed consent, add consent notes, check the consent confirmation box, and import a clean 5-30 second WAV sample where the speaker is you or has given written permission.
 4. Adjust each voice's blend weight in `Blend Mixer`.
 5. Select `Local preview` or `Qwen3-TTS` in `Voice Engine`.
 6. Create the blend.
@@ -106,6 +106,7 @@ npm run build
 ## Safety Rules
 
 - Do not import public figures, celebrities, politicians, or third-party voices without explicit permission.
+- Do not import a voice until the UI consent confirmation is checked and the consent record describes who confirmed permission.
 - Do not import malformed, non-WAV, shorter-than-5-second, or longer-than-30-second reference audio.
 - Do not use generated audio for impersonation, payment authorization, identity verification, fraud, or deception.
 - Keep generated audio disclosed as synthetic.
