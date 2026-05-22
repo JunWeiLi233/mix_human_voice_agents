@@ -502,6 +502,7 @@ def _generation_metadata_status(generation: GenerationResult) -> dict[str, objec
         or metadata.source_profile_details != generation.source_profile_details
         or metadata.blend_strategy != generation.blend_strategy
         or metadata.tts_backend != generation.tts_backend
+        or metadata.qwen_runtime_config != generation.qwen_runtime_config
         or metadata.prompt != generation.prompt
         or metadata.agent_reply != generation.agent_reply
         or metadata.synthetic_label != generation.synthetic_label
