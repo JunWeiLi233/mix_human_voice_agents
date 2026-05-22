@@ -59,7 +59,11 @@ def evaluate_launch_readiness() -> LaunchReadinessReport:
     )
     qwen_verification_status = _qwen_verification_status(qwen_verification, qwen_output_exists)
     research_review = _research_review_status()
-    qwen_generation = _qwen_mixed_generation_status(generations, agent_provider_verification)
+    qwen_generation = _qwen_mixed_generation_status(
+        generations,
+        agent_provider_verification,
+        qwen_verification,
+    )
 
     checks = [
         LaunchReadinessCheck(
@@ -209,6 +213,7 @@ def _resolve_research_review_path() -> Path:
 def _qwen_mixed_generation_status(
     generations: list[GenerationResult],
     agent_provider_verification: AgentProviderVerificationReport,
+    qwen_verification: QwenVerificationReport,
 ) -> dict[str, object]:
     for generation in generations:
         if generation.tts_backend != "qwen3_tts":
@@ -221,6 +226,14 @@ def _qwen_mixed_generation_status(
             return {
                 "passed": False,
                 "detail": "Qwen mixed voice source details do not match generated source ids.",
+            }
+        if (
+            qwen_verification.status == "passed"
+            and set(generation.source_profile_ids) != set(qwen_verification.voice_profile_ids)
+        ):
+            return {
+                "passed": False,
+                "detail": "Qwen mixed voice generation does not match the verified Qwen voice ids.",
             }
         if not all(detail.reference_text_present for detail in generation.source_profile_details):
             continue
