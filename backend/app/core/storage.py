@@ -3,6 +3,8 @@ import json
 import shutil
 from uuid import uuid4
 
+from pydantic import ValidationError
+
 from app.models.schemas import GenerationResult, VoiceBlend, VoiceProfile
 
 DATA_ROOT = Path("data")
@@ -141,7 +143,10 @@ def list_generation_results() -> list[GenerationResult]:
         key=lambda path: path.stat().st_mtime,
         reverse=True,
     ):
-        result = GenerationResult.model_validate_json(metadata_path.read_text(encoding="utf-8"))
+        try:
+            result = GenerationResult.model_validate_json(metadata_path.read_text(encoding="utf-8"))
+        except ValidationError:
+            continue
         if not _generation_metadata_path_matches_file(result, metadata_path):
             continue
         results.append(result)

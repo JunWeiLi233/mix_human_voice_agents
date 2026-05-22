@@ -38,6 +38,32 @@ def test_list_generation_results_skips_metadata_file_that_points_elsewhere(
     assert [result.id for result in results] == ["generation_valid"]
 
 
+def test_list_generation_results_skips_invalid_metadata_files(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    generation_root = tmp_path / "data" / "generations"
+    generation_root.mkdir(parents=True)
+    valid_path = generation_root / "valid.json"
+    invalid_path = generation_root / "invalid.json"
+
+    valid = GenerationResult(
+        id="generation_valid",
+        audio_path=str(generation_root / "valid.wav"),
+        metadata_path=str(valid_path),
+        synthetic_label="synthetic mixed voice",
+        source_profile_ids=["voice_a", "voice_b"],
+        blend_strategy="multi_reference_prompt",
+        tts_backend="qwen3_tts",
+    )
+    valid_path.write_text(valid.model_dump_json(), encoding="utf-8")
+    invalid_path.write_text("{invalid-json", encoding="utf-8")
+
+    results = list_generation_results()
+
+    assert [result.id for result in results] == ["generation_valid"]
+
+
 def test_get_generation_audio_path_rejects_metadata_file_that_points_elsewhere(
     tmp_path, monkeypatch
 ):
