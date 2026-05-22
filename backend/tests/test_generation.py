@@ -6,7 +6,7 @@ import pytest
 from app.core.blends import create_blend
 from app.core.generation import generate_agent_clip
 from app.core.safety import SafetyError, check_generation_request
-from app.models.schemas import AgentTrace, BlendProfileInput
+from app.models.schemas import AgentTrace, BlendProfileInput, VoiceProfile
 from app.tts.local_wav import LocalWavTtsAdapter
 
 
@@ -57,3 +57,80 @@ def test_generation_writes_wav_and_metadata(tmp_path: Path):
         {"voice_profile_id": "voice_a", "weight": pytest.approx(2 / 3)},
         {"voice_profile_id": "voice_b", "weight": pytest.approx(1 / 3)},
     ]
+
+
+def test_generation_metadata_records_imported_voice_source_details(tmp_path: Path):
+    blend = create_blend(
+        name="Imported Pair",
+        profiles=[
+            BlendProfileInput(voice_profile_id="voice_a", weight=1),
+            BlendProfileInput(voice_profile_id="voice_b", weight=1),
+        ],
+        strategy="multi_reference_prompt",
+    )
+    adapter = LocalWavTtsAdapter(output_root=tmp_path)
+
+    result = generate_agent_clip(
+        prompt="Greet the user as a synthetic assistant.",
+        agent_reply="Hello from a traceable mixed voice.",
+        blend=blend,
+        adapter=adapter,
+        voice_profiles={
+            "voice_a": voice_profile("voice_a", "Alice", "Alice reads a consented reference transcript."),
+            "voice_b": voice_profile("voice_b", "Bob", "Bob reads a consented reference transcript."),
+        },
+        tts_backend="qwen3_tts",
+    )
+
+    assert [detail.model_dump() for detail in result.source_profile_details] == [
+        {
+            "voice_profile_id": "voice_a",
+            "display_name": "Alice",
+            "weight": pytest.approx(0.5),
+            "consent_confirmed_by": "local_user",
+            "allowed_uses": ["private_agent_voice", "local_audio_export"],
+            "reference_text_present": True,
+        },
+        {
+            "voice_profile_id": "voice_b",
+            "display_name": "Bob",
+            "weight": pytest.approx(0.5),
+            "consent_confirmed_by": "local_user",
+            "allowed_uses": ["private_agent_voice", "local_audio_export"],
+            "reference_text_present": True,
+        },
+    ]
+
+    metadata = json.loads(Path(result.metadata_path).read_text(encoding="utf-8"))
+    assert metadata["source_profile_details"][0]["display_name"] == "Alice"
+    assert metadata["source_profile_details"][1]["display_name"] == "Bob"
+
+
+def voice_profile(profile_id: str, display_name: str, reference_text: str) -> VoiceProfile:
+    return VoiceProfile.model_validate(
+        {
+            "id": profile_id,
+            "display_name": display_name,
+            "reference_text": reference_text,
+            "consent": {
+                "voice_profile_id": profile_id,
+                "speaker_display_name": display_name,
+                "consent_type": "self_or_written_permission",
+                "allowed_uses": ["private_agent_voice", "local_audio_export"],
+                "confirmed_by": "local_user",
+                "notes": "Written permission captured.",
+                "synthetic_voice_allowed": True,
+            },
+            "source_audio_path": f"data/voices/{profile_id}/source.wav",
+            "cleaned_audio_path": f"data/voices/{profile_id}/source.wav",
+            "quality": {
+                "file_name": "source.wav",
+                "size_bytes": 10,
+                "format": "wav",
+                "duration_seconds": 5,
+                "sample_rate_hz": 16000,
+                "channel_count": 1,
+                "warnings": [],
+            },
+        }
+    )

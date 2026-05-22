@@ -109,6 +109,24 @@ describe("App", () => {
               { voice_profile_id: "voice_saved_a", weight: 0.6 },
               { voice_profile_id: "voice_saved_b", weight: 0.4 },
             ],
+            source_profile_details: [
+              {
+                voice_profile_id: "voice_saved_a",
+                display_name: "Saved Alice",
+                weight: 0.6,
+                consent_confirmed_by: "Junwei",
+                allowed_uses: ["private_agent_voice", "local_audio_export"],
+                reference_text_present: true,
+              },
+              {
+                voice_profile_id: "voice_saved_b",
+                display_name: "Saved Bob",
+                weight: 0.4,
+                consent_confirmed_by: "Junwei",
+                allowed_uses: ["private_agent_voice", "local_audio_export"],
+                reference_text_present: true,
+              },
+            ],
             watermark: {
               type: "metadata",
               label: "synthetic mixed voice",
@@ -257,6 +275,32 @@ describe("App", () => {
           metadata_path: "data/generations/generation_1.json",
           source_profile_ids: body.blend.profiles.map((profile: { voice_profile_id: string }) => profile.voice_profile_id),
           source_profiles: body.blend.profiles,
+          source_profile_details: [
+            {
+              voice_profile_id: "voice_alice",
+              display_name: "Alice",
+              weight: 0.35,
+              consent_confirmed_by: "Junwei",
+              allowed_uses: ["private_agent_voice", "local_audio_export"],
+              reference_text_present: true,
+            },
+            {
+              voice_profile_id: "voice_bob",
+              display_name: "Bob",
+              weight: 0.15,
+              consent_confirmed_by: "Junwei",
+              allowed_uses: ["private_agent_voice", "local_audio_export"],
+              reference_text_present: true,
+            },
+            {
+              voice_profile_id: "voice_cara",
+              display_name: "Cara",
+              weight: 0.5,
+              consent_confirmed_by: "Junwei",
+              allowed_uses: ["private_agent_voice", "local_audio_export"],
+              reference_text_present: true,
+            },
+          ],
           watermark: {
             type: "metadata",
             label: body.blend.synthetic_label,
@@ -278,7 +322,7 @@ describe("App", () => {
     expect(screen.getByText("data/generations/qwen_verify.wav")).toBeInTheDocument();
     await screen.findByRole("button", { name: "Saved Alice + Bob" });
     expect(screen.getByRole("button", { name: "Generate AI Voice" })).toBeEnabled();
-    await screen.findByText("synthetic mixed voice using voice_saved_a 60% + voice_saved_b 40%");
+    await screen.findByText("synthetic mixed voice using Saved Alice 60% + Saved Bob 40%");
     expect(
       screen.getByText("Generated audio is synthetic and mixed from consented imported voice profiles."),
     ).toBeInTheDocument();
@@ -351,7 +395,7 @@ describe("App", () => {
     fireEvent.change(screen.getByLabelText("Agent prompt text"), { target: { value: prompt } });
     fireEvent.click(screen.getByRole("button", { name: "Generate AI Voice" }));
 
-    await screen.findByText("synthetic mixed voice using voice_alice 35% + voice_bob 15% + voice_cara 50%");
+    await screen.findByText("synthetic mixed voice using Alice 35% + Bob 15% + Cara 50%");
     expect(screen.getAllByLabelText("Play synthetic mixed voice")[0]).toHaveAttribute(
       "src",
       "/api/generations/generation_1/audio",

@@ -49,6 +49,12 @@ export function GenerationHistory({ generations }: Props) {
 }
 
 function formatGenerationSources(item: GenerationResult) {
+  if (item.source_profile_details?.length) {
+    return item.source_profile_details
+      .map((profile) => `${profile.display_name} ${Math.round(profile.weight * 100)}%`)
+      .join(" + ");
+  }
+
   if (item.source_profiles?.length) {
     return item.source_profiles
       .map((profile) => `${profile.voice_profile_id} ${Math.round(profile.weight * 100)}%`)

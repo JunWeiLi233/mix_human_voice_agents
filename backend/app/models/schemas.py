@@ -64,6 +64,13 @@ class BlendProfile(BaseModel):
     weight: float
 
 
+class SourceProfileDetail(BlendProfile):
+    display_name: str
+    consent_confirmed_by: str
+    allowed_uses: list[str]
+    reference_text_present: bool
+
+
 class VoiceBlend(BaseModel):
     id: str = Field(default_factory=lambda: f"blend_{uuid4().hex[:12]}")
     name: str = Field(min_length=1)
@@ -91,6 +98,7 @@ class GenerationResult(BaseModel):
     synthetic_label: str
     source_profile_ids: list[str]
     source_profiles: list[BlendProfile] = Field(default_factory=list)
+    source_profile_details: list[SourceProfileDetail] = Field(default_factory=list)
     blend_strategy: BlendStrategy
     tts_backend: TtsBackend = "local_development_wav"
     watermark: MetadataWatermark = Field(default_factory=MetadataWatermark)

@@ -3,7 +3,16 @@ from pathlib import Path
 
 from app.core.blends import validate_blend
 from app.core.safety import check_generation_request
-from app.models.schemas import AgentTrace, GenerationResult, MetadataWatermark, TtsBackend, VoiceBlend, VoiceProfile
+from app.models.schemas import (
+    AgentTrace,
+    BlendProfile,
+    GenerationResult,
+    MetadataWatermark,
+    SourceProfileDetail,
+    TtsBackend,
+    VoiceBlend,
+    VoiceProfile,
+)
 from app.tts.base import TtsAdapter
 
 METADATA_WATERMARK_DISCLOSURE = "Generated audio is synthetic and mixed from consented imported voice profiles."
@@ -30,6 +39,7 @@ def generate_agent_clip(
         synthetic_label=blend.synthetic_label,
         source_profile_ids=[profile.voice_profile_id for profile in blend.profiles],
         source_profiles=blend.profiles,
+        source_profile_details=_build_source_profile_details(blend.profiles, voice_profiles),
         blend_strategy=blend.strategy,
         tts_backend=tts_backend,
         agent_trace=agent_trace,
@@ -43,3 +53,28 @@ def generate_agent_clip(
         encoding="utf-8",
     )
     return result
+
+
+def _build_source_profile_details(
+    blend_profiles: list[BlendProfile],
+    voice_profiles: dict[str, VoiceProfile] | None,
+) -> list[SourceProfileDetail]:
+    if not voice_profiles:
+        return []
+
+    details: list[SourceProfileDetail] = []
+    for blend_profile in blend_profiles:
+        voice_profile = voice_profiles.get(blend_profile.voice_profile_id)
+        if voice_profile is None:
+            continue
+        details.append(
+            SourceProfileDetail(
+                voice_profile_id=blend_profile.voice_profile_id,
+                display_name=voice_profile.display_name,
+                weight=blend_profile.weight,
+                consent_confirmed_by=voice_profile.consent.confirmed_by,
+                allowed_uses=voice_profile.consent.allowed_uses,
+                reference_text_present=bool(voice_profile.reference_text.strip()),
+            )
+        )
+    return details

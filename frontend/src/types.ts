@@ -10,6 +10,13 @@ export type BlendDraftProfile = BlendProfile & {
   display_name: string;
 };
 
+export type SourceProfileDetail = BlendProfile & {
+  display_name: string;
+  consent_confirmed_by: string;
+  allowed_uses: string[];
+  reference_text_present: boolean;
+};
+
 export type VoiceBlend = {
   id: string;
   name: string;
@@ -25,6 +32,7 @@ export type GenerationResult = {
   synthetic_label: string;
   source_profile_ids: string[];
   source_profiles?: BlendProfile[];
+  source_profile_details?: SourceProfileDetail[];
   watermark?: {
     type: "metadata";
     label: string;
