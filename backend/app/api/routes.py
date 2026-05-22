@@ -3,11 +3,19 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from app.core.agent import AgentProviderError, generate_agent_reply_record
 from app.core.blends import BlendError, create_blend
 from app.core.generation import generate_agent_clip
 from app.core.safety import SafetyError
 from app.core.storage import GENERATION_ROOT, ensure_storage
-from app.models.schemas import BlendProfileInput, BlendStrategy, GenerationResult, VoiceBlend
+from app.models.schemas import (
+    AgentReply,
+    AgentReplyRequest,
+    BlendProfileInput,
+    BlendStrategy,
+    GenerationResult,
+    VoiceBlend,
+)
 from app.tts.local_wav import LocalWavTtsAdapter
 
 router = APIRouter(prefix="/api")
@@ -54,4 +62,12 @@ def generate_route(request: GenerateRequest) -> GenerationResult:
             adapter=adapter,
         )
     except SafetyError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/agent/reply", response_model=AgentReply)
+def agent_reply_route(request: AgentReplyRequest) -> AgentReply:
+    try:
+        return generate_agent_reply_record(prompt=request.prompt, config=request.config)
+    except (AgentProviderError, SafetyError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

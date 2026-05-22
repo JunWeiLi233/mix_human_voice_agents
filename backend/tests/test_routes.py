@@ -62,3 +62,32 @@ def test_generate_endpoint_returns_audio_metadata(tmp_path: Path, monkeypatch):
     assert Path(payload["audio_path"]).exists()
     assert Path(payload["metadata_path"]).exists()
     assert payload["source_profile_ids"] == ["voice_a", "voice_b"]
+
+
+def test_agent_reply_route_accepts_local_llm_config(monkeypatch):
+    def fake_reply_record(prompt, config):
+        return {
+            "reply": f"Local reply to: {prompt}",
+            "provider": config.provider,
+            "model": config.model,
+        }
+
+    monkeypatch.setattr("app.api.routes.generate_agent_reply_record", fake_reply_record)
+
+    response = client.post(
+        "/api/agent/reply",
+        json={
+            "prompt": "Introduce the synthetic mixed voice.",
+            "config": {
+                "provider": "ollama",
+                "model": "llama3.1",
+                "base_url": "http://127.0.0.1:11434",
+                "api_key": "",
+                "system_prompt": "You are a disclosed synthetic mixed-voice assistant.",
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["reply"] == "Local reply to: Introduce the synthetic mixed voice."
+    assert response.json()["provider"] == "ollama"

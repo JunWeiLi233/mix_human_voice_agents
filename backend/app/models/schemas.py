@@ -74,3 +74,25 @@ class GenerationResult(BaseModel):
     source_profile_ids: list[str]
     blend_strategy: BlendStrategy
 
+
+AgentProviderKind = Literal["openai_compatible", "ollama"]
+
+
+class AgentConfig(BaseModel):
+    provider: AgentProviderKind
+    model: str
+    base_url: str
+    api_key: str = ""
+    system_prompt: str = "You are a disclosed synthetic mixed-voice assistant."
+
+
+class AgentReplyRequest(BaseModel):
+    prompt: str
+    config: AgentConfig
+
+
+class AgentReply(BaseModel):
+    reply: str
+    provider: AgentProviderKind
+    model: str
+
