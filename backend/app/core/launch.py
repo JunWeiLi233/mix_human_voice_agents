@@ -65,7 +65,7 @@ def evaluate_launch_readiness() -> LaunchReadinessReport:
     qwen_verification_status = _qwen_verification_status(qwen_verification, qwen_output_exists)
     qwen_runtime = _qwen_runtime_status(qwen_status, qwen_verification)
     imported_voices = _imported_voices_status(voices, qwen_verification)
-    saved_blend = _saved_blend_status(blends, qwen_verification)
+    saved_blend = _saved_blend_status(blends, voices, qwen_verification)
     research_review = _research_review_status()
     qwen_generation = _qwen_mixed_generation_status(
         generations,
@@ -243,16 +243,30 @@ def _qwen_runtime_status(status: TtsRuntimeStatus, verification: QwenVerificatio
     }
 
 
-def _saved_blend_status(blends: list[object], verification: QwenVerificationReport) -> dict[str, object]:
+def _saved_blend_status(
+    blends: list[object],
+    voices: list[object],
+    verification: QwenVerificationReport,
+) -> dict[str, object]:
     if not blends:
         return {
             "passed": False,
             "detail": "0 saved blends",
         }
     if verification.status != "passed" or not verification.voice_profile_ids:
+        imported_ids = {voice.id for voice in voices if hasattr(voice, "id")}
+        for blend in blends:
+            if not hasattr(blend, "profiles"):
+                continue
+            blend_ids = [profile.voice_profile_id for profile in blend.profiles]
+            if len(set(blend_ids)) >= 2 and set(blend_ids).issubset(imported_ids):
+                return {
+                    "passed": True,
+                    "detail": f"{len(blends)} saved blends",
+                }
         return {
-            "passed": True,
-            "detail": f"{len(blends)} saved blends",
+            "passed": False,
+            "detail": "No saved blend references at least two currently imported voices.",
         }
 
     verified_ids = sorted(verification.voice_profile_ids)

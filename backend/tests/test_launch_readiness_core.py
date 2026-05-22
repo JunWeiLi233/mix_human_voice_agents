@@ -46,6 +46,28 @@ def test_core_launch_readiness_blocks_passed_agent_provider_report_without_provi
     assert agent_provider_check.detail == "Agent provider verification report is missing provider, model, or reply."
 
 
+def test_core_launch_readiness_blocks_saved_blend_without_current_imported_voices(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    stale_blend = VoiceBlend(
+        name="Stale blend",
+        profiles=[
+            BlendProfile(voice_profile_id="voice_a", weight=0.5),
+            BlendProfile(voice_profile_id="voice_b", weight=0.5),
+        ],
+        strategy="multi_reference_prompt",
+    )
+    monkeypatch.setattr("app.core.launch.list_voice_profiles", lambda: [])
+    monkeypatch.setattr("app.core.launch.list_blends", lambda: [stale_blend])
+
+    report = evaluate_launch_readiness()
+
+    saved_blend_check = next(check for check in report.checks if check.id == "saved_blend")
+    assert saved_blend_check.passed is False
+    assert saved_blend_check.detail == "No saved blend references at least two currently imported voices."
+
+
 def test_core_launch_readiness_blocks_passed_qwen_verification_without_text(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     output_path = tmp_path / "data" / "generations" / "qwen_verify.wav"
