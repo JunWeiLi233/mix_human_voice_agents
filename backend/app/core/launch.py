@@ -431,6 +431,11 @@ def _qwen_mixed_generation_status(
                 "passed": False,
                 "detail": "Qwen mixed voice clips must include synthetic disclosure metadata.",
             }
+        if not _path_is_under(Path(generation.audio_path), GENERATION_ROOT):
+            return {
+                "passed": False,
+                "detail": "Qwen mixed voice audio must be stored under data/generations.",
+            }
         if not Path(generation.audio_path).exists():
             continue
         return {
