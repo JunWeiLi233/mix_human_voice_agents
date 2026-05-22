@@ -72,6 +72,12 @@ export function VoiceEngineSettings({
             <dd>{verification.output_audio_path}</dd>
           </>
         ) : null}
+        {verification?.source_profile_details?.length ? (
+          <>
+            <dt>Verified sources</dt>
+            <dd>{formatVerifiedSources(verification.source_profile_details)}</dd>
+          </>
+        ) : null}
         {verification?.error ? (
           <>
             <dt>Verification note</dt>
@@ -113,4 +119,8 @@ function verificationLabel(status: QwenVerificationReport["status"]) {
   if (status === "passed") return "Verification passed";
   if (status === "failed") return "Verification failed";
   return "Verification missing";
+}
+
+function formatVerifiedSources(details: NonNullable<QwenVerificationReport["source_profile_details"]>) {
+  return details.map((source) => `${source.display_name} ${Math.round(source.weight * 100)}%`).join(" + ");
 }

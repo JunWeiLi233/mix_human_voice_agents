@@ -170,6 +170,24 @@ describe("App", () => {
           tts_backend: "qwen3_tts",
           report_path: "data/qwen-runtime-verification-report.json",
           voice_profile_ids: ["voice_saved_a", "voice_saved_b"],
+          source_profile_details: [
+            {
+              voice_profile_id: "voice_saved_a",
+              display_name: "Saved Alice",
+              weight: 0.6,
+              consent_confirmed_by: "Junwei",
+              allowed_uses: ["private_agent_voice", "local_audio_export"],
+              reference_text_present: true,
+            },
+            {
+              voice_profile_id: "voice_saved_b",
+              display_name: "Saved Bob",
+              weight: 0.4,
+              consent_confirmed_by: "Junwei",
+              allowed_uses: ["private_agent_voice", "local_audio_export"],
+              reference_text_present: true,
+            },
+          ],
           blend_strategy: "multi_reference_prompt",
           output_audio_path: "data/generations/qwen_verify.wav",
           text: "verification text",
@@ -204,6 +222,24 @@ describe("App", () => {
           tts_backend: "qwen3_tts",
           report_path: "data/qwen-runtime-verification-report.json",
           voice_profile_ids: body.voice_profile_ids,
+          source_profile_details: [
+            {
+              voice_profile_id: "voice_alice",
+              display_name: "Alice",
+              weight: 0.5,
+              consent_confirmed_by: "Junwei",
+              allowed_uses: ["private_agent_voice", "local_audio_export"],
+              reference_text_present: true,
+            },
+            {
+              voice_profile_id: "voice_bob",
+              display_name: "Bob",
+              weight: 0.5,
+              consent_confirmed_by: "Junwei",
+              allowed_uses: ["private_agent_voice", "local_audio_export"],
+              reference_text_present: true,
+            },
+          ],
           blend_strategy: "multi_reference_prompt",
           output_audio_path: "data/generations/studio_qwen_verify.wav",
           text: body.text,
@@ -320,6 +356,7 @@ describe("App", () => {
     await screen.findByText("Installed");
     expect((await screen.findAllByText("Verification passed")).length).toBeGreaterThan(0);
     expect(screen.getByText("data/generations/qwen_verify.wav")).toBeInTheDocument();
+    expect(screen.getByText("Saved Alice 60% + Saved Bob 40%")).toBeInTheDocument();
     await screen.findByRole("button", { name: "Saved Alice + Bob" });
     expect(screen.getByRole("button", { name: "Generate AI Voice" })).toBeEnabled();
     await screen.findByText("synthetic mixed voice using Saved Alice 60% + Saved Bob 40%");
@@ -382,6 +419,7 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Run Qwen verification" }));
 
     await screen.findByText("data/generations/studio_qwen_verify.wav");
+    expect(screen.getByText("Alice 50% + Bob 50%")).toBeInTheDocument();
     const verificationCall = requestJson(fetchMock, "/api/tts/qwen/verification");
     expect(verificationCall).toMatchObject({
       voice_profile_ids: ["voice_alice", "voice_bob"],

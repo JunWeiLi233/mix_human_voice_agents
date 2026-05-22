@@ -83,6 +83,7 @@ export type QwenVerificationReport = {
   tts_backend: "qwen3_tts";
   report_path: string;
   voice_profile_ids: string[];
+  source_profile_details?: SourceProfileDetail[];
   blend_id?: string | null;
   blend_strategy?: BlendStrategy | null;
   output_audio_path?: string | null;
