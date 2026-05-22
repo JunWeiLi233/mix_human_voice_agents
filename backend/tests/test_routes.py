@@ -347,6 +347,7 @@ def test_generate_endpoint_can_use_qwen_with_imported_profiles(tmp_path: Path, m
                     "allowed_uses": "private_agent_voice,local_audio_export",
                     "confirmed_by": "local_user",
                     "notes": "approved for qwen test",
+                    "reference_text": f"{name} reads a clean reference sentence for Qwen cloning.",
                 },
                 files={"file": ("sample.wav", sample, "audio/wav")},
             )
@@ -455,6 +456,29 @@ def test_import_voice_requires_consent_fields(tmp_path: Path, monkeypatch):
     assert payload["quality"]["duration_seconds"] == 5
 
 
+def test_import_voice_requires_reference_text(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    sample_path = tmp_path / "sample.wav"
+    write_reference_wav(sample_path)
+
+    with sample_path.open("rb") as sample:
+        response = client.post(
+            "/api/voices",
+            data={
+                "speaker_display_name": "Alice",
+                "consent_type": "self_or_written_permission",
+                "allowed_uses": "private_agent_voice,local_audio_export",
+                "confirmed_by": "local_user",
+                "notes": "approved for local prototype",
+                "reference_text": "   ",
+            },
+            files={"file": ("sample.wav", sample, "audio/wav")},
+        )
+
+    assert response.status_code == 400
+    assert "reference transcript" in response.json()["detail"]
+
+
 def test_import_voice_rejects_invalid_wav(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     sample_path = tmp_path / "sample.wav"
@@ -469,6 +493,7 @@ def test_import_voice_rejects_invalid_wav(tmp_path: Path, monkeypatch):
                 "allowed_uses": "private_agent_voice,local_audio_export",
                 "confirmed_by": "local_user",
                 "notes": "approved for local prototype",
+                "reference_text": "Alice reads a clean reference sentence for Qwen cloning.",
             },
             files={"file": ("sample.wav", sample, "audio/wav")},
         )
@@ -491,6 +516,7 @@ def test_import_voice_blocks_public_figure_label(tmp_path: Path, monkeypatch):
                 "allowed_uses": "private_agent_voice,local_audio_export",
                 "confirmed_by": "local_user",
                 "notes": "approved for local prototype",
+                "reference_text": "Famous politician reads a clean reference sentence for Qwen cloning.",
             },
             files={"file": ("sample.wav", sample, "audio/wav")},
         )
@@ -513,6 +539,7 @@ def test_list_voices_returns_imported_profiles(tmp_path: Path, monkeypatch):
                 "allowed_uses": "private_agent_voice,local_audio_export",
                 "confirmed_by": "local_user",
                 "notes": "approved for local prototype",
+                "reference_text": "Alice reads a clean reference sentence for Qwen cloning.",
             },
             files={"file": ("sample.wav", sample, "audio/wav")},
         )
@@ -541,6 +568,7 @@ def test_delete_voice_removes_profile_and_dependent_blends(tmp_path: Path, monke
                     "allowed_uses": "private_agent_voice,local_audio_export",
                     "confirmed_by": "local_user",
                     "notes": "approved for local prototype",
+                    "reference_text": f"{name} reads a clean reference sentence for Qwen cloning.",
                 },
                 files={"file": ("sample.wav", sample, "audio/wav")},
             )

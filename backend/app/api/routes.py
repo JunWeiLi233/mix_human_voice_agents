@@ -230,6 +230,10 @@ async def import_voice_route(
     reference_text: str = Form(""),
     file: UploadFile = File(...),
 ) -> VoiceProfile:
+    cleaned_reference_text = reference_text.strip()
+    if not cleaned_reference_text:
+        raise HTTPException(status_code=400, detail="A reference transcript is required for voice import.")
+
     voice_id = new_voice_profile_id()
     consent_request = ConsentRequest(
         speaker_display_name=speaker_display_name,
@@ -257,7 +261,7 @@ async def import_voice_route(
     profile = VoiceProfile(
         id=voice_id,
         display_name=speaker_display_name,
-        reference_text=reference_text,
+        reference_text=cleaned_reference_text,
         consent=consent,
         source_audio_path="",
         cleaned_audio_path="",

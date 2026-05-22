@@ -54,6 +54,14 @@ describe("App", () => {
     expect(screen.getByText("No imported voices yet.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Create blend from imported voices" })).toBeDisabled();
     expect(screen.getByLabelText("Import consented voice sample")).toBeDisabled();
+
+    fireEvent.click(screen.getByLabelText("Confirm voice consent"));
+    fireEvent.change(screen.getByLabelText("Confirmed by"), { target: { value: "Junwei" } });
+    expect(screen.getByLabelText("Import consented voice sample")).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Reference transcript"), {
+      target: { value: "Alice reads a clean reference sentence for Qwen cloning." },
+    });
+    expect(screen.getByLabelText("Import consented voice sample")).toBeEnabled();
   });
 
   it("lets the user configure an API model, import voices, blend them, and generate with Qwen", async () => {
