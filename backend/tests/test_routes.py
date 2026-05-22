@@ -972,6 +972,40 @@ def test_generate_endpoint_rejects_duplicate_voice_profile_ids(tmp_path: Path, m
     assert "distinct" in response.json()["detail"]
 
 
+def test_generate_endpoint_rejects_duplicate_qwen_profiles_before_loading_runtime(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+
+    def fail_if_qwen_loads(**kwargs):
+        raise AssertionError("duplicate profile ids should be rejected before loading Qwen")
+
+    monkeypatch.setattr("app.api.routes.QwenTtsAdapter.from_pretrained", fail_if_qwen_loads)
+    monkeypatch.setattr("app.api.routes.get_voice_profiles_by_ids", lambda profile_ids: {})
+
+    response = client.post(
+        "/api/generate",
+        json={
+            "prompt": "Say hello as a disclosed synthetic assistant.",
+            "agent_reply": "Hello from a synthetic mixed voice.",
+            "tts_backend": "qwen3_tts",
+            "blend": {
+                "id": "blend_duplicate",
+                "name": "Duplicate",
+                "strategy": "multi_reference_prompt",
+                "synthetic_label": "synthetic mixed voice",
+                "profiles": [
+                    {"voice_profile_id": "voice_a", "weight": 0.5},
+                    {"voice_profile_id": "voice_a", "weight": 0.5},
+                ],
+            },
+        },
+    )
+
+    assert response.status_code == 400
+    assert "distinct" in response.json()["detail"]
+
+
 def test_list_generations_returns_persisted_metadata(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     blend_response = client.post(

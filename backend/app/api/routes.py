@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from app.core.agent import AgentProviderError, generate_agent_reply_record
 from app.core.audio import AudioQualityError, analyze_audio_sample
-from app.core.blends import BlendError, create_blend
+from app.core.blends import BlendError, create_blend, validate_blend
 from app.core.consent import ConsentError, create_consent_record
 from app.core.generation import generate_agent_clip
 from app.core.generation import build_source_profile_details
@@ -239,6 +239,10 @@ def list_blends_route() -> list[VoiceBlend]:
 @router.post("/generate", response_model=GenerationResult)
 def generate_route(request: GenerateRequest) -> GenerationResult:
     ensure_storage()
+    try:
+        validate_blend(request.blend)
+    except BlendError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     source_ids = [profile.voice_profile_id for profile in request.blend.profiles]
     voice_profiles = _load_voice_profiles_for_generation(source_ids, strict=request.tts_backend == "qwen3_tts")
     qwen_runtime_config = _qwen_runtime_config_from_request(request)
