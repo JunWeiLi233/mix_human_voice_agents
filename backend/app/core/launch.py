@@ -191,6 +191,11 @@ def _qwen_verification_status(report: QwenVerificationReport, output_exists: boo
             "passed": False,
             "detail": "Qwen verification output must be stored under data/generations.",
         }
+    if not _path_is_non_empty(report.output_audio_path or ""):
+        return {
+            "passed": False,
+            "detail": "Qwen verification output audio must be non-empty.",
+        }
     if report.tts_backend != "qwen3_tts":
         return {
             "passed": False,
@@ -498,6 +503,11 @@ def _qwen_mixed_generation_status(
             }
         if not Path(generation.audio_path).exists():
             continue
+        if not _path_is_non_empty(generation.audio_path):
+            return {
+                "passed": False,
+                "detail": "Qwen mixed voice audio must be non-empty.",
+            }
         return {
             "passed": True,
             "detail": f"Qwen mixed voice generated: {generation.id}",
@@ -525,6 +535,13 @@ def _qwen_verification_runtime_config(report: QwenVerificationReport) -> dict[st
 
 def _same_audio_path(left: str, right: str) -> bool:
     return Path(left).resolve(strict=False) == Path(right).resolve(strict=False)
+
+
+def _path_is_non_empty(path: str) -> bool:
+    try:
+        return Path(path).stat().st_size > 0
+    except OSError:
+        return False
 
 
 def _generation_metadata_status(generation: GenerationResult) -> dict[str, object]:

@@ -203,6 +203,47 @@ def test_core_launch_readiness_blocks_passed_qwen_verification_output_outside_ge
     }
 
 
+def test_core_launch_readiness_blocks_empty_qwen_verification_output(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    output_path = tmp_path / "data" / "generations" / "qwen_verify.wav"
+    output_path.parent.mkdir(parents=True)
+    output_path.write_bytes(b"")
+    report = QwenVerificationReport(
+        status="passed",
+        report_path="data/qwen-runtime-verification-report.json",
+        voice_profile_ids=["voice_a", "voice_b"],
+        tts_backend="qwen3_tts",
+        blend_strategy="multi_reference_prompt",
+        source_profile_details=[
+            SourceProfileDetail(
+                voice_profile_id="voice_a",
+                display_name="Alice",
+                weight=0.5,
+                consent_confirmed_by="local_user",
+                allowed_uses=["private_agent_voice", "local_audio_export"],
+                reference_text_present=True,
+            ),
+            SourceProfileDetail(
+                voice_profile_id="voice_b",
+                display_name="Bob",
+                weight=0.5,
+                consent_confirmed_by="local_user",
+                allowed_uses=["private_agent_voice", "local_audio_export"],
+                reference_text_present=True,
+            ),
+        ],
+        output_audio_path=str(output_path),
+        text="This is a disclosed synthetic mixed voice runtime verification.",
+    )
+
+    status = _qwen_verification_status(report, output_exists=True)
+
+    assert status == {
+        "passed": False,
+        "detail": "Qwen verification output audio must be non-empty.",
+    }
+
+
 def test_core_launch_readiness_blocks_qwen_generation_without_synthetic_disclosure_metadata(tmp_path):
     audio_path = tmp_path / "mixed.wav"
     audio_path.write_bytes(b"fake-qwen-wav")
@@ -1137,6 +1178,71 @@ def test_core_launch_readiness_blocks_when_generation_trace_differs_from_verifie
             "at http://127.0.0.1:11434, but verified provider endpoint is "
             "https://llm.example.test/v1."
         ),
+    }
+
+
+def test_core_launch_readiness_blocks_empty_generated_qwen_audio(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    audio_path = tmp_path / "data" / "generations" / "mixed.wav"
+    metadata_path = tmp_path / "data" / "generations" / "mixed.json"
+    audio_path.parent.mkdir(parents=True)
+    audio_path.write_bytes(b"")
+    source_details = [
+        SourceProfileDetail(
+            voice_profile_id="voice_a",
+            display_name="Alice",
+            weight=0.5,
+            consent_confirmed_by="local_user",
+            allowed_uses=["private_agent_voice", "local_audio_export"],
+            reference_text_present=True,
+        ),
+        SourceProfileDetail(
+            voice_profile_id="voice_b",
+            display_name="Bob",
+            weight=0.5,
+            consent_confirmed_by="local_user",
+            allowed_uses=["private_agent_voice", "local_audio_export"],
+            reference_text_present=True,
+        ),
+    ]
+    generation = GenerationResult(
+        id="generation_empty_audio",
+        audio_path=str(Path("data") / "generations" / "mixed.wav"),
+        metadata_path=str(Path("data") / "generations" / "mixed.json"),
+        prompt="Say hello as a synthetic assistant.",
+        agent_reply="Hello from a synthetic mixed voice.",
+        synthetic_label="synthetic mixed voice",
+        source_profile_ids=["voice_a", "voice_b"],
+        source_profile_details=source_details,
+        blend_strategy="multi_reference_prompt",
+        tts_backend="qwen3_tts",
+        agent_trace=AgentTrace(
+            provider="openai",
+            model="gpt-4.1-mini",
+            base_url="https://api.openai.com/v1",
+        ),
+    )
+    metadata_path.write_text(generation.model_dump_json(), encoding="utf-8")
+
+    status = _qwen_mixed_generation_status(
+        [generation],
+        AgentProviderVerificationReport(
+            status="passed",
+            report_path="data/agent-provider-verification-report.json",
+            provider="openai",
+            model="gpt-4.1-mini",
+            base_url="https://api.openai.com/v1",
+            reply="Provider ready.",
+        ),
+        QwenVerificationReport(
+            status="missing",
+            report_path="data/qwen-runtime-verification-report.json",
+        ),
+    )
+
+    assert status == {
+        "passed": False,
+        "detail": "Qwen mixed voice audio must be non-empty.",
     }
 
 

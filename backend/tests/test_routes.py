@@ -1242,6 +1242,49 @@ def test_generate_endpoint_rejects_qwen_when_verification_output_is_missing_befo
     assert response.json()["detail"] == "Qwen verification output audio must exist before Qwen generation."
 
 
+def test_generate_endpoint_rejects_qwen_when_verification_output_is_empty_before_loading_profiles(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    write_agent_provider_verification_report()
+    write_qwen_runtime_verification_report(output_bytes=b"")
+
+    def fail_if_profiles_load(profile_ids):
+        raise AssertionError("empty Qwen verification output should be rejected before loading voice profiles")
+
+    def fail_if_qwen_loads(**kwargs):
+        raise AssertionError("empty Qwen verification output should be rejected before loading Qwen")
+
+    monkeypatch.setattr("app.api.routes.get_voice_profiles_by_ids", fail_if_profiles_load)
+    monkeypatch.setattr("app.api.routes.QwenTtsAdapter.from_pretrained", fail_if_qwen_loads)
+
+    response = client.post(
+        "/api/generate",
+        json={
+            "prompt": "Say hello as a disclosed synthetic assistant.",
+            "agent_reply": "Hello from a synthetic mixed voice.",
+            "tts_backend": "qwen3_tts",
+            "agent_trace": {
+                "provider": "openai",
+                "model": "gpt-4.1-mini",
+            },
+            "blend": {
+                "id": "blend_empty_qwen_output",
+                "name": "Empty Qwen output",
+                "strategy": "multi_reference_prompt",
+                "synthetic_label": "synthetic mixed voice",
+                "profiles": [
+                    {"voice_profile_id": "voice_a", "weight": 0.5},
+                    {"voice_profile_id": "voice_b", "weight": 0.5},
+                ],
+            },
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Qwen verification output audio must be non-empty."
+
+
 def test_generate_endpoint_rejects_qwen_profile_without_private_voice_consent_before_loading_runtime(
     tmp_path: Path, monkeypatch
 ):
@@ -1869,12 +1912,13 @@ def write_qwen_runtime_verification_report(
     dtype: str | None = None,
     attn_implementation: str | None = None,
     write_output: bool = True,
+    output_bytes: bytes = b"fake-qwen-verification-wav",
 ) -> None:
     resolved_voice_profile_ids = voice_profile_ids or ["voice_a", "voice_b"]
     output_path = Path("data") / "generations" / "qwen_verify.wav"
     output_path.parent.mkdir(parents=True, exist_ok=True)
     if write_output:
-        output_path.write_bytes(b"fake-qwen-verification-wav")
+        output_path.write_bytes(output_bytes)
     report_path = Path("data") / "qwen-runtime-verification-report.json"
     report_path.write_text(
         json.dumps(

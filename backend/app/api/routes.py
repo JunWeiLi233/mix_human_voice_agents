@@ -312,6 +312,11 @@ def _validate_qwen_runtime_verification(request: GenerateRequest) -> None:
             status_code=400,
             detail="Qwen verification output audio must exist before Qwen generation.",
         )
+    if Path(report.output_audio_path).stat().st_size <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Qwen verification output audio must be non-empty.",
+        )
     requested_voice_ids = sorted(profile.voice_profile_id for profile in request.blend.profiles)
     if sorted(report.voice_profile_ids) != requested_voice_ids:
         raise HTTPException(
