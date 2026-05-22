@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from typing import Literal
+from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
@@ -44,4 +45,32 @@ class VoiceProfile(BaseModel):
     quality: AudioQuality
     artifact_path: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class BlendProfileInput(BaseModel):
+    voice_profile_id: str = Field(min_length=1)
+    weight: float = Field(gt=0)
+
+
+class BlendProfile(BaseModel):
+    voice_profile_id: str
+    weight: float
+
+
+class VoiceBlend(BaseModel):
+    id: str = Field(default_factory=lambda: f"blend_{uuid4().hex[:12]}")
+    name: str = Field(min_length=1)
+    profiles: list[BlendProfile]
+    strategy: BlendStrategy
+    synthetic_label: str = "synthetic mixed voice"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class GenerationResult(BaseModel):
+    id: str = Field(default_factory=lambda: f"generation_{uuid4().hex[:12]}")
+    audio_path: str
+    metadata_path: str
+    synthetic_label: str
+    source_profile_ids: list[str]
+    blend_strategy: BlendStrategy
 
