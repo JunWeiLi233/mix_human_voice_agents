@@ -126,9 +126,26 @@ input {
 
 .voice-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
+}
+
+.voice-details {
+  display: grid;
+  gap: 4px;
+}
+
+.voice-quality {
+  color: #596052;
+  font-size: 13px;
+}
+
+.voice-warnings {
+  color: #812828;
+  font-size: 13px;
+  margin: 4px 0 0;
+  padding-left: 18px;
 }
 
 .voice-row button {

@@ -15,9 +15,19 @@ export function VoiceLibrary({ voices, onDeleteVoice }: Props) {
         <div className="voice-list">
           {voices.map((voice) => (
             <div key={voice.id} className="voice-row">
-              <div>
-                {voice.display_name}{" "}
-                <span>{voice.consent.synthetic_voice_allowed ? "Consent ready" : "Consent missing"}</span>
+              <div className="voice-details">
+                <div>
+                  {voice.display_name}{" "}
+                  <span>{voice.consent.synthetic_voice_allowed ? "Consent ready" : "Consent missing"}</span>
+                </div>
+                <div className="voice-quality">{formatQuality(voice)}</div>
+                {voice.quality.warnings.length > 0 ? (
+                  <ul className="voice-warnings">
+                    {voice.quality.warnings.map((warning) => (
+                      <li key={warning}>{warning}</li>
+                    ))}
+                  </ul>
+                ) : null}
               </div>
               <button type="button" onClick={() => onDeleteVoice(voice.id)}>
                 Delete {voice.display_name} voice
@@ -28,4 +38,17 @@ export function VoiceLibrary({ voices, onDeleteVoice }: Props) {
       )}
     </section>
   );
+}
+
+function formatQuality(voice: VoiceProfile) {
+  const duration =
+    voice.quality.duration_seconds === null ? "unknown duration" : `${voice.quality.duration_seconds.toFixed(1)}s`;
+  const sampleRate =
+    voice.quality.sample_rate_hz === null ? "unknown Hz" : `${voice.quality.sample_rate_hz} Hz`;
+  const channels =
+    voice.quality.channel_count === null
+      ? "unknown channels"
+      : `${voice.quality.channel_count} ${voice.quality.channel_count === 1 ? "channel" : "channels"}`;
+
+  return `${duration} · ${sampleRate} · ${channels}`;
 }

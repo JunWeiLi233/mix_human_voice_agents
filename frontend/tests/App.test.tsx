@@ -248,6 +248,7 @@ describe("App", () => {
     fireEvent.click(screen.getByLabelText("Confirm voice consent"));
 
     await importNamedVoice("Alice");
+    expect(await screen.findByText("8.0s · 24000 Hz · 1 channel")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Reference transcript"), {
       target: { value: "Bob reads a clean reference sentence for Qwen cloning." },
     });
@@ -325,7 +326,7 @@ describe("App", () => {
       if (url === "/api/voices" && !init) {
         return jsonResponse([
           voiceProfile("voice_alice", "Alice"),
-          voiceProfile("voice_bob", "Bob"),
+          voiceProfile("voice_bob", "Bob", ["Reference audio appears clipped; record a cleaner sample."]),
           voiceProfile("voice_cara", "Cara"),
         ]);
       }
@@ -411,6 +412,7 @@ describe("App", () => {
     render(<App />);
 
     await screen.findByRole("button", { name: "Alice + Bob" });
+    expect(await screen.findByText("Reference audio appears clipped; record a cleaner sample.")).toBeInTheDocument();
     await screen.findByText("synthetic mixed voice using voice_alice + voice_bob");
     await screen.findByText("synthetic mixed voice using voice_bob + voice_cara");
     expect(screen.getByRole("button", { name: "Generate AI Voice" })).toBeEnabled();
@@ -444,13 +446,22 @@ function jsonResponse(body: unknown) {
   );
 }
 
-function voiceProfile(id: string, displayName: string) {
+function voiceProfile(id: string, displayName: string, warnings: string[] = []) {
   return {
     id,
     display_name: displayName,
     source_audio_path: `data/voices/${id}/sample.wav`,
     cleaned_audio_path: `data/voices/${id}/sample.wav`,
     reference_text: `${displayName} reads a clean reference sentence for Qwen cloning.`,
+    quality: {
+      file_name: "sample.wav",
+      size_bytes: 160044,
+      format: "wav",
+      duration_seconds: 5,
+      sample_rate_hz: 16000,
+      channel_count: 1,
+      warnings,
+    },
     consent: {
       voice_profile_id: id,
       speaker_display_name: displayName,
