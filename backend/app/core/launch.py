@@ -170,10 +170,10 @@ def _qwen_verification_status(report: QwenVerificationReport, output_exists: boo
             "passed": False,
             "detail": "Qwen verification report lacks imported source profile details.",
         }
-    if {detail.voice_profile_id for detail in report.source_profile_details} != set(report.voice_profile_ids):
+    if sorted(detail.voice_profile_id for detail in report.source_profile_details) != sorted(report.voice_profile_ids):
         return {
             "passed": False,
-            "detail": "Qwen verification source details do not match the verified voice ids.",
+            "detail": "Qwen verification source details do not match each verified voice id exactly once.",
         }
     if not all(detail.reference_text_present for detail in report.source_profile_details):
         return {
