@@ -1097,6 +1097,58 @@ def test_generate_endpoint_rejects_qwen_with_mismatched_runtime_verification_voi
     assert response.json()["detail"] == "Qwen generation voices must match the passed Qwen runtime verification."
 
 
+def test_generate_endpoint_rejects_qwen_with_mismatched_runtime_config_before_loading_profiles(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    write_agent_provider_verification_report()
+    write_qwen_runtime_verification_report(
+        model_id="Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+        device_map="cuda:0",
+        dtype="bfloat16",
+        attn_implementation="flash_attention_2",
+    )
+
+    def fail_if_profiles_load(profile_ids):
+        raise AssertionError("mismatched Qwen runtime config should be rejected before loading voice profiles")
+
+    def fail_if_qwen_loads(**kwargs):
+        raise AssertionError("mismatched Qwen runtime config should be rejected before loading Qwen")
+
+    monkeypatch.setattr("app.api.routes.get_voice_profiles_by_ids", fail_if_profiles_load)
+    monkeypatch.setattr("app.api.routes.QwenTtsAdapter.from_pretrained", fail_if_qwen_loads)
+
+    response = client.post(
+        "/api/generate",
+        json={
+            "prompt": "Say hello as a disclosed synthetic assistant.",
+            "agent_reply": "Hello from a synthetic mixed voice.",
+            "tts_backend": "qwen3_tts",
+            "agent_trace": {
+                "provider": "openai",
+                "model": "gpt-4.1-mini",
+            },
+            "model_id": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+            "device_map": "cuda:0",
+            "dtype": "bfloat16",
+            "attn_implementation": "flash_attention_2",
+            "blend": {
+                "id": "blend_mismatched_qwen_runtime",
+                "name": "Mismatched Qwen runtime",
+                "strategy": "multi_reference_prompt",
+                "synthetic_label": "synthetic mixed voice",
+                "profiles": [
+                    {"voice_profile_id": "voice_a", "weight": 0.5},
+                    {"voice_profile_id": "voice_b", "weight": 0.5},
+                ],
+            },
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Qwen generation runtime config must match the passed Qwen verification."
+
+
 def test_generate_endpoint_rejects_qwen_profile_without_private_voice_consent_before_loading_runtime(
     tmp_path: Path, monkeypatch
 ):
@@ -1715,7 +1767,13 @@ def write_agent_provider_verification_report(
     )
 
 
-def write_qwen_runtime_verification_report(voice_profile_ids: list[str] | None = None) -> None:
+def write_qwen_runtime_verification_report(
+    voice_profile_ids: list[str] | None = None,
+    model_id: str | None = None,
+    device_map: str | None = None,
+    dtype: str | None = None,
+    attn_implementation: str | None = None,
+) -> None:
     resolved_voice_profile_ids = voice_profile_ids or ["voice_a", "voice_b"]
     output_path = Path("data") / "generations" / "qwen_verify.wav"
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1728,6 +1786,10 @@ def write_qwen_runtime_verification_report(voice_profile_ids: list[str] | None =
                 "tts_backend": "qwen3_tts",
                 "report_path": str(report_path),
                 "voice_profile_ids": resolved_voice_profile_ids,
+                "model_id": model_id,
+                "device_map": device_map,
+                "dtype": dtype,
+                "attn_implementation": attn_implementation,
                 "output_audio_path": str(output_path),
             }
         ),

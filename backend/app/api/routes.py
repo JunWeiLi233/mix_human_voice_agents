@@ -306,6 +306,12 @@ def _validate_qwen_runtime_verification(request: GenerateRequest) -> None:
             status_code=400,
             detail="Qwen generation voices must match the passed Qwen runtime verification.",
         )
+    verified_runtime_config = _qwen_runtime_config_from_report(report)
+    if verified_runtime_config and _qwen_runtime_config_from_request(request) != verified_runtime_config:
+        raise HTTPException(
+            status_code=400,
+            detail="Qwen generation runtime config must match the passed Qwen verification.",
+        )
 
 
 def _load_voice_profiles_for_generation(profile_ids: list[str], strict: bool) -> dict[str, VoiceProfile] | None:
@@ -325,6 +331,19 @@ def _qwen_runtime_config_from_request(request: GenerateRequest) -> dict[str, str
         "device_map": request.device_map,
         "dtype": request.dtype,
         "attn_implementation": request.attn_implementation,
+    }
+
+
+def _qwen_runtime_config_from_report(report: QwenVerificationReport) -> dict[str, str | None]:
+    return {
+        key: value
+        for key, value in {
+            "model_id": report.model_id,
+            "device_map": report.device_map,
+            "dtype": report.dtype,
+            "attn_implementation": report.attn_implementation,
+        }.items()
+        if value is not None
     }
 
 
