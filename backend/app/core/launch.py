@@ -33,9 +33,16 @@ def get_qwen_verification_report() -> QwenVerificationReport:
             report_path=str(report_path),
             error="Run python -m app.cli.verify_qwen_runtime with two consented voice profile ids.",
         )
-    payload = json.loads(report_path.read_text(encoding="utf-8"))
-    payload.setdefault("report_path", str(report_path))
-    return QwenVerificationReport.model_validate(payload)
+    try:
+        payload = json.loads(report_path.read_text(encoding="utf-8"))
+        payload.setdefault("report_path", str(report_path))
+        return QwenVerificationReport.model_validate(payload)
+    except (json.JSONDecodeError, ValidationError):
+        return QwenVerificationReport(
+            status="failed",
+            report_path=str(report_path),
+            error="Qwen runtime verification report is invalid.",
+        )
 
 
 def get_agent_provider_verification_report() -> AgentProviderVerificationReport:
@@ -46,9 +53,16 @@ def get_agent_provider_verification_report() -> AgentProviderVerificationReport:
             report_path=str(report_path),
             error="Run the Agent Provider Test provider preflight before launch.",
         )
-    payload = json.loads(report_path.read_text(encoding="utf-8"))
-    payload.setdefault("report_path", str(report_path))
-    return AgentProviderVerificationReport.model_validate(payload)
+    try:
+        payload = json.loads(report_path.read_text(encoding="utf-8"))
+        payload.setdefault("report_path", str(report_path))
+        return AgentProviderVerificationReport.model_validate(payload)
+    except (json.JSONDecodeError, ValidationError):
+        return AgentProviderVerificationReport(
+            status="failed",
+            report_path=str(report_path),
+            error="Agent provider verification report is invalid.",
+        )
 
 
 def evaluate_launch_readiness() -> LaunchReadinessReport:

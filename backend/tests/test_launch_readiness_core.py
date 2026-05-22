@@ -46,6 +46,32 @@ def test_core_launch_readiness_blocks_passed_agent_provider_report_without_provi
     assert agent_provider_check.detail == "Agent provider verification report is missing provider, model, or reply."
 
 
+def test_core_launch_readiness_blocks_invalid_agent_provider_report(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    report_path = tmp_path / "data" / "agent-provider-verification-report.json"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text("{invalid-json", encoding="utf-8")
+
+    report = evaluate_launch_readiness()
+
+    agent_provider_check = next(check for check in report.checks if check.id == "agent_provider")
+    assert agent_provider_check.passed is False
+    assert agent_provider_check.detail == "Agent provider verification report is invalid."
+
+
+def test_core_launch_readiness_blocks_invalid_qwen_verification_report(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    report_path = tmp_path / "data" / "qwen-runtime-verification-report.json"
+    report_path.parent.mkdir(parents=True)
+    report_path.write_text("{invalid-json", encoding="utf-8")
+
+    report = evaluate_launch_readiness()
+
+    qwen_verification_check = next(check for check in report.checks if check.id == "qwen_verification")
+    assert qwen_verification_check.passed is False
+    assert qwen_verification_check.detail == "Qwen runtime verification report is invalid."
+
+
 def test_core_launch_readiness_blocks_saved_blend_without_current_imported_voices(
     tmp_path, monkeypatch
 ):
