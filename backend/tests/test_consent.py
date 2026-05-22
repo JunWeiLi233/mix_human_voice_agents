@@ -37,6 +37,32 @@ def test_consent_record_contains_synthetic_safe_scope():
     assert "local_audio_export" in record.allowed_uses
 
 
+def test_consent_record_blocks_public_figure_labels():
+    request = ConsentRequest(
+        speaker_display_name="Famous celebrity clone",
+        consent_type="self_or_written_permission",
+        allowed_uses=["private_agent_voice", "local_audio_export"],
+        confirmed_by="local_user",
+        notes="private prototype",
+    )
+
+    with pytest.raises(ConsentError, match="public figure"):
+        create_consent_record("voice_public", request)
+
+
+def test_consent_record_blocks_admitted_missing_permission():
+    request = ConsentRequest(
+        speaker_display_name="Coworker",
+        consent_type="self_or_written_permission",
+        allowed_uses=["private_agent_voice", "local_audio_export"],
+        confirmed_by="local_user",
+        notes="I do not have permission from this speaker.",
+    )
+
+    with pytest.raises(ConsentError, match="permission"):
+        create_consent_record("voice_no_permission", request)
+
+
 def test_audio_analysis_rejects_missing_file(tmp_path: Path):
     missing = tmp_path / "missing.wav"
 

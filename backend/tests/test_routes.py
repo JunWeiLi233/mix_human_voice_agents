@@ -477,6 +477,28 @@ def test_import_voice_rejects_invalid_wav(tmp_path: Path, monkeypatch):
     assert "WAV header" in response.json()["detail"]
 
 
+def test_import_voice_blocks_public_figure_label(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    sample_path = tmp_path / "sample.wav"
+    write_reference_wav(sample_path)
+
+    with sample_path.open("rb") as sample:
+        response = client.post(
+            "/api/voices",
+            data={
+                "speaker_display_name": "Famous politician voice",
+                "consent_type": "self_or_written_permission",
+                "allowed_uses": "private_agent_voice,local_audio_export",
+                "confirmed_by": "local_user",
+                "notes": "approved for local prototype",
+            },
+            files={"file": ("sample.wav", sample, "audio/wav")},
+        )
+
+    assert response.status_code == 400
+    assert "public figure" in response.json()["detail"]
+
+
 def test_list_voices_returns_imported_profiles(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     sample_path = tmp_path / "sample.wav"
