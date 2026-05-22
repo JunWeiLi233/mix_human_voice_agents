@@ -24,12 +24,15 @@ def analyze_audio_sample(path: Path) -> AudioQuality:
 
     duration_seconds: float | None = None
     peak_amplitude = 0
+    sample_rate_hz: int | None = None
+    channel_count: int | None = None
     try:
         with wave.open(str(path), "rb") as wav_file:
             frames = wav_file.getnframes()
-            rate = wav_file.getframerate()
+            sample_rate_hz = wav_file.getframerate()
+            channel_count = wav_file.getnchannels()
             sample_width = wav_file.getsampwidth()
-            duration_seconds = frames / float(rate) if rate else None
+            duration_seconds = frames / float(sample_rate_hz) if sample_rate_hz else None
             pcm = wav_file.readframes(frames)
             peak_amplitude = _peak_pcm_amplitude(pcm, sample_width)
     except wave.Error as exc:
@@ -54,6 +57,8 @@ def analyze_audio_sample(path: Path) -> AudioQuality:
         size_bytes=size_bytes,
         format=suffix.removeprefix(".") or "unknown",
         duration_seconds=duration_seconds,
+        sample_rate_hz=sample_rate_hz,
+        channel_count=channel_count,
         warnings=warnings,
     )
 

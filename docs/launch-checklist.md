@@ -9,6 +9,7 @@
 - Import is disabled until the user confirms self or written-permission consent in the UI.
 - Imported profile metadata records `confirmed_by` and consent notes from user input.
 - Imported profile metadata records the user-provided reference transcript used by Qwen voice cloning.
+- Imported profile quality metadata records duration, sample rate, channel count, and warnings.
 - Import rejects blank reference transcripts so every profile has usable Qwen cloning text.
 - Import rejects public-figure, celebrity, politician, and explicit no-permission consent claims.
 - Malformed, non-WAV, silent, shorter-than-5-second, and longer-than-30-second samples are rejected.

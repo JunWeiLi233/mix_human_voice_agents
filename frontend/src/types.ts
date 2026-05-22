@@ -70,6 +70,15 @@ export type VoiceProfile = {
   reference_text: string;
   source_audio_path: string;
   cleaned_audio_path: string;
+  quality: {
+    file_name: string;
+    size_bytes: number;
+    format: string;
+    duration_seconds: number | null;
+    sample_rate_hz: number | null;
+    channel_count: number | null;
+    warnings: string[];
+  };
   consent: {
     voice_profile_id: string;
     speaker_display_name: string;

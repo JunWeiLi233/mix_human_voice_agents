@@ -88,6 +88,8 @@ def test_audio_analysis_accepts_clean_reference_wav(tmp_path: Path):
 
     assert quality.format == "wav"
     assert quality.duration_seconds == 5
+    assert quality.sample_rate_hz == 16000
+    assert quality.channel_count == 1
     assert quality.warnings == []
 
 

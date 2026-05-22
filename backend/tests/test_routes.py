@@ -456,6 +456,8 @@ def test_import_voice_requires_consent_fields(tmp_path: Path, monkeypatch):
     assert payload["consent"]["synthetic_voice_allowed"] is True
     assert Path(payload["source_audio_path"]).exists()
     assert payload["quality"]["duration_seconds"] == 5
+    assert payload["quality"]["sample_rate_hz"] == 16000
+    assert payload["quality"]["channel_count"] == 1
 
 
 def test_import_voice_requires_reference_text(tmp_path: Path, monkeypatch):

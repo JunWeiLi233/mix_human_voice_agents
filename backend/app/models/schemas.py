@@ -35,6 +35,8 @@ class AudioQuality(BaseModel):
     size_bytes: int
     format: str
     duration_seconds: float | None
+    sample_rate_hz: int | None = None
+    channel_count: int | None = None
     warnings: list[str]
 
 
