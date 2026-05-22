@@ -2,7 +2,7 @@ from pathlib import Path
 import json
 from uuid import uuid4
 
-from app.models.schemas import VoiceProfile
+from app.models.schemas import GenerationResult, VoiceProfile
 
 DATA_ROOT = Path("data")
 VOICE_ROOT = DATA_ROOT / "voices"
@@ -52,6 +52,18 @@ def get_voice_profiles_by_ids(profile_ids: list[str]) -> dict[str, VoiceProfile]
     if missing:
         raise FileNotFoundError(f"Missing voice profiles: {', '.join(missing)}")
     return {profile_id: profiles[profile_id] for profile_id in profile_ids}
+
+
+def list_generation_results() -> list[GenerationResult]:
+    ensure_storage()
+    results: list[GenerationResult] = []
+    for metadata_path in sorted(
+        GENERATION_ROOT.glob("*.json"),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    ):
+        results.append(GenerationResult.model_validate_json(metadata_path.read_text(encoding="utf-8")))
+    return results
 
 
 def get_generation_audio_path(generation_id: str) -> Path:

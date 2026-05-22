@@ -15,6 +15,7 @@ from app.core.storage import (
     ensure_storage,
     get_generation_audio_path,
     get_voice_profiles_by_ids,
+    list_generation_results,
     list_voice_profiles,
     new_voice_profile_id,
     save_voice_profile,
@@ -96,6 +97,11 @@ def generate_route(request: GenerateRequest) -> GenerationResult:
         )
     except (QwenTtsNotConfigured, SafetyError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/generations", response_model=list[GenerationResult])
+def list_generations_route() -> list[GenerationResult]:
+    return list_generation_results()
 
 
 @router.get("/generations/{generation_id}/audio")

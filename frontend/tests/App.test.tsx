@@ -14,6 +14,9 @@ describe("App", () => {
       if (url === "/api/voices") {
         return jsonResponse([]);
       }
+      if (url === "/api/generations") {
+        return jsonResponse([]);
+      }
       if (url === "/api/tts/qwen/status") {
         return jsonResponse({
           backend: "qwen3_tts",
@@ -46,6 +49,20 @@ describe("App", () => {
 
       if (url === "/api/voices" && !init) {
         return jsonResponse([]);
+      }
+
+      if (url === "/api/generations" && !init) {
+        return jsonResponse([
+          {
+            id: "generation_existing",
+            audio_path: "data/generations/generation_existing.wav",
+            metadata_path: "data/generations/generation_existing.json",
+            source_profile_ids: ["voice_saved_a", "voice_saved_b"],
+            synthetic_label: "synthetic mixed voice",
+            blend_strategy: "local_development_wav",
+            tts_backend: "local_development_wav",
+          },
+        ]);
       }
 
       if (url === "/api/tts/qwen/status" && !init) {
@@ -124,6 +141,11 @@ describe("App", () => {
     render(<App />);
     await waitFor(() => expect(screen.getByText("No imported voices yet.")).toBeInTheDocument());
     await screen.findByText("Installed");
+    await screen.findByText("synthetic mixed voice using voice_saved_a + voice_saved_b");
+    expect(screen.getByLabelText("Play synthetic mixed voice")).toHaveAttribute(
+      "src",
+      "/api/generations/generation_existing/audio",
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "API" }));
     fireEvent.change(screen.getByLabelText("Base URL"), { target: { value: "https://llm.example.test/v1" } });
@@ -149,7 +171,7 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Generate AI Voice" }));
 
     await screen.findByText("synthetic mixed voice using voice_alice + voice_bob");
-    expect(screen.getByLabelText("Play synthetic mixed voice")).toHaveAttribute(
+    expect(screen.getAllByLabelText("Play synthetic mixed voice")[0]).toHaveAttribute(
       "src",
       "/api/generations/generation_1/audio",
     );

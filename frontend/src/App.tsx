@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createBlend, generateClip, getQwenRuntimeStatus, listVoices, requestAgentReply } from "./api";
+import { createBlend, generateClip, getQwenRuntimeStatus, listGenerations, listVoices, requestAgentReply } from "./api";
 import { AgentChat } from "./components/AgentChat";
 import { AgentProviderSettings } from "./components/AgentProviderSettings";
 import { BlendMixer } from "./components/BlendMixer";
@@ -43,6 +43,14 @@ export default function App() {
       .catch(() => {
         setVoices([]);
         setBlendProfiles([]);
+      });
+  }, []);
+
+  useEffect(() => {
+    void listGenerations()
+      .then(setGenerations)
+      .catch(() => {
+        setGenerations([]);
       });
   }, []);
 

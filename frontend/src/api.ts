@@ -26,6 +26,14 @@ export async function getQwenRuntimeStatus(): Promise<TtsRuntimeStatus> {
   return response.json();
 }
 
+export async function listGenerations(): Promise<GenerationResult[]> {
+  const response = await fetch("/api/generations");
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  return response.json();
+}
+
 export async function createBlend(profiles: BlendDraftProfile[], ttsBackend: TtsBackend): Promise<VoiceBlend> {
   const selected = profiles.filter((profile) => profile.weight > 0);
   const response = await fetch("/api/blends", {
