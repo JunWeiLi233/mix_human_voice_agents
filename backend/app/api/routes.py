@@ -247,6 +247,8 @@ def generate_route(request: GenerateRequest) -> GenerationResult:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     if request.tts_backend == "qwen3_tts" and request.agent_trace is None:
         raise HTTPException(status_code=400, detail="Qwen generation requires an agent provider trace.")
+    if request.tts_backend == "qwen3_tts":
+        _validate_qwen_agent_provider_preflight(request.agent_trace)
     source_ids = [profile.voice_profile_id for profile in request.blend.profiles]
     voice_profiles = _load_voice_profiles_for_generation(source_ids, strict=request.tts_backend == "qwen3_tts")
     qwen_runtime_config = _qwen_runtime_config_from_request(request)
@@ -277,6 +279,20 @@ def generate_route(request: GenerateRequest) -> GenerationResult:
         )
     except (BlendError, QwenTtsNotConfigured, SafetyError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+def _validate_qwen_agent_provider_preflight(agent_trace: AgentTrace | None) -> None:
+    if agent_trace is None:
+        return
+
+    report = get_agent_provider_verification_report()
+    if report.status != "passed":
+        raise HTTPException(status_code=400, detail="Agent provider preflight must pass before Qwen generation.")
+    if report.provider != agent_trace.provider or report.model != agent_trace.model:
+        raise HTTPException(
+            status_code=400,
+            detail="Qwen generation agent trace must match the passed agent provider preflight.",
+        )
 
 
 def _load_voice_profiles_for_generation(profile_ids: list[str], strict: bool) -> dict[str, VoiceProfile] | None:

@@ -358,6 +358,7 @@ def test_launch_readiness_reports_ready_after_full_qwen_verification(tmp_path: P
             "strategy": "multi_reference_prompt",
         },
     ).json()
+    write_agent_provider_verification_report()
 
     class FakeQwenAdapter:
         name = "qwen3_tts"
@@ -387,19 +388,6 @@ def test_launch_readiness_reports_ready_after_full_qwen_verification(tmp_path: P
             },
         },
     ).json()
-    provider_report_path = tmp_path / "data" / "agent-provider-verification-report.json"
-    provider_report_path.write_text(
-        json.dumps(
-            {
-                "status": "passed",
-                "provider": "openai",
-                "model": "gpt-4.1-mini",
-                "reply": "Provider ready.",
-                "report_path": str(Path("data") / "agent-provider-verification-report.json"),
-            }
-        ),
-        encoding="utf-8",
-    )
     report_path = tmp_path / "data" / "qwen-runtime-verification-report.json"
     verification_output_path = tmp_path / "data" / "generations" / "qwen_verify.wav"
     verification_output_path.write_bytes(b"fake-qwen-verification-wav")
@@ -498,6 +486,7 @@ def test_launch_readiness_blocks_when_qwen_verification_lacks_source_details(tmp
             "strategy": "multi_reference_prompt",
         },
     ).json()
+    write_agent_provider_verification_report()
 
     class FakeQwenAdapter:
         name = "qwen3_tts"
@@ -527,19 +516,6 @@ def test_launch_readiness_blocks_when_qwen_verification_lacks_source_details(tmp
             },
         },
     ).json()
-    provider_report_path = tmp_path / "data" / "agent-provider-verification-report.json"
-    provider_report_path.write_text(
-        json.dumps(
-            {
-                "status": "passed",
-                "provider": "openai",
-                "model": "gpt-4.1-mini",
-                "reply": "Provider ready.",
-                "report_path": str(Path("data") / "agent-provider-verification-report.json"),
-            }
-        ),
-        encoding="utf-8",
-    )
     report_path = tmp_path / "data" / "qwen-runtime-verification-report.json"
     report_path.write_text(
         json.dumps(
@@ -951,10 +927,94 @@ def test_generate_endpoint_rejects_qwen_without_agent_trace_before_loading_runti
     assert response.json()["detail"] == "Qwen generation requires an agent provider trace."
 
 
+def test_generate_endpoint_rejects_qwen_without_provider_preflight_before_loading_runtime(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+
+    def fail_if_profiles_load(profile_ids):
+        raise AssertionError("missing provider preflight should be rejected before loading voice profiles")
+
+    def fail_if_qwen_loads(**kwargs):
+        raise AssertionError("missing provider preflight should be rejected before loading Qwen")
+
+    monkeypatch.setattr("app.api.routes.get_voice_profiles_by_ids", fail_if_profiles_load)
+    monkeypatch.setattr("app.api.routes.QwenTtsAdapter.from_pretrained", fail_if_qwen_loads)
+
+    response = client.post(
+        "/api/generate",
+        json={
+            "prompt": "Say hello as a disclosed synthetic assistant.",
+            "agent_reply": "Hello from a synthetic mixed voice.",
+            "tts_backend": "qwen3_tts",
+            "agent_trace": {
+                "provider": "openai",
+                "model": "gpt-4.1-mini",
+            },
+            "blend": {
+                "id": "blend_missing_provider_preflight",
+                "name": "Missing provider preflight",
+                "strategy": "multi_reference_prompt",
+                "synthetic_label": "synthetic mixed voice",
+                "profiles": [
+                    {"voice_profile_id": "voice_a", "weight": 0.5},
+                    {"voice_profile_id": "voice_b", "weight": 0.5},
+                ],
+            },
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Agent provider preflight must pass before Qwen generation."
+
+
+def test_generate_endpoint_rejects_qwen_agent_trace_that_differs_from_provider_preflight(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    write_agent_provider_verification_report(provider="anthropic", model="claude-sonnet-4-5")
+
+    def fail_if_profiles_load(profile_ids):
+        raise AssertionError("mismatched provider preflight should be rejected before loading voice profiles")
+
+    def fail_if_qwen_loads(**kwargs):
+        raise AssertionError("mismatched provider preflight should be rejected before loading Qwen")
+
+    monkeypatch.setattr("app.api.routes.get_voice_profiles_by_ids", fail_if_profiles_load)
+    monkeypatch.setattr("app.api.routes.QwenTtsAdapter.from_pretrained", fail_if_qwen_loads)
+
+    response = client.post(
+        "/api/generate",
+        json={
+            "prompt": "Say hello as a disclosed synthetic assistant.",
+            "agent_reply": "Hello from a synthetic mixed voice.",
+            "tts_backend": "qwen3_tts",
+            "agent_trace": {
+                "provider": "openai",
+                "model": "gpt-4.1-mini",
+            },
+            "blend": {
+                "id": "blend_mismatched_provider_preflight",
+                "name": "Mismatched provider preflight",
+                "strategy": "multi_reference_prompt",
+                "synthetic_label": "synthetic mixed voice",
+                "profiles": [
+                    {"voice_profile_id": "voice_a", "weight": 0.5},
+                    {"voice_profile_id": "voice_b", "weight": 0.5},
+                ],
+            },
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Qwen generation agent trace must match the passed agent provider preflight."
+
+
 def test_generate_endpoint_rejects_qwen_profile_without_private_voice_consent_before_loading_runtime(
     tmp_path: Path, monkeypatch
 ):
     monkeypatch.chdir(tmp_path)
+    write_agent_provider_verification_report()
 
     def fail_if_qwen_loads(**kwargs):
         raise AssertionError("revoked voice consent should be rejected before loading Qwen")
@@ -999,6 +1059,7 @@ def test_generate_endpoint_rejects_qwen_profile_without_reference_text_before_lo
     tmp_path: Path, monkeypatch
 ):
     monkeypatch.chdir(tmp_path)
+    write_agent_provider_verification_report()
 
     def fail_if_qwen_loads(**kwargs):
         raise AssertionError("missing reference text should be rejected before loading Qwen")
@@ -1043,6 +1104,7 @@ def test_generate_endpoint_rejects_qwen_profile_with_quality_warnings_before_loa
     tmp_path: Path, monkeypatch
 ):
     monkeypatch.chdir(tmp_path)
+    write_agent_provider_verification_report()
 
     def fail_if_qwen_loads(**kwargs):
         raise AssertionError("quality warnings should be rejected before loading Qwen")
@@ -1135,6 +1197,7 @@ def test_generation_metadata_endpoint_returns_not_found(tmp_path: Path, monkeypa
 
 def test_generate_endpoint_can_use_qwen_with_imported_profiles(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
+    write_agent_provider_verification_report()
     sample_path = tmp_path / "sample.wav"
     write_reference_wav(sample_path)
     voices = []
@@ -1539,6 +1602,26 @@ def test_delete_voice_removes_profile_and_dependent_blends(tmp_path: Path, monke
     assert remaining_voice_ids == {imported[1]["id"], imported[2]["id"]}
     assert [blend["id"] for blend in client.get("/api/blends").json()] == [unrelated_blend["id"]]
     assert [generation["id"] for generation in client.get("/api/generations").json()] == [unrelated_generation["id"]]
+
+
+def write_agent_provider_verification_report(
+    provider: str = "openai",
+    model: str = "gpt-4.1-mini",
+) -> None:
+    report_path = Path("data") / "agent-provider-verification-report.json"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(
+        json.dumps(
+            {
+                "status": "passed",
+                "provider": provider,
+                "model": model,
+                "reply": "Provider ready.",
+                "report_path": str(report_path),
+            }
+        ),
+        encoding="utf-8",
+    )
 
 
 def write_reference_wav(path: Path, duration_seconds: int = 5, sample_rate: int = 16000) -> None:
