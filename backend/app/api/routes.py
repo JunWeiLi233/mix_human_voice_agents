@@ -248,7 +248,7 @@ def generate_route(request: GenerateRequest) -> GenerationResult:
     voice_profiles = _load_voice_profiles_for_generation(source_ids, strict=request.tts_backend == "qwen3_tts")
     qwen_runtime_config = _qwen_runtime_config_from_request(request)
     if request.tts_backend == "qwen3_tts":
-        _validate_qwen_voice_profile_consent(voice_profiles or {})
+        _validate_qwen_voice_profiles(voice_profiles or {})
         adapter = QwenTtsAdapter.from_pretrained(
             model_id=request.model_id,
             device_map=request.device_map,
@@ -282,13 +282,18 @@ def _load_voice_profiles_for_generation(profile_ids: list[str], strict: bool) ->
         return None
 
 
-def _validate_qwen_voice_profile_consent(voice_profiles: dict[str, VoiceProfile]) -> None:
+def _validate_qwen_voice_profiles(voice_profiles: dict[str, VoiceProfile]) -> None:
     for profile in voice_profiles.values():
         consent = profile.consent
         if not consent.synthetic_voice_allowed or REQUIRED_VOICE_USE not in consent.allowed_uses:
             raise HTTPException(
                 status_code=400,
                 detail=f"Voice profile {profile.id} is not allowed for private agent voice use.",
+            )
+        if not profile.reference_text.strip():
+            raise HTTPException(
+                status_code=400,
+                detail=f"Voice profile {profile.id} must include reference text for Qwen synthesis.",
             )
 
 
