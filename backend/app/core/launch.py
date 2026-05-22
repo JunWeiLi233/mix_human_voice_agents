@@ -235,6 +235,15 @@ def _qwen_mixed_generation_status(
                 "passed": False,
                 "detail": "Qwen mixed voice generation does not match the verified Qwen voice ids.",
             }
+        if (
+            qwen_verification.status == "passed"
+            and _qwen_verification_runtime_config(qwen_verification)
+            and generation.qwen_runtime_config != _qwen_verification_runtime_config(qwen_verification)
+        ):
+            return {
+                "passed": False,
+                "detail": "Qwen mixed voice generation runtime config does not match verification.",
+            }
         if not all(detail.reference_text_present for detail in generation.source_profile_details):
             continue
         if generation.agent_trace is None:
@@ -269,6 +278,19 @@ def _qwen_mixed_generation_status(
     return {
         "passed": False,
         "detail": f"{qwen_count} Qwen mixed voice clips with imported source details",
+    }
+
+
+def _qwen_verification_runtime_config(report: QwenVerificationReport) -> dict[str, str | None]:
+    return {
+        key: value
+        for key, value in {
+            "model_id": report.model_id,
+            "device_map": report.device_map,
+            "dtype": report.dtype,
+            "attn_implementation": report.attn_implementation,
+        }.items()
+        if value is not None
     }
 
 
