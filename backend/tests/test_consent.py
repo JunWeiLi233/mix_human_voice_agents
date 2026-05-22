@@ -99,8 +99,26 @@ def test_audio_analysis_rejects_silent_reference_wav(tmp_path: Path):
         analyze_audio_sample(sample)
 
 
+def test_audio_analysis_warns_on_clipped_reference_wav(tmp_path: Path):
+    sample = tmp_path / "clipped.wav"
+    write_clipped_wav(sample)
+
+    quality = analyze_audio_sample(sample)
+
+    assert "Reference audio appears clipped; record a cleaner sample." in quality.warnings
+
+
 def write_reference_wav(path: Path, duration_seconds: int = 5, sample_rate: int = 16000) -> None:
     frames = build_tone_frames(duration_seconds, sample_rate)
+    with wave.open(str(path), "wb") as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(sample_rate)
+        wav_file.writeframes(frames)
+
+
+def write_clipped_wav(path: Path, duration_seconds: int = 5, sample_rate: int = 16000) -> None:
+    frames = b"".join(struct.pack("<h", 32767) for _ in range(sample_rate * duration_seconds))
     with wave.open(str(path), "wb") as wav_file:
         wav_file.setnchannels(1)
         wav_file.setsampwidth(2)

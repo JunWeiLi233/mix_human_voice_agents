@@ -6,6 +6,7 @@ from app.models.schemas import AudioQuality
 
 MIN_REFERENCE_SECONDS = 5
 MAX_REFERENCE_SECONDS = 30
+CLIPPING_WARNING = "Reference audio appears clipped; record a cleaner sample."
 
 
 class AudioQualityError(ValueError):
@@ -45,6 +46,8 @@ def analyze_audio_sample(path: Path) -> AudioQuality:
         raise AudioQualityError(f"Reference audio must be {MAX_REFERENCE_SECONDS} seconds or shorter.")
     if peak_amplitude <= 1:
         raise AudioQualityError("Reference audio appears to contain only silence.")
+    if peak_amplitude >= _max_pcm_amplitude(sample_width):
+        warnings.append(CLIPPING_WARNING)
 
     return AudioQuality(
         file_name=path.name,
@@ -64,3 +67,9 @@ def _peak_pcm_amplitude(pcm: bytes, sample_width: int) -> int:
         sample = int.from_bytes(pcm[index : index + sample_width], byteorder="little", signed=True)
         peak = max(peak, abs(sample))
     return peak
+
+
+def _max_pcm_amplitude(sample_width: int) -> int:
+    if sample_width <= 0:
+        return 0
+    return (1 << (sample_width * 8 - 1)) - 1
