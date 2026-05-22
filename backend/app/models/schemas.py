@@ -95,6 +95,8 @@ class GenerationResult(BaseModel):
     id: str = Field(default_factory=lambda: f"generation_{uuid4().hex[:12]}")
     audio_path: str
     metadata_path: str
+    prompt: str = ""
+    agent_reply: str = ""
     synthetic_label: str
     source_profile_ids: list[str]
     source_profiles: list[BlendProfile] = Field(default_factory=list)

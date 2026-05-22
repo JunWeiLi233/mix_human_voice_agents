@@ -104,6 +104,8 @@ describe("App", () => {
             id: "generation_existing",
             audio_path: "data/generations/generation_existing.wav",
             metadata_path: "data/generations/generation_existing.json",
+            prompt: "Summarize launch readiness.",
+            agent_reply: "The mixed voice agent still needs Qwen verification.",
             source_profile_ids: ["voice_saved_a", "voice_saved_b"],
             source_profiles: [
               { voice_profile_id: "voice_saved_a", weight: 0.6 },
@@ -361,6 +363,8 @@ describe("App", () => {
     await screen.findByRole("button", { name: "Saved Alice + Bob" });
     expect(screen.getByRole("button", { name: "Generate AI Voice" })).toBeEnabled();
     await screen.findByText("synthetic mixed voice using Saved Alice 60% + Saved Bob 40%");
+    expect(screen.getByText("Prompt: Summarize launch readiness.")).toBeInTheDocument();
+    expect(screen.getByText("Reply: The mixed voice agent still needs Qwen verification.")).toBeInTheDocument();
     expect(
       screen.getByText("Generated audio is synthetic and mixed from consented imported voice profiles."),
     ).toBeInTheDocument();

@@ -37,6 +37,8 @@ def generate_agent_clip(
     result = GenerationResult(
         audio_path=str(audio_path),
         metadata_path=str(metadata_path),
+        prompt=prompt,
+        agent_reply=agent_reply,
         synthetic_label=blend.synthetic_label,
         source_profile_ids=[profile.voice_profile_id for profile in blend.profiles],
         source_profiles=blend.profiles,
