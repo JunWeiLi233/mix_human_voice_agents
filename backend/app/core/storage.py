@@ -156,6 +156,10 @@ def get_generation_audio_path(generation_id: str) -> Path:
         if payload.get("id") != generation_id:
             continue
 
+        result = GenerationResult.model_validate(payload)
+        if not _generation_metadata_path_matches_file(result, metadata_path):
+            raise FileNotFoundError(f"Generated metadata is stale: {generation_id}")
+
         audio_path = Path(payload["audio_path"]).resolve()
         if generation_root not in (audio_path, *audio_path.parents):
             raise FileNotFoundError(f"Generated audio is outside generation storage: {generation_id}")
@@ -173,6 +177,10 @@ def get_generation_metadata_path(generation_id: str) -> Path:
         payload = json.loads(metadata_path.read_text(encoding="utf-8"))
         if payload.get("id") != generation_id:
             continue
+
+        result = GenerationResult.model_validate(payload)
+        if not _generation_metadata_path_matches_file(result, metadata_path):
+            raise FileNotFoundError(f"Generated metadata is stale: {generation_id}")
 
         resolved_metadata_path = metadata_path.resolve()
         if generation_root not in (resolved_metadata_path, *resolved_metadata_path.parents):
