@@ -38,3 +38,15 @@ export type AgentReply = {
   model: string;
 };
 
+export type VoiceProfile = {
+  id: string;
+  display_name: string;
+  source_audio_path: string;
+  cleaned_audio_path: string;
+  consent: {
+    voice_profile_id: string;
+    speaker_display_name: string;
+    synthetic_voice_allowed: boolean;
+    allowed_uses: string[];
+  };
+};

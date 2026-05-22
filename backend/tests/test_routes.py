@@ -91,3 +91,28 @@ def test_agent_reply_route_accepts_local_llm_config(monkeypatch):
     assert response.status_code == 200
     assert response.json()["reply"] == "Local reply to: Introduce the synthetic mixed voice."
     assert response.json()["provider"] == "ollama"
+
+
+def test_import_voice_requires_consent_fields(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    sample_path = tmp_path / "sample.wav"
+    sample_path.write_bytes(b"not a real wav but enough for storage")
+
+    with sample_path.open("rb") as sample:
+        response = client.post(
+            "/api/voices",
+            data={
+                "speaker_display_name": "Alice",
+                "consent_type": "self_or_written_permission",
+                "allowed_uses": "private_agent_voice,local_audio_export",
+                "confirmed_by": "local_user",
+                "notes": "approved for local prototype",
+            },
+            files={"file": ("sample.wav", sample, "audio/wav")},
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["display_name"] == "Alice"
+    assert payload["consent"]["synthetic_voice_allowed"] is True
+    assert Path(payload["source_audio_path"]).exists()
