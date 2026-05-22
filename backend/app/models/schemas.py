@@ -75,6 +75,7 @@ class GenerationResult(BaseModel):
     metadata_path: str
     synthetic_label: str
     source_profile_ids: list[str]
+    source_profiles: list[BlendProfile] = Field(default_factory=list)
     blend_strategy: BlendStrategy
     tts_backend: TtsBackend = "local_development_wav"
 

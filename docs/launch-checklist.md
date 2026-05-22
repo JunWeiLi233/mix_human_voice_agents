@@ -15,7 +15,7 @@
 - Agent provider settings accept either an OpenAI-compatible API configuration or an Ollama-compatible local endpoint.
 - Agent reply generation succeeds through the selected provider before TTS synthesis.
 - Audio generation creates a `.wav` file and adjacent `.json` metadata file.
-- Metadata includes `synthetic_label`, `source_profile_ids`, and `blend_strategy`.
+- Metadata includes `synthetic_label`, `source_profile_ids`, `source_profiles` with normalized weights, and `blend_strategy`.
 - Safety filter blocks impersonation or payment authorization language.
 - Generated audio is disclosed as synthetic in UI and metadata.
 - Deleting an imported voice profile removes its local profile/audio directory.

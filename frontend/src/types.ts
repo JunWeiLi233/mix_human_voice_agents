@@ -24,6 +24,7 @@ export type GenerationResult = {
   metadata_path: string;
   synthetic_label: string;
   source_profile_ids: string[];
+  source_profiles?: BlendProfile[];
   blend_strategy: BlendStrategy;
   tts_backend: TtsBackend;
 };

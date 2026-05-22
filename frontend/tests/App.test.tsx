@@ -71,6 +71,10 @@ describe("App", () => {
             audio_path: "data/generations/generation_existing.wav",
             metadata_path: "data/generations/generation_existing.json",
             source_profile_ids: ["voice_saved_a", "voice_saved_b"],
+            source_profiles: [
+              { voice_profile_id: "voice_saved_a", weight: 0.6 },
+              { voice_profile_id: "voice_saved_b", weight: 0.4 },
+            ],
             synthetic_label: "synthetic mixed voice",
             blend_strategy: "local_development_wav",
             tts_backend: "local_development_wav",
@@ -159,11 +163,15 @@ describe("App", () => {
 
       if (url === "/api/blends") {
         const body = JSON.parse(init?.body?.toString() ?? "{}");
+        const totalWeight = body.profiles.reduce((sum: number, profile: { weight: number }) => sum + profile.weight, 0);
         return jsonResponse({
           id: "blend_1",
           name: body.name,
           strategy: body.strategy,
-          profiles: body.profiles,
+          profiles: body.profiles.map((profile: { voice_profile_id: string; weight: number }) => ({
+            ...profile,
+            weight: profile.weight / totalWeight,
+          })),
           synthetic_label: "synthetic mixed voice",
         });
       }
@@ -187,6 +195,7 @@ describe("App", () => {
           audio_path: "data/generations/generation_1.wav",
           metadata_path: "data/generations/generation_1.json",
           source_profile_ids: body.blend.profiles.map((profile: { voice_profile_id: string }) => profile.voice_profile_id),
+          source_profiles: body.blend.profiles,
           synthetic_label: body.blend.synthetic_label,
           tts_backend: body.tts_backend,
         });
@@ -202,7 +211,7 @@ describe("App", () => {
     expect(screen.getByText("data/generations/qwen_verify.wav")).toBeInTheDocument();
     await screen.findByRole("button", { name: "Saved Alice + Bob" });
     expect(screen.getByRole("button", { name: "Generate AI Voice" })).toBeEnabled();
-    await screen.findByText("synthetic mixed voice using voice_saved_a + voice_saved_b");
+    await screen.findByText("synthetic mixed voice using voice_saved_a 60% + voice_saved_b 40%");
     expect(screen.getByLabelText("Play synthetic mixed voice")).toHaveAttribute(
       "src",
       "/api/generations/generation_existing/audio",
@@ -253,7 +262,7 @@ describe("App", () => {
     fireEvent.change(screen.getByLabelText("Agent prompt text"), { target: { value: prompt } });
     fireEvent.click(screen.getByRole("button", { name: "Generate AI Voice" }));
 
-    await screen.findByText("synthetic mixed voice using voice_alice + voice_bob + voice_cara");
+    await screen.findByText("synthetic mixed voice using voice_alice 35% + voice_bob 15% + voice_cara 50%");
     expect(screen.getAllByLabelText("Play synthetic mixed voice")[0]).toHaveAttribute(
       "src",
       "/api/generations/generation_1/audio",

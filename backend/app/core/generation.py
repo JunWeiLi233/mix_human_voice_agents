@@ -26,6 +26,7 @@ def generate_agent_clip(
         metadata_path=str(metadata_path),
         synthetic_label=blend.synthetic_label,
         source_profile_ids=[profile.voice_profile_id for profile in blend.profiles],
+        source_profiles=blend.profiles,
         blend_strategy=blend.strategy,
         tts_backend=tts_backend,
     )
