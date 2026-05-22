@@ -365,6 +365,9 @@ def test_launch_readiness_reports_ready_after_full_qwen_verification(tmp_path: P
         encoding="utf-8",
     )
     report_path = tmp_path / "data" / "qwen-runtime-verification-report.json"
+    verification_output_path = tmp_path / "data" / "generations" / "qwen_verify.wav"
+    verification_output_path.write_bytes(b"fake-qwen-verification-wav")
+    verification_output = str(Path("data") / "generations" / "qwen_verify.wav")
     report_path.write_text(
         json.dumps(
             {
@@ -390,7 +393,7 @@ def test_launch_readiness_reports_ready_after_full_qwen_verification(tmp_path: P
                 ],
                 "tts_backend": "qwen3_tts",
                 "blend_strategy": "multi_reference_prompt",
-                "output_audio_path": generated["audio_path"],
+                "output_audio_path": verification_output,
                 "text": "Launch readiness verification.",
             }
         ),

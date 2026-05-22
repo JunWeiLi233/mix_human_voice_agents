@@ -344,6 +344,15 @@ def _qwen_mixed_generation_status(
                     f"{agent_provider_verification.provider} / {agent_provider_verification.model}."
                 ),
             }
+        if (
+            qwen_verification.status == "passed"
+            and qwen_verification.output_audio_path
+            and _same_audio_path(generation.audio_path, qwen_verification.output_audio_path)
+        ):
+            return {
+                "passed": False,
+                "detail": "Qwen verification output and generated mixed voice audio must be separate files.",
+            }
         if not Path(generation.audio_path).exists():
             continue
         return {
@@ -369,6 +378,10 @@ def _qwen_verification_runtime_config(report: QwenVerificationReport) -> dict[st
         }.items()
         if value is not None
     }
+
+
+def _same_audio_path(left: str, right: str) -> bool:
+    return Path(left).resolve(strict=False) == Path(right).resolve(strict=False)
 
 
 def _launch_blocking_reasons(checks: list[LaunchReadinessCheck]) -> list[str]:
