@@ -83,12 +83,23 @@ export type QwenVerificationReport = {
   tts_backend: "qwen3_tts";
   report_path: string;
   voice_profile_ids: string[];
+  model_id?: string | null;
+  device_map?: string | null;
+  dtype?: string | null;
+  attn_implementation?: string | null;
   source_profile_details?: SourceProfileDetail[];
   blend_id?: string | null;
   blend_strategy?: BlendStrategy | null;
   output_audio_path?: string | null;
   text?: string | null;
   error?: string | null;
+};
+
+export type QwenRuntimeConfig = {
+  model_id: string;
+  device_map: string;
+  dtype: string;
+  attn_implementation: string;
 };
 
 export type LaunchReadinessCheck = {

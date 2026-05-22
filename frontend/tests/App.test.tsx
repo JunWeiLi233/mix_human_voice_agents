@@ -391,6 +391,14 @@ describe("App", () => {
     fireEvent.change(screen.getByLabelText("Model"), { target: { value: "custom-voice-agent-model" } });
     fireEvent.change(screen.getByLabelText("API key"), { target: { value: "sk-test" } });
     fireEvent.click(screen.getByRole("button", { name: "Qwen3-TTS" }));
+    fireEvent.change(screen.getByLabelText("Qwen model id"), {
+      target: { value: "Qwen/Qwen3-TTS-12Hz-1.7B-Base" },
+    });
+    fireEvent.change(screen.getByLabelText("Qwen device map"), { target: { value: "cuda:0" } });
+    fireEvent.change(screen.getByLabelText("Qwen dtype"), { target: { value: "bfloat16" } });
+    fireEvent.change(screen.getByLabelText("Qwen attention implementation"), {
+      target: { value: "flash_attention_2" },
+    });
     fireEvent.change(screen.getByLabelText("Confirmed by"), { target: { value: "Junwei" } });
     fireEvent.change(screen.getByLabelText("Consent notes"), {
       target: { value: "Written consent captured for local private mixed voice testing." },
@@ -424,6 +432,10 @@ describe("App", () => {
     expect(verificationCall).toMatchObject({
       voice_profile_ids: ["voice_alice", "voice_bob"],
       text: "Studio verification with imported Alice and Bob.",
+      model_id: "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+      device_map: "cuda:0",
+      dtype: "bfloat16",
+      attn_implementation: "flash_attention_2",
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Create blend from imported voices" }));

@@ -73,6 +73,10 @@ class GenerateRequest(BaseModel):
 class RunQwenVerificationRequest(BaseModel):
     voice_profile_ids: list[str]
     text: str = "This is a disclosed synthetic mixed voice runtime verification."
+    model_id: str | None = None
+    device_map: str | None = None
+    dtype: str | None = None
+    attn_implementation: str | None = None
 
 
 class DeleteVoiceResponse(BaseModel):
@@ -149,7 +153,13 @@ def run_qwen_verification_route(request: RunQwenVerificationRequest) -> QwenVeri
             profiles=[BlendProfileInput(voice_profile_id=profile_id, weight=1) for profile_id in profile_ids],
             strategy="multi_reference_prompt",
         )
-        adapter = QwenTtsAdapter.from_pretrained(output_root=Path(GENERATION_ROOT))
+        adapter = QwenTtsAdapter.from_pretrained(
+            model_id=request.model_id,
+            device_map=request.device_map,
+            dtype=request.dtype,
+            attn_implementation=request.attn_implementation,
+            output_root=Path(GENERATION_ROOT),
+        )
         output_path = adapter.synthesize(request.text, blend, voice_profiles=voice_profiles)
     except (FileNotFoundError, QwenTtsNotConfigured, ValueError) as exc:
         return _write_qwen_verification_report(
@@ -157,6 +167,10 @@ def run_qwen_verification_route(request: RunQwenVerificationRequest) -> QwenVeri
                 "status": "failed",
                 "error": str(exc),
                 "voice_profile_ids": profile_ids,
+                "model_id": request.model_id,
+                "device_map": request.device_map,
+                "dtype": request.dtype,
+                "attn_implementation": request.attn_implementation,
                 "tts_backend": "qwen3_tts",
                 "text": request.text,
             }
@@ -166,6 +180,10 @@ def run_qwen_verification_route(request: RunQwenVerificationRequest) -> QwenVeri
         {
             "status": "passed",
             "voice_profile_ids": profile_ids,
+            "model_id": request.model_id,
+            "device_map": request.device_map,
+            "dtype": request.dtype,
+            "attn_implementation": request.attn_implementation,
             "source_profile_details": [
                 detail.model_dump(mode="json")
                 for detail in build_source_profile_details(blend.profiles, voice_profiles)

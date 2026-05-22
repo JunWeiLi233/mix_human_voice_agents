@@ -59,6 +59,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "status": "failed",
                 "error": "Qwen runtime verification requires at least two voice profile ids.",
                 "voice_profile_ids": profile_ids,
+                "model_id": args.model_id,
+                "device_map": args.device_map,
+                "dtype": args.dtype,
+                "attn_implementation": args.attn_implementation,
                 "tts_backend": "qwen3_tts",
             },
         )
@@ -86,6 +90,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "status": "failed",
                 "error": str(exc),
                 "voice_profile_ids": profile_ids,
+                "model_id": args.model_id,
+                "device_map": args.device_map,
+                "dtype": args.dtype,
+                "attn_implementation": args.attn_implementation,
                 "tts_backend": "qwen3_tts",
             },
         )
@@ -96,6 +104,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         {
             "status": "passed",
             "voice_profile_ids": profile_ids,
+            "model_id": args.model_id,
+            "device_map": args.device_map,
+            "dtype": args.dtype,
+            "attn_implementation": args.attn_implementation,
             "source_profile_details": [
                 detail.model_dump(mode="json")
                 for detail in build_source_profile_details(blend.profiles, voice_profiles)

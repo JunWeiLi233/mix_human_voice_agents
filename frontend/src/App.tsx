@@ -26,6 +26,7 @@ import type {
   BlendDraftProfile,
   GenerationResult,
   LaunchReadinessReport,
+  QwenRuntimeConfig,
   QwenVerificationReport,
   TtsBackend,
   TtsRuntimeStatus,
@@ -54,6 +55,12 @@ export default function App() {
   const [qwenVerificationText, setQwenVerificationText] = useState(
     "This is a disclosed synthetic mixed voice runtime verification.",
   );
+  const [qwenRuntimeConfig, setQwenRuntimeConfig] = useState<QwenRuntimeConfig>({
+    model_id: "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+    device_map: "auto",
+    dtype: "",
+    attn_implementation: "",
+  });
   const [qwenVerificationVoiceIds, setQwenVerificationVoiceIds] = useState<string[]>([]);
   const [qwenVerificationBusy, setQwenVerificationBusy] = useState(false);
   const [agentProviderTestReply, setAgentProviderTestReply] = useState<string | null>(null);
@@ -233,6 +240,7 @@ export default function App() {
       const report = await runQwenVerification(
         qwenVerificationVoiceIds,
         qwenVerificationText,
+        qwenRuntimeConfig,
       );
       setQwenVerification(report);
       void refreshLaunchReadiness();
@@ -269,6 +277,7 @@ export default function App() {
           voices={voices}
           selectedVerificationVoiceIds={qwenVerificationVoiceIds}
           verificationText={qwenVerificationText}
+          runtimeConfig={qwenRuntimeConfig}
           verificationBusy={qwenVerificationBusy}
           onChange={setTtsBackend}
           onToggleVerificationVoice={(voiceProfileId) => {
@@ -279,6 +288,7 @@ export default function App() {
             );
           }}
           onVerificationTextChange={setQwenVerificationText}
+          onRuntimeConfigChange={setQwenRuntimeConfig}
           onRunVerification={handleRunQwenVerification}
         />
         <LaunchReadiness readiness={launchReadiness} />

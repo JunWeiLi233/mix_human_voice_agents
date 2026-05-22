@@ -6,6 +6,7 @@ import type {
   DeleteVoiceResult,
   GenerationResult,
   LaunchReadinessReport,
+  QwenRuntimeConfig,
   QwenVerificationReport,
   TtsBackend,
   TtsRuntimeStatus,
@@ -46,13 +47,21 @@ export async function getQwenVerificationReport(): Promise<QwenVerificationRepor
   return response.json();
 }
 
-export async function runQwenVerification(voiceProfileIds: string[], text: string): Promise<QwenVerificationReport> {
+export async function runQwenVerification(
+  voiceProfileIds: string[],
+  text: string,
+  runtime: QwenRuntimeConfig,
+): Promise<QwenVerificationReport> {
   const response = await fetch("/api/tts/qwen/verification", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       voice_profile_ids: voiceProfileIds,
       text,
+      model_id: runtime.model_id || null,
+      device_map: runtime.device_map || null,
+      dtype: runtime.dtype || null,
+      attn_implementation: runtime.attn_implementation || null,
     }),
   });
   if (!response.ok) {

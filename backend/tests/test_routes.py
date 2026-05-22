@@ -151,11 +151,13 @@ def test_qwen_verification_route_runs_with_selected_imported_profiles(tmp_path: 
     class FakeQwenAdapter:
         seen_text = ""
         seen_profile_ids: list[str] = []
+        seen_load_kwargs: dict[str, object] = {}
 
         @classmethod
-        def from_pretrained(cls, output_root=None):
+        def from_pretrained(cls, output_root=None, **kwargs):
             cls.output_root = Path(output_root)
             cls.output_root.mkdir(parents=True, exist_ok=True)
+            cls.seen_load_kwargs = kwargs
             return cls()
 
         def synthesize(self, text, blend, voice_profiles=None):
@@ -172,6 +174,10 @@ def test_qwen_verification_route_runs_with_selected_imported_profiles(tmp_path: 
         json={
             "voice_profile_ids": [voices[0]["id"], voices[1]["id"]],
             "text": "This is a studio Qwen verification.",
+            "model_id": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+            "device_map": "cuda:0",
+            "dtype": "bfloat16",
+            "attn_implementation": "flash_attention_2",
         },
     )
 
@@ -181,6 +187,10 @@ def test_qwen_verification_route_runs_with_selected_imported_profiles(tmp_path: 
     assert payload["voice_profile_ids"] == [voices[0]["id"], voices[1]["id"]]
     assert payload["blend_strategy"] == "multi_reference_prompt"
     assert payload["text"] == "This is a studio Qwen verification."
+    assert payload["model_id"] == "Qwen/Qwen3-TTS-12Hz-1.7B-Base"
+    assert payload["device_map"] == "cuda:0"
+    assert payload["dtype"] == "bfloat16"
+    assert payload["attn_implementation"] == "flash_attention_2"
     assert payload["source_profile_details"] == [
         {
             "voice_profile_id": voices[0]["id"],
@@ -202,6 +212,12 @@ def test_qwen_verification_route_runs_with_selected_imported_profiles(tmp_path: 
     assert Path(payload["output_audio_path"]).exists()
     assert FakeQwenAdapter.seen_text == "This is a studio Qwen verification."
     assert FakeQwenAdapter.seen_profile_ids == sorted([voices[0]["id"], voices[1]["id"]])
+    assert FakeQwenAdapter.seen_load_kwargs == {
+        "model_id": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+        "device_map": "cuda:0",
+        "dtype": "bfloat16",
+        "attn_implementation": "flash_attention_2",
+    }
 
     saved_report = client.get("/api/tts/qwen/verification").json()
     assert saved_report["status"] == "passed"

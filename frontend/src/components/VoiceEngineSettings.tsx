@@ -1,4 +1,4 @@
-import type { QwenVerificationReport, TtsBackend, TtsRuntimeStatus, VoiceProfile } from "../types";
+import type { QwenRuntimeConfig, QwenVerificationReport, TtsBackend, TtsRuntimeStatus, VoiceProfile } from "../types";
 
 type Props = {
   value: TtsBackend;
@@ -7,10 +7,12 @@ type Props = {
   voices: VoiceProfile[];
   selectedVerificationVoiceIds: string[];
   verificationText: string;
+  runtimeConfig: QwenRuntimeConfig;
   verificationBusy: boolean;
   onChange: (backend: TtsBackend) => void;
   onToggleVerificationVoice: (voiceProfileId: string) => void;
   onVerificationTextChange: (text: string) => void;
+  onRuntimeConfigChange: (config: QwenRuntimeConfig) => void;
   onRunVerification: () => void;
 };
 
@@ -21,10 +23,12 @@ export function VoiceEngineSettings({
   voices,
   selectedVerificationVoiceIds,
   verificationText,
+  runtimeConfig,
   verificationBusy,
   onChange,
   onToggleVerificationVoice,
   onVerificationTextChange,
+  onRuntimeConfigChange,
   onRunVerification,
 }: Props) {
   const verificationDisabled = selectedVerificationVoiceIds.length < 2 || verificationBusy;
@@ -91,6 +95,38 @@ export function VoiceEngineSettings({
           aria-label="Qwen verification text"
           value={verificationText}
           onChange={(event) => onVerificationTextChange(event.target.value)}
+        />
+      </label>
+      <label>
+        Qwen model id
+        <input
+          aria-label="Qwen model id"
+          value={runtimeConfig.model_id}
+          onChange={(event) => onRuntimeConfigChange({ ...runtimeConfig, model_id: event.target.value })}
+        />
+      </label>
+      <label>
+        Qwen device map
+        <input
+          aria-label="Qwen device map"
+          value={runtimeConfig.device_map}
+          onChange={(event) => onRuntimeConfigChange({ ...runtimeConfig, device_map: event.target.value })}
+        />
+      </label>
+      <label>
+        Qwen dtype
+        <input
+          aria-label="Qwen dtype"
+          value={runtimeConfig.dtype}
+          onChange={(event) => onRuntimeConfigChange({ ...runtimeConfig, dtype: event.target.value })}
+        />
+      </label>
+      <label>
+        Qwen attention implementation
+        <input
+          aria-label="Qwen attention implementation"
+          value={runtimeConfig.attn_implementation}
+          onChange={(event) => onRuntimeConfigChange({ ...runtimeConfig, attn_implementation: event.target.value })}
         />
       </label>
       {voices.length ? (
