@@ -142,7 +142,7 @@ def evaluate_launch_readiness() -> LaunchReadinessReport:
 
 def _agent_provider_verification_detail(report: AgentProviderVerificationReport) -> str:
     if report.status == "passed":
-        return f"Provider verified: {report.provider} / {report.model}"
+        return f"Provider verified: {report.provider} / {report.model} at {report.base_url}"
     if report.error:
         return report.error
     return "No passed agent provider verification report."
@@ -154,10 +154,10 @@ def _agent_provider_verification_status(report: AgentProviderVerificationReport)
             "passed": False,
             "detail": _agent_provider_verification_detail(report),
         }
-    if not report.provider or not report.model or not (report.reply or "").strip():
+    if not report.provider or not report.model or not report.base_url or not (report.reply or "").strip():
         return {
             "passed": False,
-            "detail": "Agent provider verification report is missing provider, model, or reply.",
+            "detail": "Agent provider verification report is missing provider, model, base_url, or reply.",
         }
     return {
         "passed": True,
@@ -440,6 +440,20 @@ def _qwen_mixed_generation_status(
                     f"{generation.agent_trace.provider} / {generation.agent_trace.model}, "
                     "but verified provider is "
                     f"{agent_provider_verification.provider} / {agent_provider_verification.model}."
+                ),
+            }
+        if (
+            agent_provider_verification.status == "passed"
+            and agent_provider_verification.base_url
+            and agent_provider_verification.base_url.rstrip("/") != (generation.agent_trace.base_url or "").rstrip("/")
+        ):
+            return {
+                "passed": False,
+                "detail": (
+                    "Qwen mixed voice clip uses "
+                    f"{generation.agent_trace.provider} / {generation.agent_trace.model} "
+                    f"at {generation.agent_trace.base_url}, but verified provider endpoint is "
+                    f"{agent_provider_verification.base_url}."
                 ),
             }
         if (

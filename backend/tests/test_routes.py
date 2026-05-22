@@ -360,7 +360,7 @@ def test_launch_readiness_reports_ready_after_full_qwen_verification(tmp_path: P
             "strategy": "multi_reference_prompt",
         },
     ).json()
-    write_agent_provider_verification_report()
+    write_agent_provider_verification_report(base_url="https://api.openai.com/v1")
     write_qwen_runtime_verification_report([voices[0]["id"], voices[1]["id"]])
 
     class FakeQwenAdapter:
@@ -388,6 +388,7 @@ def test_launch_readiness_reports_ready_after_full_qwen_verification(tmp_path: P
             "agent_trace": {
                 "provider": "openai",
                 "model": "gpt-4.1-mini",
+                "base_url": "https://api.openai.com/v1",
             },
         },
     ).json()

@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from pathlib import Path
 
 from app.core.launch import _qwen_mixed_generation_status, _qwen_verification_status, evaluate_launch_readiness
 from app.models.schemas import (
@@ -43,7 +44,32 @@ def test_core_launch_readiness_blocks_passed_agent_provider_report_without_provi
 
     agent_provider_check = next(check for check in report.checks if check.id == "agent_provider")
     assert agent_provider_check.passed is False
-    assert agent_provider_check.detail == "Agent provider verification report is missing provider, model, or reply."
+    assert agent_provider_check.detail == "Agent provider verification report is missing provider, model, base_url, or reply."
+
+
+def test_core_launch_readiness_blocks_passed_agent_provider_report_without_base_url(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "agent-provider-verification-report.json").write_text(
+        """
+        {
+          "status": "passed",
+          "provider": "openai_compatible",
+          "model": "custom-voice-agent-model",
+          "reply": "Provider ready.",
+          "report_path": "data/agent-provider-verification-report.json"
+        }
+        """,
+        encoding="utf-8",
+    )
+
+    report = evaluate_launch_readiness()
+
+    agent_provider_check = next(check for check in report.checks if check.id == "agent_provider")
+    assert agent_provider_check.passed is False
+    assert agent_provider_check.detail == "Agent provider verification report is missing provider, model, base_url, or reply."
 
 
 def test_core_launch_readiness_blocks_invalid_agent_provider_report(tmp_path, monkeypatch):
@@ -1048,6 +1074,70 @@ def test_core_launch_readiness_blocks_when_generation_trace_differs_from_verifie
     generated_audio_check = next(check for check in report.checks if check.id == "generated_audio")
     assert generated_audio_check.passed is False
     assert generated_audio_check.detail == "Qwen mixed voice clip uses anthropic / claude-sonnet-4-5, but verified provider is openai / gpt-4.1-mini."
+
+
+def test_core_launch_readiness_blocks_when_generation_trace_differs_from_verified_provider_base_url(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    source_details = [
+        SourceProfileDetail(
+            voice_profile_id="voice_a",
+            display_name="Alice",
+            weight=0.5,
+            consent_confirmed_by="local_user",
+            allowed_uses=["private_agent_voice", "local_audio_export"],
+            reference_text_present=True,
+        ),
+        SourceProfileDetail(
+            voice_profile_id="voice_b",
+            display_name="Bob",
+            weight=0.5,
+            consent_confirmed_by="local_user",
+            allowed_uses=["private_agent_voice", "local_audio_export"],
+            reference_text_present=True,
+        ),
+    ]
+
+    status = _qwen_mixed_generation_status(
+        [
+            GenerationResult(
+                audio_path=str(Path("data") / "generations" / "mixed.wav"),
+                metadata_path=str(Path("data") / "generations" / "mixed.json"),
+                prompt="Say hello as a synthetic assistant.",
+                agent_reply="Hello from a synthetic mixed voice.",
+                synthetic_label="synthetic mixed voice",
+                source_profile_ids=["voice_a", "voice_b"],
+                source_profile_details=source_details,
+                blend_strategy="multi_reference_prompt",
+                tts_backend="qwen3_tts",
+                agent_trace=AgentTrace(
+                    provider="openai_compatible",
+                    model="custom-voice-agent-model",
+                    base_url="http://127.0.0.1:11434",
+                ),
+            )
+        ],
+        AgentProviderVerificationReport(
+            status="passed",
+            report_path="data/agent-provider-verification-report.json",
+            provider="openai_compatible",
+            model="custom-voice-agent-model",
+            base_url="https://llm.example.test/v1",
+            reply="Provider ready.",
+        ),
+        QwenVerificationReport(
+            status="missing",
+            report_path="data/qwen-runtime-verification-report.json",
+        ),
+    )
+
+    assert status == {
+        "passed": False,
+        "detail": (
+            "Qwen mixed voice clip uses openai_compatible / custom-voice-agent-model "
+            "at http://127.0.0.1:11434, but verified provider endpoint is "
+            "https://llm.example.test/v1."
+        ),
+    }
 
 
 def test_core_launch_readiness_blocks_when_qwen_verification_uses_wrong_backend(tmp_path, monkeypatch):
