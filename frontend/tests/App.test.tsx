@@ -114,6 +114,7 @@ describe("App", () => {
               label: "synthetic mixed voice",
               disclosure: "Generated audio is synthetic and mixed from consented imported voice profiles.",
             },
+            agent_trace: { provider: "openai", model: "gpt-4.1-mini" },
             synthetic_label: "synthetic mixed voice",
             blend_strategy: "local_development_wav",
             tts_backend: "local_development_wav",
@@ -261,6 +262,7 @@ describe("App", () => {
             label: body.blend.synthetic_label,
             disclosure: "Generated audio is synthetic and mixed from consented imported voice profiles.",
           },
+          agent_trace: body.agent_trace,
           synthetic_label: body.blend.synthetic_label,
           tts_backend: body.tts_backend,
         });
@@ -280,6 +282,7 @@ describe("App", () => {
     expect(
       screen.getByText("Generated audio is synthetic and mixed from consented imported voice profiles."),
     ).toBeInTheDocument();
+    expect(screen.getByText("Agent: openai / gpt-4.1-mini")).toBeInTheDocument();
     expect(screen.getByLabelText("Play synthetic mixed voice")).toHaveAttribute(
       "src",
       "/api/generations/generation_existing/audio",
@@ -384,6 +387,10 @@ describe("App", () => {
     expect(generationCall).toMatchObject({
       prompt,
       agent_reply: `API reply to ${prompt}`,
+      agent_trace: {
+        provider: "openai",
+        model: "custom-voice-agent-model",
+      },
       tts_backend: "qwen3_tts",
     });
   });

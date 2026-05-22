@@ -115,7 +115,7 @@ export async function requestAgentReply(config: AgentConfig, prompt: string): Pr
 
 export async function generateClip(
   blend: VoiceBlend,
-  agentReply: string,
+  agentReply: AgentReply,
   ttsBackend: TtsBackend,
   prompt: string,
 ): Promise<GenerationResult> {
@@ -124,7 +124,11 @@ export async function generateClip(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       prompt,
-      agent_reply: agentReply,
+      agent_reply: agentReply.reply,
+      agent_trace: {
+        provider: agentReply.provider,
+        model: agentReply.model,
+      },
       blend,
       tts_backend: ttsBackend,
     }),

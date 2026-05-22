@@ -6,7 +6,7 @@ import pytest
 from app.core.blends import create_blend
 from app.core.generation import generate_agent_clip
 from app.core.safety import SafetyError, check_generation_request
-from app.models.schemas import BlendProfileInput
+from app.models.schemas import AgentTrace, BlendProfileInput
 from app.tts.local_wav import LocalWavTtsAdapter
 
 
@@ -31,6 +31,7 @@ def test_generation_writes_wav_and_metadata(tmp_path: Path):
         agent_reply="Hello, I am your synthetic mixed voice assistant.",
         blend=blend,
         adapter=adapter,
+        agent_trace=AgentTrace(provider="openai", model="gpt-4.1-mini"),
     )
 
     assert Path(result.audio_path).exists()
@@ -41,9 +42,12 @@ def test_generation_writes_wav_and_metadata(tmp_path: Path):
     assert result.source_profiles[0].weight == pytest.approx(2 / 3)
     assert result.source_profiles[1].voice_profile_id == "voice_b"
     assert result.source_profiles[1].weight == pytest.approx(1 / 3)
+    assert result.agent_trace.provider == "openai"
+    assert result.agent_trace.model == "gpt-4.1-mini"
 
     metadata = json.loads(Path(result.metadata_path).read_text(encoding="utf-8"))
     assert metadata["source_profile_ids"] == ["voice_a", "voice_b"]
+    assert metadata["agent_trace"] == {"provider": "openai", "model": "gpt-4.1-mini"}
     assert metadata["watermark"] == {
         "type": "metadata",
         "label": "synthetic mixed voice",

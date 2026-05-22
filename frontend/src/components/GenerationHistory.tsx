@@ -17,6 +17,11 @@ export function GenerationHistory({ generations }: Props) {
               <div>
                 {item.synthetic_label} using {formatGenerationSources(item)}
               </div>
+              {item.agent_trace ? (
+                <p>
+                  Agent: {item.agent_trace.provider} / {item.agent_trace.model}
+                </p>
+              ) : null}
               {item.watermark ? <p className="metadata-watermark">{item.watermark.disclosure}</p> : null}
               <audio controls aria-label={`Play ${item.synthetic_label}`} src={`/api/generations/${item.id}/audio`} />
               <div className="history-actions">

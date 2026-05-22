@@ -32,6 +32,10 @@ export type GenerationResult = {
   };
   blend_strategy: BlendStrategy;
   tts_backend: TtsBackend;
+  agent_trace?: {
+    provider: AgentProviderKind;
+    model: string;
+  } | null;
 };
 
 export type AgentProviderKind = "openai" | "anthropic" | "xai" | "openai_compatible" | "ollama";

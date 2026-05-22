@@ -3,7 +3,7 @@ from pathlib import Path
 
 from app.core.blends import validate_blend
 from app.core.safety import check_generation_request
-from app.models.schemas import GenerationResult, MetadataWatermark, TtsBackend, VoiceBlend, VoiceProfile
+from app.models.schemas import AgentTrace, GenerationResult, MetadataWatermark, TtsBackend, VoiceBlend, VoiceProfile
 from app.tts.base import TtsAdapter
 
 METADATA_WATERMARK_DISCLOSURE = "Generated audio is synthetic and mixed from consented imported voice profiles."
@@ -16,6 +16,7 @@ def generate_agent_clip(
     adapter: TtsAdapter,
     voice_profiles: dict[str, VoiceProfile] | None = None,
     tts_backend: TtsBackend = "local_development_wav",
+    agent_trace: AgentTrace | None = None,
 ) -> GenerationResult:
     validate_blend(blend)
     check_generation_request(prompt)
@@ -31,6 +32,7 @@ def generate_agent_clip(
         source_profiles=blend.profiles,
         blend_strategy=blend.strategy,
         tts_backend=tts_backend,
+        agent_trace=agent_trace,
         watermark=MetadataWatermark(
             label=blend.synthetic_label,
             disclosure=METADATA_WATERMARK_DISCLOSURE,

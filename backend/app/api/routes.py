@@ -29,6 +29,7 @@ from app.core.storage import (
 from app.models.schemas import (
     AgentReply,
     AgentReplyRequest,
+    AgentTrace,
     BlendProfileInput,
     BlendStrategy,
     ConsentRequest,
@@ -59,6 +60,7 @@ class GenerateRequest(BaseModel):
     agent_reply: str
     blend: VoiceBlend
     tts_backend: TtsBackend = "local_development_wav"
+    agent_trace: AgentTrace | None = None
 
 
 class RunQwenVerificationRequest(BaseModel):
@@ -260,6 +262,7 @@ def generate_route(request: GenerateRequest) -> GenerationResult:
             adapter=adapter,
             voice_profiles=voice_profiles,
             tts_backend=request.tts_backend,
+            agent_trace=request.agent_trace,
         )
     except (BlendError, QwenTtsNotConfigured, SafetyError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

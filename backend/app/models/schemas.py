@@ -15,6 +15,7 @@ BlendStrategy = Literal[
     "designed_voice_proxy",
     "local_development_wav",
 ]
+AgentProviderKind = Literal["openai", "anthropic", "xai", "openai_compatible", "ollama"]
 
 
 class ConsentRequest(BaseModel):
@@ -78,6 +79,11 @@ class MetadataWatermark(BaseModel):
     disclosure: str = "Generated audio is synthetic and mixed from consented imported voice profiles."
 
 
+class AgentTrace(BaseModel):
+    provider: AgentProviderKind
+    model: str
+
+
 class GenerationResult(BaseModel):
     id: str = Field(default_factory=lambda: f"generation_{uuid4().hex[:12]}")
     audio_path: str
@@ -88,6 +94,7 @@ class GenerationResult(BaseModel):
     blend_strategy: BlendStrategy
     tts_backend: TtsBackend = "local_development_wav"
     watermark: MetadataWatermark = Field(default_factory=MetadataWatermark)
+    agent_trace: AgentTrace | None = None
 
 
 class TtsRuntimeStatus(BaseModel):
@@ -120,9 +127,6 @@ class LaunchReadinessReport(BaseModel):
     status: LaunchReadinessStatus
     checks: list[LaunchReadinessCheck]
     blocking_reasons: list[str]
-
-
-AgentProviderKind = Literal["openai", "anthropic", "xai", "openai_compatible", "ollama"]
 
 
 class AgentConfig(BaseModel):

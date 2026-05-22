@@ -21,7 +21,7 @@
 - The selected agent provider passes the in-app `Test provider` preflight before using it for voice generation.
 - Agent reply generation succeeds through the selected provider before TTS synthesis.
 - Audio generation creates a `.wav` file and adjacent `.json` metadata file.
-- Metadata includes `synthetic_label`, `source_profile_ids`, `source_profiles` with normalized weights, `blend_strategy`, and a synthetic metadata watermark disclosure.
+- Metadata includes `synthetic_label`, `source_profile_ids`, `source_profiles` with normalized weights, `agent_trace` with provider/model, `blend_strategy`, and a synthetic metadata watermark disclosure.
 - Safety filter blocks impersonation or payment authorization language.
 - Generated audio is disclosed as synthetic in UI and metadata.
 - Deleting an imported voice profile removes its local profile/audio directory.
