@@ -18,6 +18,7 @@ from app.core.launch import (
     get_agent_provider_verification_report,
     get_qwen_verification_report,
 )
+from app.core.qwen_profiles import validate_qwen_voice_profiles
 from app.core.safety import SafetyError
 from app.core.storage import (
     GENERATION_ROOT,
@@ -54,7 +55,6 @@ from app.tts.local_wav import LocalWavTtsAdapter
 from app.tts.qwen import QwenTtsAdapter, QwenTtsNotConfigured
 
 router = APIRouter(prefix="/api")
-REQUIRED_VOICE_USE = "private_agent_voice"
 
 
 class CreateBlendRequest(BaseModel):
@@ -153,6 +153,7 @@ def run_qwen_verification_route(request: RunQwenVerificationRequest) -> QwenVeri
 
     try:
         voice_profiles = get_voice_profiles_by_ids(profile_ids)
+        validate_qwen_voice_profiles(voice_profiles)
         blend = create_blend(
             name="Qwen runtime verification blend",
             profiles=[BlendProfileInput(voice_profile_id=profile_id, weight=1) for profile_id in profile_ids],
@@ -248,7 +249,10 @@ def generate_route(request: GenerateRequest) -> GenerationResult:
     voice_profiles = _load_voice_profiles_for_generation(source_ids, strict=request.tts_backend == "qwen3_tts")
     qwen_runtime_config = _qwen_runtime_config_from_request(request)
     if request.tts_backend == "qwen3_tts":
-        _validate_qwen_voice_profiles(voice_profiles or {})
+        try:
+            validate_qwen_voice_profiles(voice_profiles or {})
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         adapter = QwenTtsAdapter.from_pretrained(
             model_id=request.model_id,
             device_map=request.device_map,
@@ -280,26 +284,6 @@ def _load_voice_profiles_for_generation(profile_ids: list[str], strict: bool) ->
         if strict:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         return None
-
-
-def _validate_qwen_voice_profiles(voice_profiles: dict[str, VoiceProfile]) -> None:
-    for profile in voice_profiles.values():
-        consent = profile.consent
-        if not consent.synthetic_voice_allowed or REQUIRED_VOICE_USE not in consent.allowed_uses:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Voice profile {profile.id} is not allowed for private agent voice use.",
-            )
-        if not profile.reference_text.strip():
-            raise HTTPException(
-                status_code=400,
-                detail=f"Voice profile {profile.id} must include reference text for Qwen synthesis.",
-            )
-        if profile.quality.warnings:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Voice profile {profile.id} must not have audio quality warnings for Qwen synthesis.",
-            )
 
 
 def _qwen_runtime_config_from_request(request: GenerateRequest) -> dict[str, str | None] | None:

@@ -256,6 +256,41 @@ def test_qwen_verification_route_requires_distinct_profiles(tmp_path: Path, monk
     assert "distinct" in response.json()["detail"]
 
 
+def test_qwen_verification_route_rejects_quality_warnings_before_loading_runtime(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+
+    def fail_if_qwen_loads(**kwargs):
+        raise AssertionError("quality warnings should be rejected before loading Qwen")
+
+    monkeypatch.setattr("app.api.routes.QwenTtsAdapter.from_pretrained", fail_if_qwen_loads)
+    monkeypatch.setattr(
+        "app.api.routes.get_voice_profiles_by_ids",
+        lambda profile_ids: {
+            "voice_a": voice_profile(
+                "voice_a",
+                "Alice",
+                quality_warnings=["Reference audio appears clipped; record a cleaner sample."],
+            ),
+            "voice_b": voice_profile("voice_b", "Bob"),
+        },
+    )
+
+    response = client.post(
+        "/api/tts/qwen/verification",
+        json={
+            "voice_profile_ids": ["voice_a", "voice_b"],
+            "text": "This is a studio Qwen verification.",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "failed"
+    assert payload["error"] == "Voice profile voice_a must not have audio quality warnings for Qwen synthesis."
+
+
 def test_launch_readiness_reports_blockers_when_requirements_are_missing(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
 

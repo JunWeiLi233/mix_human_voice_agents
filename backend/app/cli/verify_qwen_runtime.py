@@ -7,6 +7,7 @@ from typing import Sequence
 
 from app.core.blends import create_blend
 from app.core.generation import build_source_profile_details
+from app.core.qwen_profiles import validate_qwen_voice_profiles
 from app.core.storage import GENERATION_ROOT, get_voice_profiles_by_ids
 from app.models.schemas import BlendProfileInput
 from app.tts.qwen import QwenTtsAdapter, QwenTtsNotConfigured
@@ -85,6 +86,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     try:
         voice_profiles = get_voice_profiles_by_ids(profile_ids)
+        validate_qwen_voice_profiles(voice_profiles)
         blend = create_blend(
             name="Qwen runtime verification blend",
             profiles=[BlendProfileInput(voice_profile_id=profile_id, weight=1) for profile_id in profile_ids],
