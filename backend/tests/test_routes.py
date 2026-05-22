@@ -13,6 +13,26 @@ def test_health_route_returns_ok():
     assert response.json() == {"status": "ok"}
 
 
+def test_qwen_status_route_reports_runtime_availability(monkeypatch):
+    def fake_status():
+        return {
+            "backend": "qwen3_tts",
+            "available": False,
+            "model_id": "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+            "message": "qwen-tts is not installed.",
+        }
+
+    monkeypatch.setattr("app.api.routes.QwenTtsAdapter.runtime_status", fake_status)
+
+    response = client.get("/api/tts/qwen/status")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["backend"] == "qwen3_tts"
+    assert payload["available"] is False
+    assert payload["model_id"] == "Qwen/Qwen3-TTS-12Hz-0.6B-Base"
+
+
 def test_create_blend_endpoint_normalizes_weights():
     response = client.post(
         "/api/blends",

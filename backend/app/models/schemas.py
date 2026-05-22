@@ -77,6 +77,13 @@ class GenerationResult(BaseModel):
     tts_backend: TtsBackend = "local_development_wav"
 
 
+class TtsRuntimeStatus(BaseModel):
+    backend: TtsBackend
+    available: bool
+    model_id: str | None = None
+    message: str
+
+
 AgentProviderKind = Literal["openai_compatible", "ollama"]
 
 

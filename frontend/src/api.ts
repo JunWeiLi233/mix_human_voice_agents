@@ -1,7 +1,23 @@
-import type { AgentConfig, AgentReply, GenerationResult, TtsBackend, VoiceBlend, VoiceProfile } from "./types";
+import type {
+  AgentConfig,
+  AgentReply,
+  GenerationResult,
+  TtsBackend,
+  TtsRuntimeStatus,
+  VoiceBlend,
+  VoiceProfile,
+} from "./types";
 
 export async function listVoices(): Promise<VoiceProfile[]> {
   const response = await fetch("/api/voices");
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  return response.json();
+}
+
+export async function getQwenRuntimeStatus(): Promise<TtsRuntimeStatus> {
+  const response = await fetch("/api/tts/qwen/status");
   if (!response.ok) {
     throw new Error(await response.text());
   }

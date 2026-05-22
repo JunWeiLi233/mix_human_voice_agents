@@ -8,8 +8,22 @@ describe("App", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders the mixed voice studio", () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify([]), { status: 200 }));
+  it("renders the mixed voice studio", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = input.toString();
+      if (url === "/api/voices") {
+        return jsonResponse([]);
+      }
+      if (url === "/api/tts/qwen/status") {
+        return jsonResponse({
+          backend: "qwen3_tts",
+          available: false,
+          model_id: "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+          message: 'qwen-tts is not installed. Run: python -m pip install -e ".[qwen]"',
+        });
+      }
+      return new Response("not found", { status: 404 });
+    });
 
     render(<App />);
 
@@ -19,6 +33,8 @@ describe("App", () => {
     expect(screen.getByText("Agent Provider")).toBeInTheDocument();
     expect(screen.getByText("Voice Engine")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Qwen3-TTS" })).toBeInTheDocument();
+    expect(await screen.findByText("Qwen/Qwen3-TTS-12Hz-0.6B-Base")).toBeInTheDocument();
+    expect(screen.getByText("Not installed")).toBeInTheDocument();
     expect(screen.getByText("No imported voices yet.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Create blend from imported voices" })).toBeDisabled();
   });
@@ -29,6 +45,15 @@ describe("App", () => {
 
       if (url === "/api/voices" && !init) {
         return jsonResponse([]);
+      }
+
+      if (url === "/api/tts/qwen/status" && !init) {
+        return jsonResponse({
+          backend: "qwen3_tts",
+          available: true,
+          model_id: "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+          message: "qwen-tts package is importable. Verify with consented samples before launch.",
+        });
       }
 
       if (url === "/api/voices" && init?.method === "POST") {
@@ -91,6 +116,7 @@ describe("App", () => {
 
     render(<App />);
     await waitFor(() => expect(screen.getByText("No imported voices yet.")).toBeInTheDocument());
+    await screen.findByText("Installed");
 
     fireEvent.click(screen.getByRole("button", { name: "API" }));
     fireEvent.change(screen.getByLabelText("Base URL"), { target: { value: "https://llm.example.test/v1" } });

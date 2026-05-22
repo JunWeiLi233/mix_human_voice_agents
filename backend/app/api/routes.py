@@ -24,6 +24,7 @@ from app.models.schemas import (
     BlendStrategy,
     ConsentRequest,
     GenerationResult,
+    TtsRuntimeStatus,
     TtsBackend,
     VoiceProfile,
     VoiceBlend,
@@ -50,6 +51,11 @@ class GenerateRequest(BaseModel):
 @router.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@router.get("/tts/qwen/status", response_model=TtsRuntimeStatus)
+def qwen_status_route() -> TtsRuntimeStatus:
+    return QwenTtsAdapter.runtime_status()
 
 
 @router.post("/blends", response_model=VoiceBlend)

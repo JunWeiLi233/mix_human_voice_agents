@@ -40,6 +40,13 @@ export type AgentReply = {
   model: string;
 };
 
+export type TtsRuntimeStatus = {
+  backend: TtsBackend;
+  available: boolean;
+  model_id: string | null;
+  message: string;
+};
+
 export type VoiceProfile = {
   id: string;
   display_name: string;

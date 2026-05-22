@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createBlend, generateClip, listVoices, requestAgentReply } from "./api";
+import { createBlend, generateClip, getQwenRuntimeStatus, listVoices, requestAgentReply } from "./api";
 import { AgentChat } from "./components/AgentChat";
 import { AgentProviderSettings } from "./components/AgentProviderSettings";
 import { BlendMixer } from "./components/BlendMixer";
@@ -7,7 +7,7 @@ import { GenerationHistory } from "./components/GenerationHistory";
 import { ImportVoice } from "./components/ImportVoice";
 import { VoiceLibrary } from "./components/VoiceLibrary";
 import { VoiceEngineSettings } from "./components/VoiceEngineSettings";
-import type { AgentConfig, GenerationResult, TtsBackend, VoiceBlend, VoiceProfile } from "./types";
+import type { AgentConfig, GenerationResult, TtsBackend, TtsRuntimeStatus, VoiceBlend, VoiceProfile } from "./types";
 import "./styles.css";
 
 export default function App() {
@@ -22,6 +22,7 @@ export default function App() {
   const [voices, setVoices] = useState<VoiceProfile[]>([]);
   const [blend, setBlend] = useState<VoiceBlend | null>(null);
   const [generations, setGenerations] = useState<GenerationResult[]>([]);
+  const [qwenStatus, setQwenStatus] = useState<TtsRuntimeStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -29,6 +30,19 @@ export default function App() {
       .then(setVoices)
       .catch(() => {
         setVoices([]);
+      });
+  }, []);
+
+  useEffect(() => {
+    void getQwenRuntimeStatus()
+      .then(setQwenStatus)
+      .catch(() => {
+        setQwenStatus({
+          backend: "qwen3_tts",
+          available: false,
+          model_id: null,
+          message: "Qwen3-TTS runtime status is unavailable.",
+        });
       });
   }, []);
 
@@ -71,7 +85,7 @@ export default function App() {
       ) : null}
       <div className="layout">
         <AgentProviderSettings value={agentConfig} onChange={setAgentConfig} />
-        <VoiceEngineSettings value={ttsBackend} onChange={setTtsBackend} />
+        <VoiceEngineSettings value={ttsBackend} status={qwenStatus} onChange={setTtsBackend} />
         <VoiceLibrary voices={voices} />
         <ImportVoice onImported={handleImported} />
         <BlendMixer blend={blend} voices={voices} onCreateBlend={handleCreateBlend} />

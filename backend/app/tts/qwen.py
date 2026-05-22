@@ -1,10 +1,13 @@
+from __future__ import annotations
+
+import importlib.util
 from pathlib import Path
 from typing import Any
 
-import numpy as np
-import soundfile as sf
+from app.models.schemas import TtsRuntimeStatus, VoiceBlend, VoiceProfile
 
-from app.models.schemas import VoiceBlend, VoiceProfile
+
+DEFAULT_QWEN_TTS_MODEL_ID = "Qwen/Qwen3-TTS-12Hz-0.6B-Base"
 
 
 class QwenTtsNotConfigured(RuntimeError):
@@ -30,7 +33,7 @@ class QwenTtsAdapter:
     @classmethod
     def from_pretrained(
         cls,
-        model_id: str = "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+        model_id: str = DEFAULT_QWEN_TTS_MODEL_ID,
         device_map: str = "auto",
         dtype: Any | None = None,
         output_root: Path | None = None,
@@ -49,6 +52,22 @@ class QwenTtsAdapter:
         model = Qwen3TTSModel.from_pretrained(model_id, **kwargs)
         return cls(model=model, output_root=output_root)
 
+    @staticmethod
+    def runtime_status(model_id: str = DEFAULT_QWEN_TTS_MODEL_ID) -> TtsRuntimeStatus:
+        if importlib.util.find_spec("qwen_tts") is None:
+            return TtsRuntimeStatus(
+                backend="qwen3_tts",
+                available=False,
+                model_id=model_id,
+                message='qwen-tts is not installed. Run: python -m pip install -e ".[qwen]"',
+            )
+        return TtsRuntimeStatus(
+            backend="qwen3_tts",
+            available=True,
+            model_id=model_id,
+            message="qwen-tts package is importable. Verify with consented samples before launch.",
+        )
+
     def synthesize(
         self,
         text: str,
@@ -62,6 +81,7 @@ class QwenTtsAdapter:
         if not voice_profiles:
             raise QwenTtsNotConfigured("Qwen synthesis requires voice profile artifacts.")
 
+        np, sf = _load_audio_dependencies()
         weighted_wavs: list[np.ndarray] = []
         sample_rate: int | None = None
         for blend_profile in blend.profiles:
@@ -89,6 +109,7 @@ class QwenTtsAdapter:
 
     @staticmethod
     def _mix_weighted_wavs(weighted_wavs: list[np.ndarray]) -> np.ndarray:
+        np, _ = _load_audio_dependencies()
         if not weighted_wavs:
             raise QwenTtsNotConfigured("No Qwen waveforms were generated for mixing.")
 
@@ -107,5 +128,18 @@ class QwenTtsAdapter:
 
     @staticmethod
     def read_output(path: Path) -> tuple[np.ndarray, int]:
+        np, sf = _load_audio_dependencies()
         data, sample_rate = sf.read(path, dtype="float32")
         return np.asarray(data, dtype=np.float32), sample_rate
+
+
+def _load_audio_dependencies() -> tuple[Any, Any]:
+    try:
+        import numpy as np
+        import soundfile as sf
+    except ImportError as exc:
+        raise QwenTtsNotConfigured(
+            "Qwen audio mixing dependencies are not installed. Install backend with: "
+            'python -m pip install -e ".[qwen]"'
+        ) from exc
+    return np, sf
