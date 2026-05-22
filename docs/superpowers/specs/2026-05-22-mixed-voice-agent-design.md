@@ -83,13 +83,15 @@ The UI is a studio-style application with these views:
 - Blend Mixer: choose profiles, adjust weights, save blend presets, preview sample text.
 - Agent Chat: text or microphone input, transcript, generated reply, voice playback.
 - History: generated clips, source blend, model/backend used, export controls.
-- Settings: local model path, OpenAI API key for agent reasoning if used, storage location, safety settings.
+- Settings: user-selected agent provider, API key or local endpoint, local model path, storage location, safety settings.
 
 ### Agent Core
 
 The agent core owns conversation state and response generation. MVP can start with text input plus optional STT. The agent returns text that is passed to the mixed voice synthesis engine.
 
 The agent should be designed so a future realtime transport can replace the input/output shell without changing voice profile storage or blend logic.
+
+The agent backend must be user-configurable. Users should be able to choose between an API-hosted LLM and a local LLM endpoint. The MVP should support an OpenAI-compatible chat API configuration and an Ollama-compatible local configuration, with a provider-neutral interface so more providers can be added without changing the voice profile or TTS pipeline.
 
 ### Voice Profile Service
 
@@ -318,7 +320,7 @@ Use these defaults for the first implementation plan:
 
 - App shell: local web app with a React frontend and Python service.
 - TTS backend: Qwen3-TTS first, behind a backend-neutral adapter interface.
-- Agent backend: OpenAI text agent first, behind a provider-neutral agent interface.
+- Agent backend: user-configurable provider with OpenAI-compatible API and Ollama-compatible local LLM options behind a provider-neutral agent interface.
 - MVP input mode: typed chat plus generated audio output.
 - Microphone input: deferred until voice profiles, blend generation, and export metadata work.
 - Realtime API / LiveKit / Pipecat integration: deferred until the custom mixed-voice path is proven.
