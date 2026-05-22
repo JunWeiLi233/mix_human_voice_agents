@@ -55,6 +55,8 @@ export default function App() {
   );
   const [qwenVerificationVoiceIds, setQwenVerificationVoiceIds] = useState<string[]>([]);
   const [qwenVerificationBusy, setQwenVerificationBusy] = useState(false);
+  const [agentProviderTestReply, setAgentProviderTestReply] = useState<string | null>(null);
+  const [agentProviderTesting, setAgentProviderTesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -201,6 +203,23 @@ export default function App() {
     }
   }
 
+  async function handleTestAgentProvider() {
+    setError(null);
+    setAgentProviderTestReply(null);
+    setAgentProviderTesting(true);
+    try {
+      const reply = await requestAgentReply(
+        agentConfig,
+        "Reply with one short sentence confirming this provider is connected.",
+      );
+      setAgentProviderTestReply(reply.reply);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Agent provider test failed");
+    } finally {
+      setAgentProviderTesting(false);
+    }
+  }
+
   async function handleRunQwenVerification() {
     setError(null);
     setQwenVerificationBusy(true);
@@ -230,7 +249,13 @@ export default function App() {
         </div>
       ) : null}
       <div className="layout">
-        <AgentProviderSettings value={agentConfig} onChange={setAgentConfig} />
+        <AgentProviderSettings
+          value={agentConfig}
+          testReply={agentProviderTestReply}
+          testing={agentProviderTesting}
+          onChange={setAgentConfig}
+          onTestProvider={handleTestAgentProvider}
+        />
         <VoiceEngineSettings
           value={ttsBackend}
           status={qwenStatus}

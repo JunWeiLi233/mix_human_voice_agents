@@ -3,9 +3,12 @@ import type { AgentConfig, AgentProviderKind } from "../types";
 type Props = {
   value: AgentConfig;
   onChange: (config: AgentConfig) => void;
+  testReply: string | null;
+  testing: boolean;
+  onTestProvider: () => void;
 };
 
-export function AgentProviderSettings({ value, onChange }: Props) {
+export function AgentProviderSettings({ value, onChange, testReply, testing, onTestProvider }: Props) {
   function update(partial: Partial<AgentConfig>) {
     onChange({ ...value, ...partial });
   }
@@ -76,6 +79,10 @@ export function AgentProviderSettings({ value, onChange }: Props) {
           <input type="password" value={value.api_key} onChange={(event) => update({ api_key: event.target.value })} />
         </label>
       ) : null}
+      <button type="button" onClick={onTestProvider} disabled={testing}>
+        {testing ? "Testing provider" : "Test provider"}
+      </button>
+      {testReply ? <p>{testReply}</p> : null}
     </section>
   );
 }

@@ -17,7 +17,8 @@
 - Clipped reference samples import with a quality warning so users can re-record cleaner audio.
 - Blend creation with two distinct profiles succeeds and weights normalize to 100%.
 - Blend creation and Qwen verification reject duplicate voice profile IDs.
-- Agent provider settings accept either an OpenAI-compatible API configuration or an Ollama-compatible local endpoint.
+- Agent provider settings accept ChatGPT/OpenAI, Claude/Anthropic, Grok/xAI, custom OpenAI-compatible API, and Ollama-compatible local endpoints.
+- The selected agent provider passes the in-app `Test provider` preflight before using it for voice generation.
 - Agent reply generation succeeds through the selected provider before TTS synthesis.
 - Audio generation creates a `.wav` file and adjacent `.json` metadata file.
 - Metadata includes `synthetic_label`, `source_profile_ids`, `source_profiles` with normalized weights, `blend_strategy`, and a synthetic metadata watermark disclosure.

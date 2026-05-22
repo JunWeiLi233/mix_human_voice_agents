@@ -388,6 +388,71 @@ describe("App", () => {
     });
   });
 
+  it("lets the user test the selected agent provider before generating voice", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = input.toString();
+      if (url === "/api/voices" && !init) {
+        return jsonResponse([]);
+      }
+      if (url === "/api/generations" && !init) {
+        return jsonResponse([]);
+      }
+      if (url === "/api/blends" && !init) {
+        return jsonResponse([]);
+      }
+      if (url === "/api/tts/qwen/status" && !init) {
+        return jsonResponse({
+          backend: "qwen3_tts",
+          available: false,
+          model_id: "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+          message: "qwen-tts is not installed.",
+        });
+      }
+      if (url === "/api/tts/qwen/verification" && !init) {
+        return jsonResponse({
+          status: "missing",
+          tts_backend: "qwen3_tts",
+          report_path: "data/qwen-runtime-verification-report.json",
+          voice_profile_ids: [],
+        });
+      }
+      if (url === "/api/launch/readiness" && !init) {
+        return jsonResponse({
+          status: "blocked",
+          blocking_reasons: [],
+          checks: [],
+        });
+      }
+      if (url === "/api/agent/reply" && init?.method === "POST") {
+        const body = JSON.parse(init.body?.toString() ?? "{}");
+        return jsonResponse({
+          reply: "Provider test reply",
+          provider: body.config.provider,
+          model: body.config.model,
+        });
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    render(<App />);
+    await screen.findByText("No imported voices yet.");
+
+    fireEvent.click(screen.getByRole("button", { name: "Claude" }));
+    fireEvent.change(screen.getByLabelText("API key"), { target: { value: "sk-test" } });
+    fireEvent.click(screen.getByRole("button", { name: "Test provider" }));
+
+    expect(await screen.findByText("Provider test reply")).toBeInTheDocument();
+    expect(requestJson(fetchMock, "/api/agent/reply")).toMatchObject({
+      prompt: "Reply with one short sentence confirming this provider is connected.",
+      config: {
+        provider: "anthropic",
+        base_url: "https://api.anthropic.com",
+        model: "claude-sonnet-4-5",
+        api_key: "sk-test",
+      },
+    });
+  });
+
   it("lets the user delete an imported voice and removes dependent blends", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = input.toString();
