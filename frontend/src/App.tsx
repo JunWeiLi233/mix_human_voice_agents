@@ -7,7 +7,15 @@ import { GenerationHistory } from "./components/GenerationHistory";
 import { ImportVoice } from "./components/ImportVoice";
 import { VoiceLibrary } from "./components/VoiceLibrary";
 import { VoiceEngineSettings } from "./components/VoiceEngineSettings";
-import type { AgentConfig, GenerationResult, TtsBackend, TtsRuntimeStatus, VoiceBlend, VoiceProfile } from "./types";
+import type {
+  AgentConfig,
+  BlendDraftProfile,
+  GenerationResult,
+  TtsBackend,
+  TtsRuntimeStatus,
+  VoiceBlend,
+  VoiceProfile,
+} from "./types";
 import "./styles.css";
 
 export default function App() {
@@ -20,6 +28,7 @@ export default function App() {
   });
   const [ttsBackend, setTtsBackend] = useState<TtsBackend>("local_development_wav");
   const [voices, setVoices] = useState<VoiceProfile[]>([]);
+  const [blendProfiles, setBlendProfiles] = useState<BlendDraftProfile[]>([]);
   const [blend, setBlend] = useState<VoiceBlend | null>(null);
   const [generations, setGenerations] = useState<GenerationResult[]>([]);
   const [qwenStatus, setQwenStatus] = useState<TtsRuntimeStatus | null>(null);
@@ -27,9 +36,13 @@ export default function App() {
 
   useEffect(() => {
     void listVoices()
-      .then(setVoices)
+      .then((profiles) => {
+        setVoices(profiles);
+        setBlendProfiles(toBlendDrafts(profiles, []));
+      })
       .catch(() => {
         setVoices([]);
+        setBlendProfiles([]);
       });
   }, []);
 
@@ -49,14 +62,25 @@ export default function App() {
   async function handleCreateBlend() {
     setError(null);
     try {
-      setBlend(await createBlend(voices, ttsBackend));
+      setBlend(await createBlend(blendProfiles, ttsBackend));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Blend creation failed");
     }
   }
 
   function handleImported(profile: VoiceProfile) {
-    setVoices((current) => [...current, profile]);
+    const next = [...voices, profile];
+    setVoices(next);
+    setBlendProfiles((currentProfiles) => toBlendDrafts(next, currentProfiles));
+    setBlend(null);
+  }
+
+  function handleBlendWeightChange(voiceProfileId: string, weight: number) {
+    setBlendProfiles((current) =>
+      current.map((profile) =>
+        profile.voice_profile_id === voiceProfileId ? { ...profile, weight: Math.max(0.1, weight) } : profile,
+      ),
+    );
     setBlend(null);
   }
 
@@ -88,10 +112,26 @@ export default function App() {
         <VoiceEngineSettings value={ttsBackend} status={qwenStatus} onChange={setTtsBackend} />
         <VoiceLibrary voices={voices} />
         <ImportVoice onImported={handleImported} />
-        <BlendMixer blend={blend} voices={voices} onCreateBlend={handleCreateBlend} />
+        <BlendMixer
+          blend={blend}
+          profiles={blendProfiles}
+          onCreateBlend={handleCreateBlend}
+          onWeightChange={handleBlendWeightChange}
+        />
         <AgentChat blend={blend} onGenerate={handleGenerate} />
         <GenerationHistory generations={generations} />
       </div>
     </main>
   );
+}
+
+function toBlendDrafts(voices: VoiceProfile[], current: BlendDraftProfile[]): BlendDraftProfile[] {
+  return voices.map((voice) => {
+    const existing = current.find((profile) => profile.voice_profile_id === voice.id);
+    return {
+      voice_profile_id: voice.id,
+      display_name: voice.display_name,
+      weight: existing?.weight ?? 1,
+    };
+  });
 }

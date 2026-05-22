@@ -121,6 +121,12 @@ input {
   color: #3f6f46;
 }
 
+.blend-weights {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
 .error {
   border: 1px solid #a93d3d;
   background: #fff0f0;
@@ -143,4 +149,3 @@ input {
     grid-column: span 1;
   }
 }
-

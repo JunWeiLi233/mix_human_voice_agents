@@ -1,6 +1,7 @@
 import type {
   AgentConfig,
   AgentReply,
+  BlendDraftProfile,
   GenerationResult,
   TtsBackend,
   TtsRuntimeStatus,
@@ -24,15 +25,14 @@ export async function getQwenRuntimeStatus(): Promise<TtsRuntimeStatus> {
   return response.json();
 }
 
-export async function createBlend(voices: VoiceProfile[], ttsBackend: TtsBackend): Promise<VoiceBlend> {
-  const selected = voices.slice(0, Math.max(2, voices.length));
-  const weight = selected.length > 0 ? 1 : 0;
+export async function createBlend(profiles: BlendDraftProfile[], ttsBackend: TtsBackend): Promise<VoiceBlend> {
+  const selected = profiles.filter((profile) => profile.weight > 0);
   const response = await fetch("/api/blends", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      name: selected.map((voice) => voice.display_name).join(" + "),
-      profiles: selected.map((voice) => ({ voice_profile_id: voice.id, weight })),
+      name: selected.map((profile) => profile.display_name).join(" + "),
+      profiles: selected.map((profile) => ({ voice_profile_id: profile.voice_profile_id, weight: profile.weight })),
       strategy: ttsBackend === "qwen3_tts" ? "multi_reference_prompt" : "local_development_wav",
     }),
   });

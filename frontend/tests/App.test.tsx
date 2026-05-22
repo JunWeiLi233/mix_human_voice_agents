@@ -126,6 +126,8 @@ describe("App", () => {
 
     await importNamedVoice("Alice");
     await importNamedVoice("Bob");
+    fireEvent.change(screen.getByLabelText("Alice blend weight"), { target: { value: "0.7" } });
+    fireEvent.change(screen.getByLabelText("Bob blend weight"), { target: { value: "0.3" } });
 
     fireEvent.click(screen.getByRole("button", { name: "Create blend from imported voices" }));
     await screen.findByText("Alice + Bob");
@@ -152,8 +154,8 @@ describe("App", () => {
       name: "Alice + Bob",
       strategy: "multi_reference_prompt",
       profiles: [
-        { voice_profile_id: "voice_alice", weight: 1 },
-        { voice_profile_id: "voice_bob", weight: 1 },
+        { voice_profile_id: "voice_alice", weight: 0.7 },
+        { voice_profile_id: "voice_bob", weight: 0.3 },
       ],
     });
 
@@ -171,7 +173,7 @@ async function importNamedVoice(name: string) {
   fireEvent.change(screen.getByLabelText("Import consented voice sample"), {
     target: { files: [new File(["voice"], `${name}.wav`, { type: "audio/wav" })] },
   });
-  await screen.findByText(name);
+  await screen.findByLabelText(`${name} blend weight`);
 }
 
 function jsonResponse(body: unknown) {

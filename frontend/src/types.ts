@@ -6,6 +6,10 @@ export type BlendProfile = {
   weight: number;
 };
 
+export type BlendDraftProfile = BlendProfile & {
+  display_name: string;
+};
+
 export type VoiceBlend = {
   id: string;
   name: string;
