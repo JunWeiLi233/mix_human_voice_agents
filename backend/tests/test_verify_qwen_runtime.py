@@ -17,8 +17,9 @@ def test_verify_qwen_runtime_generates_report_with_selected_profiles(tmp_path: P
 
     class FakeQwenAdapter:
         @classmethod
-        def from_pretrained(cls, output_root=None):
+        def from_pretrained(cls, output_root=None, **kwargs):
             seen["output_root"] = output_root
+            seen["load_kwargs"] = kwargs
             return cls()
 
         def synthesize(self, text, blend, voice_profiles=None):
@@ -43,12 +44,26 @@ def test_verify_qwen_runtime_generates_report_with_selected_profiles(tmp_path: P
             "This is a Qwen runtime verification.",
             "--report",
             str(report_path),
+            "--model-id",
+            "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+            "--device-map",
+            "cuda:0",
+            "--dtype",
+            "bfloat16",
+            "--attn-implementation",
+            "flash_attention_2",
         ]
     )
 
     assert exit_code == 0
     assert seen["profile_ids"] == ["voice_a", "voice_b"]
     assert seen["text"] == "This is a Qwen runtime verification."
+    assert seen["load_kwargs"] == {
+        "model_id": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+        "device_map": "cuda:0",
+        "dtype": "bfloat16",
+        "attn_implementation": "flash_attention_2",
+    }
     assert seen["blend"].strategy == "multi_reference_prompt"
     assert sorted(seen["voice_profiles"]) == ["voice_a", "voice_b"]
     assert report_path.exists()

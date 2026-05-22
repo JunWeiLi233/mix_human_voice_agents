@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 from pathlib import Path
 from typing import Any
 
@@ -33,9 +34,10 @@ class QwenTtsAdapter:
     @classmethod
     def from_pretrained(
         cls,
-        model_id: str = DEFAULT_QWEN_TTS_MODEL_ID,
-        device_map: str = "auto",
+        model_id: str | None = None,
+        device_map: str | None = None,
         dtype: Any | None = None,
+        attn_implementation: str | None = None,
         output_root: Path | None = None,
     ) -> "QwenTtsAdapter":
         try:
@@ -46,10 +48,17 @@ class QwenTtsAdapter:
                 "python -m pip install -e \".[qwen]\""
             ) from exc
 
-        kwargs: dict[str, Any] = {"device_map": device_map}
-        if dtype is not None:
-            kwargs["dtype"] = dtype
-        model = Qwen3TTSModel.from_pretrained(model_id, **kwargs)
+        resolved_model_id = model_id or os.getenv("QWEN_TTS_MODEL_ID") or DEFAULT_QWEN_TTS_MODEL_ID
+        resolved_device_map = device_map or os.getenv("QWEN_TTS_DEVICE_MAP") or "auto"
+        resolved_dtype = dtype if dtype is not None else os.getenv("QWEN_TTS_DTYPE")
+        resolved_attn = attn_implementation or os.getenv("QWEN_TTS_ATTN_IMPLEMENTATION")
+
+        kwargs: dict[str, Any] = {"device_map": resolved_device_map}
+        if resolved_dtype is not None:
+            kwargs["dtype"] = _resolve_torch_dtype(resolved_dtype)
+        if resolved_attn:
+            kwargs["attn_implementation"] = resolved_attn
+        model = Qwen3TTSModel.from_pretrained(resolved_model_id, **kwargs)
         return cls(model=model, output_root=output_root)
 
     @staticmethod
@@ -148,3 +157,22 @@ def _load_audio_dependencies() -> tuple[Any, Any]:
             'python -m pip install -e ".[qwen]"'
         ) from exc
     return np, sf
+
+
+def _resolve_torch_dtype(dtype: Any) -> Any:
+    if not isinstance(dtype, str):
+        return dtype
+    normalized = dtype.strip()
+    if not normalized:
+        return None
+    try:
+        import torch
+    except ImportError as exc:
+        raise QwenTtsNotConfigured(
+            f"Qwen dtype '{normalized}' requires torch. Install backend with: "
+            'python -m pip install -e ".[qwen]"'
+        ) from exc
+    try:
+        return getattr(torch, normalized)
+    except AttributeError as exc:
+        raise QwenTtsNotConfigured(f"Unsupported torch dtype for Qwen: {normalized}") from exc

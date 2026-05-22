@@ -25,6 +25,26 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     parser.add_argument("--text", default=DEFAULT_VERIFY_TEXT, help="Text to synthesize during verification.")
     parser.add_argument(
+        "--model-id",
+        default=None,
+        help="Qwen3-TTS model id or local model directory. Defaults to QWEN_TTS_MODEL_ID or the adapter default.",
+    )
+    parser.add_argument(
+        "--device-map",
+        default=None,
+        help="Device map passed to Qwen3TTSModel.from_pretrained, such as auto, cuda:0, or cpu.",
+    )
+    parser.add_argument(
+        "--dtype",
+        default=None,
+        help="Torch dtype passed to Qwen3TTSModel.from_pretrained, such as bfloat16 or float16.",
+    )
+    parser.add_argument(
+        "--attn-implementation",
+        default=None,
+        help="Attention implementation passed to Qwen3TTSModel.from_pretrained, such as flash_attention_2.",
+    )
+    parser.add_argument(
         "--report",
         default="data/qwen-runtime-verification-report.json",
         help="Path to write the JSON verification report.",
@@ -51,7 +71,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             profiles=[BlendProfileInput(voice_profile_id=profile_id, weight=1) for profile_id in profile_ids],
             strategy="multi_reference_prompt",
         )
-        adapter = QwenTtsAdapter.from_pretrained(output_root=Path(GENERATION_ROOT))
+        adapter = QwenTtsAdapter.from_pretrained(
+            model_id=args.model_id,
+            device_map=args.device_map,
+            dtype=args.dtype,
+            attn_implementation=args.attn_implementation,
+            output_root=Path(GENERATION_ROOT),
+        )
         output_path = adapter.synthesize(args.text, blend, voice_profiles=voice_profiles)
     except (FileNotFoundError, QwenTtsNotConfigured, ValueError) as exc:
         _write_report(

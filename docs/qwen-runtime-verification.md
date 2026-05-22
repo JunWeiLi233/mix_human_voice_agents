@@ -15,6 +15,19 @@ From the backend directory:
 
 If the selected Qwen model requires GPU acceleration, install the correct PyTorch build for the machine before running the command above.
 
+Qwen's published package examples load Base voice-clone models with `Qwen3TTSModel.from_pretrained(...)`, then call `create_voice_clone_prompt(ref_audio=..., ref_text=...)` and `generate_voice_clone(...)`. This project follows that pattern once per imported profile, then mixes the generated waveforms by the user's blend weights.
+
+Useful runtime settings:
+
+```powershell
+$env:QWEN_TTS_MODEL_ID = "Qwen/Qwen3-TTS-12Hz-1.7B-Base"
+$env:QWEN_TTS_DEVICE_MAP = "cuda:0"
+$env:QWEN_TTS_DTYPE = "bfloat16"
+$env:QWEN_TTS_ATTN_IMPLEMENTATION = "flash_attention_2"
+```
+
+For a smaller Base model, use `Qwen/Qwen3-TTS-12Hz-0.6B-Base`. For CPU-only diagnostics, set `QWEN_TTS_DEVICE_MAP=cpu` and omit dtype/FlashAttention settings if the local install does not support them.
+
 ## Verify With Consented Samples
 
 1. Start the backend:
@@ -69,6 +82,10 @@ After importing two or more consented profiles, you can also run this from `back
   --voice-profile-id voice_a `
   --voice-profile-id voice_b `
   --text "This is a disclosed synthetic mixed voice runtime verification." `
+  --model-id Qwen/Qwen3-TTS-12Hz-1.7B-Base `
+  --device-map cuda:0 `
+  --dtype bfloat16 `
+  --attn-implementation flash_attention_2 `
   --report data/qwen-runtime-verification-report.json
 ```
 
@@ -83,3 +100,9 @@ The backend exposes the saved report at `/api/tts/qwen/verification`. The fronte
 ## Safety Gate
 
 Only use samples where the speaker is the user or has provided written permission. Do not use public figures, celebrities, politicians, or third-party voices without consent.
+
+## Current Qwen Sources Checked
+
+- QwenLM/Qwen3-TTS GitHub README: documents local demo commands for `Qwen/Qwen3-TTS-12Hz-1.7B-Base` and Qwen3-TTS API/runtime options.
+- Qwen/Qwen3-TTS-12Hz-1.7B-Base Hugging Face model card: lists released 1.7B and 0.6B Base voice-clone models, package install guidance, and the `create_voice_clone_prompt` / `generate_voice_clone` workflow.
+- qwen-tts PyPI package page: documents the same Python package workflow and reusable voice-clone prompts.

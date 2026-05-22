@@ -1,4 +1,6 @@
 from pathlib import Path
+import sys
+import types
 
 import numpy as np
 
@@ -126,3 +128,35 @@ def test_qwen_adapter_uses_imported_reference_text_for_clone_prompt(tmp_path: Pa
         "Alice says the first reference sentence.",
         "Bob says the second reference sentence.",
     ]
+
+
+def test_qwen_adapter_loads_model_from_environment_config(monkeypatch, tmp_path: Path):
+    seen: dict[str, object] = {}
+
+    class FakeQwen3TTSModel:
+        @classmethod
+        def from_pretrained(cls, model_id, **kwargs):
+            seen["model_id"] = model_id
+            seen["kwargs"] = kwargs
+            return cls()
+
+    fake_qwen_tts = types.SimpleNamespace(Qwen3TTSModel=FakeQwen3TTSModel)
+    fake_torch = types.SimpleNamespace(bfloat16="fake-bfloat16")
+    monkeypatch.setitem(sys.modules, "qwen_tts", fake_qwen_tts)
+    monkeypatch.setitem(sys.modules, "torch", fake_torch)
+    monkeypatch.setenv("QWEN_TTS_MODEL_ID", "Qwen/Qwen3-TTS-12Hz-1.7B-Base")
+    monkeypatch.setenv("QWEN_TTS_DEVICE_MAP", "cuda:0")
+    monkeypatch.setenv("QWEN_TTS_DTYPE", "bfloat16")
+    monkeypatch.setenv("QWEN_TTS_ATTN_IMPLEMENTATION", "flash_attention_2")
+
+    adapter = QwenTtsAdapter.from_pretrained(output_root=tmp_path)
+
+    assert adapter.model is not None
+    assert seen == {
+        "model_id": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+        "kwargs": {
+            "device_map": "cuda:0",
+            "dtype": "fake-bfloat16",
+            "attn_implementation": "flash_attention_2",
+        },
+    }
