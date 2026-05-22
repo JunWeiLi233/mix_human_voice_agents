@@ -12,6 +12,8 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+  "numpy>=2.0.0",
+  "soundfile>=0.12.1",
   "pytest>=8.0"
 ]
 qwen = [
