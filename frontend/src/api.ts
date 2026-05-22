@@ -34,6 +34,14 @@ export async function listGenerations(): Promise<GenerationResult[]> {
   return response.json();
 }
 
+export async function listBlends(): Promise<VoiceBlend[]> {
+  const response = await fetch("/api/blends");
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  return response.json();
+}
+
 export async function createBlend(profiles: BlendDraftProfile[], ttsBackend: TtsBackend): Promise<VoiceBlend> {
   const selected = profiles.filter((profile) => profile.weight > 0);
   const response = await fetch("/api/blends", {

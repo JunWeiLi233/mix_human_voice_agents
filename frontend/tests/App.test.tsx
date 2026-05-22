@@ -17,6 +17,9 @@ describe("App", () => {
       if (url === "/api/generations") {
         return jsonResponse([]);
       }
+      if (url === "/api/blends") {
+        return jsonResponse([]);
+      }
       if (url === "/api/tts/qwen/status") {
         return jsonResponse({
           backend: "qwen3_tts",
@@ -61,6 +64,21 @@ describe("App", () => {
             synthetic_label: "synthetic mixed voice",
             blend_strategy: "local_development_wav",
             tts_backend: "local_development_wav",
+          },
+        ]);
+      }
+
+      if (url === "/api/blends" && !init) {
+        return jsonResponse([
+          {
+            id: "blend_saved",
+            name: "Saved Alice + Bob",
+            strategy: "multi_reference_prompt",
+            synthetic_label: "synthetic mixed voice",
+            profiles: [
+              { voice_profile_id: "voice_saved_a", weight: 0.6 },
+              { voice_profile_id: "voice_saved_b", weight: 0.4 },
+            ],
           },
         ]);
       }
@@ -141,6 +159,8 @@ describe("App", () => {
     render(<App />);
     await waitFor(() => expect(screen.getByText("No imported voices yet.")).toBeInTheDocument());
     await screen.findByText("Installed");
+    await screen.findByRole("button", { name: "Saved Alice + Bob" });
+    expect(screen.getByRole("button", { name: "Generate AI Voice" })).toBeEnabled();
     await screen.findByText("synthetic mixed voice using voice_saved_a + voice_saved_b");
     expect(screen.getByLabelText("Play synthetic mixed voice")).toHaveAttribute(
       "src",
@@ -164,7 +184,7 @@ describe("App", () => {
     fireEvent.change(screen.getByLabelText("Bob blend weight"), { target: { value: "0.3" } });
 
     fireEvent.click(screen.getByRole("button", { name: "Create blend from imported voices" }));
-    await screen.findByText("Alice + Bob");
+    await screen.findByRole("button", { name: "Alice + Bob" });
 
     const prompt = "Tell me the launch status using the mixed voice.";
     fireEvent.change(screen.getByLabelText("Agent prompt text"), { target: { value: prompt } });

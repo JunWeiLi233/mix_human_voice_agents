@@ -15,9 +15,11 @@ from app.core.storage import (
     ensure_storage,
     get_generation_audio_path,
     get_voice_profiles_by_ids,
+    list_blends,
     list_generation_results,
     list_voice_profiles,
     new_voice_profile_id,
+    save_blend,
     save_voice_profile,
 )
 from app.models.schemas import (
@@ -64,13 +66,19 @@ def qwen_status_route() -> TtsRuntimeStatus:
 @router.post("/blends", response_model=VoiceBlend)
 def create_blend_route(request: CreateBlendRequest) -> VoiceBlend:
     try:
-        return create_blend(
+        blend = create_blend(
             name=request.name,
             profiles=request.profiles,
             strategy=request.strategy,
         )
+        return save_blend(blend)
     except BlendError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/blends", response_model=list[VoiceBlend])
+def list_blends_route() -> list[VoiceBlend]:
+    return list_blends()
 
 
 @router.post("/generate", response_model=GenerationResult)

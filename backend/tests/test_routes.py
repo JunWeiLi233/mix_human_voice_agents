@@ -54,6 +54,29 @@ def test_create_blend_endpoint_normalizes_weights():
     assert payload["synthetic_label"] == "synthetic mixed voice"
 
 
+def test_list_blends_returns_persisted_blends(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    created = client.post(
+        "/api/blends",
+        json={
+            "name": "Persisted Pair",
+            "profiles": [
+                {"voice_profile_id": "voice_a", "weight": 2},
+                {"voice_profile_id": "voice_b", "weight": 1},
+            ],
+            "strategy": "multi_reference_prompt",
+        },
+    ).json()
+
+    response = client.get("/api/blends")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert [blend["id"] for blend in payload] == [created["id"]]
+    assert payload[0]["name"] == "Persisted Pair"
+    assert payload[0]["strategy"] == "multi_reference_prompt"
+
+
 def test_generate_endpoint_returns_audio_metadata(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     blend_response = client.post(

@@ -1,5 +1,13 @@
 import { useEffect, useState } from "react";
-import { createBlend, generateClip, getQwenRuntimeStatus, listGenerations, listVoices, requestAgentReply } from "./api";
+import {
+  createBlend,
+  generateClip,
+  getQwenRuntimeStatus,
+  listBlends,
+  listGenerations,
+  listVoices,
+  requestAgentReply,
+} from "./api";
 import { AgentChat } from "./components/AgentChat";
 import { AgentProviderSettings } from "./components/AgentProviderSettings";
 import { BlendMixer } from "./components/BlendMixer";
@@ -29,6 +37,7 @@ export default function App() {
   const [ttsBackend, setTtsBackend] = useState<TtsBackend>("local_development_wav");
   const [voices, setVoices] = useState<VoiceProfile[]>([]);
   const [blendProfiles, setBlendProfiles] = useState<BlendDraftProfile[]>([]);
+  const [savedBlends, setSavedBlends] = useState<VoiceBlend[]>([]);
   const [blend, setBlend] = useState<VoiceBlend | null>(null);
   const [generations, setGenerations] = useState<GenerationResult[]>([]);
   const [qwenStatus, setQwenStatus] = useState<TtsRuntimeStatus | null>(null);
@@ -43,6 +52,17 @@ export default function App() {
       .catch(() => {
         setVoices([]);
         setBlendProfiles([]);
+      });
+  }, []);
+
+  useEffect(() => {
+    void listBlends()
+      .then((blends) => {
+        setSavedBlends(blends);
+        setBlend((current) => current ?? blends[0] ?? null);
+      })
+      .catch(() => {
+        setSavedBlends([]);
       });
   }, []);
 
@@ -70,7 +90,9 @@ export default function App() {
   async function handleCreateBlend() {
     setError(null);
     try {
-      setBlend(await createBlend(blendProfiles, ttsBackend));
+      const created = await createBlend(blendProfiles, ttsBackend);
+      setBlend(created);
+      setSavedBlends((current) => [created, ...current.filter((item) => item.id !== created.id)]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Blend creation failed");
     }
@@ -123,7 +145,9 @@ export default function App() {
         <BlendMixer
           blend={blend}
           profiles={blendProfiles}
+          savedBlends={savedBlends}
           onCreateBlend={handleCreateBlend}
+          onSelectBlend={setBlend}
           onWeightChange={handleBlendWeightChange}
         />
         <AgentChat blend={blend} onGenerate={handleGenerate} />

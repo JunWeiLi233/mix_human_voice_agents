@@ -3,11 +3,13 @@ import type { BlendDraftProfile, VoiceBlend } from "../types";
 type Props = {
   blend: VoiceBlend | null;
   profiles: BlendDraftProfile[];
+  savedBlends: VoiceBlend[];
   onCreateBlend: () => void;
+  onSelectBlend: (blend: VoiceBlend) => void;
   onWeightChange: (voiceProfileId: string, weight: number) => void;
 };
 
-export function BlendMixer({ blend, profiles, onCreateBlend, onWeightChange }: Props) {
+export function BlendMixer({ blend, profiles, savedBlends, onCreateBlend, onSelectBlend, onWeightChange }: Props) {
   const canBlend = profiles.length >= 2;
 
   return (
@@ -34,6 +36,21 @@ export function BlendMixer({ blend, profiles, onCreateBlend, onWeightChange }: P
         Create blend from imported voices
       </button>
       {!canBlend ? <p>Import at least two consented voices to create a mix.</p> : null}
+      {savedBlends.length > 0 ? (
+        <div className="saved-blends">
+          <h3>Saved blends</h3>
+          {savedBlends.map((savedBlend) => (
+            <button
+              key={savedBlend.id}
+              type="button"
+              className={blend?.id === savedBlend.id ? "active" : ""}
+              onClick={() => onSelectBlend(savedBlend)}
+            >
+              {savedBlend.name}
+            </button>
+          ))}
+        </div>
+      ) : null}
       {blend ? (
         <dl>
           <dt>Name</dt>

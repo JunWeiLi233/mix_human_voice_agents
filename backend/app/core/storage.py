@@ -2,7 +2,7 @@ from pathlib import Path
 import json
 from uuid import uuid4
 
-from app.models.schemas import GenerationResult, VoiceProfile
+from app.models.schemas import GenerationResult, VoiceBlend, VoiceProfile
 
 DATA_ROOT = Path("data")
 VOICE_ROOT = DATA_ROOT / "voices"
@@ -52,6 +52,28 @@ def get_voice_profiles_by_ids(profile_ids: list[str]) -> dict[str, VoiceProfile]
     if missing:
         raise FileNotFoundError(f"Missing voice profiles: {', '.join(missing)}")
     return {profile_id: profiles[profile_id] for profile_id in profile_ids}
+
+
+def save_blend(blend: VoiceBlend) -> VoiceBlend:
+    ensure_storage()
+    blend_path = BLEND_ROOT / f"{blend.id}.json"
+    blend_path.write_text(
+        json.dumps(blend.model_dump(mode="json"), indent=2),
+        encoding="utf-8",
+    )
+    return blend
+
+
+def list_blends() -> list[VoiceBlend]:
+    ensure_storage()
+    blends: list[VoiceBlend] = []
+    for blend_path in sorted(
+        BLEND_ROOT.glob("*.json"),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    ):
+        blends.append(VoiceBlend.model_validate_json(blend_path.read_text(encoding="utf-8")))
+    return blends
 
 
 def list_generation_results() -> list[GenerationResult]:

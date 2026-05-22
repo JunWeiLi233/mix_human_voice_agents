@@ -140,6 +140,27 @@ input {
   margin-bottom: 12px;
 }
 
+.saved-blends {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.saved-blends h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.saved-blends button {
+  background: #eef0e8;
+  color: #1f2a22;
+}
+
+.saved-blends button.active {
+  background: #1f2a22;
+  color: #fff;
+}
+
 audio {
   width: 100%;
   margin-top: 8px;
