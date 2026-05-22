@@ -5,6 +5,7 @@
 - Backend tests pass with `cd backend && .\.venv\Scripts\python -m pytest -v`.
 - Frontend tests pass with `cd frontend && npm test`.
 - Frontend production build passes with `cd frontend && npm run build`.
+- Local launch audit runs with `cd backend && .\.venv\Scripts\python -m app.cli.launch_readiness --report data/launch-readiness-report.json` and writes the current readiness evidence.
 - `docs/research-review.md` has been reviewed for current voice-agent and voice-cloning implementation patterns before launch.
 - Manual import of at least two valid 5-30 second consented WAV samples with matching reference transcripts succeeds.
 - Import is disabled until the user confirms self or written-permission consent in the UI.
@@ -31,6 +32,7 @@
 - Voice Engine panel shows the saved Qwen runtime verification report status and verified output path when present.
 - Voice Engine can run Qwen verification with at least two selected imported consented voices and persist the report with `source_profile_details`.
 - Launch Readiness panel and `/api/launch/readiness` report blockers until imported voices, a saved blend, at least one Qwen3-TTS mixed voice clip with imported source details, passed agent provider verification, Qwen runtime availability, and passed Qwen verification are present.
+- `data/launch-readiness-report.json` can be generated from the CLI for a saved launch audit outside the browser.
 
 ## Known MVP Limits
 

@@ -61,6 +61,13 @@ Qwen runtime verification report:
 Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8000/api/tts/qwen/verification
 ```
 
+Saved launch readiness audit:
+
+```powershell
+cd backend
+.\.venv\Scripts\python -m app.cli.launch_readiness --report data/launch-readiness-report.json
+```
+
 ## Frontend Setup
 
 In a second terminal:
