@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from pydantic import ValidationError
+
 from app.core.generation import METADATA_WATERMARK_DISCLOSURE
 from app.core.storage import GENERATION_ROOT, list_blends, list_generation_results, list_voice_profiles
 from app.models.schemas import (
@@ -486,13 +488,14 @@ def _same_audio_path(left: str, right: str) -> bool:
 def _generation_metadata_status(generation: GenerationResult) -> dict[str, object]:
     try:
         payload = json.loads(Path(generation.metadata_path).read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
+        metadata = GenerationResult.model_validate(payload)
+    except (json.JSONDecodeError, ValidationError):
         return {
             "passed": False,
             "detail": "Qwen mixed voice metadata is invalid.",
         }
-    if payload.get("id") != generation.id or not _same_audio_path(
-        payload.get("audio_path", ""),
+    if metadata.id != generation.id or not _same_audio_path(
+        metadata.audio_path,
         generation.audio_path,
     ):
         return {
