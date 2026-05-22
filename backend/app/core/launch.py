@@ -223,13 +223,13 @@ def _saved_blend_status(blends: list[object], verification: QwenVerificationRepo
             "detail": f"{len(blends)} saved blends",
         }
 
-    verified_ids = set(verification.voice_profile_ids)
+    verified_ids = sorted(verification.voice_profile_ids)
     for blend in blends:
         if not hasattr(blend, "profiles") or not hasattr(blend, "strategy"):
             continue
         if blend.strategy != "multi_reference_prompt":
             continue
-        if {profile.voice_profile_id for profile in blend.profiles} == verified_ids:
+        if sorted(profile.voice_profile_id for profile in blend.profiles) == verified_ids:
             return {
                 "passed": True,
                 "detail": f"Saved Qwen blend matches verified voices: {blend.id}",
@@ -237,7 +237,7 @@ def _saved_blend_status(blends: list[object], verification: QwenVerificationRepo
 
     return {
         "passed": False,
-        "detail": "No saved multi-reference blend matches verified Qwen voice ids.",
+        "detail": "No saved multi-reference blend matches each verified Qwen voice id exactly once.",
     }
 
 
