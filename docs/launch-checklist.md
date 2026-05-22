@@ -5,6 +5,7 @@
 - Backend tests pass with `cd backend && .\.venv\Scripts\python -m pytest -v`.
 - Frontend tests pass with `cd frontend && npm test`.
 - Frontend production build passes with `cd frontend && npm run build`.
+- `docs/research-review.md` has been reviewed for current voice-agent and voice-cloning implementation patterns before launch.
 - Manual import of at least two valid 5-30 second consented WAV samples with matching reference transcripts succeeds.
 - Import is disabled until the user confirms self or written-permission consent in the UI.
 - Imported profile metadata records `confirmed_by` and consent notes from user input.

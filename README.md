@@ -101,7 +101,9 @@ If the selected model requires GPU acceleration, install the appropriate PyTorch
 
 ## Research Notes
 
-Current voice-agent practice splits into realtime speech-to-speech agents and chained STT/LLM/TTS pipelines. OpenAI's voice-agent docs recommend the Realtime API for low-latency speech-to-speech and chained pipelines when the application needs more control over each stage. LiveKit and Pipecat follow the same pipeline pattern for production voice agents. Qwen3-TTS voice cloning takes reference audio plus its transcript as reference text for cloned synthesis, so this app keeps imported voice profiles, transcripts, blend metadata, and TTS adapters separate instead of assuming a realtime model can directly own multi-person voice blending.
+Current voice-agent practice splits into realtime speech-to-speech agents and chained STT/LLM/TTS pipelines. OpenAI's voice-agent docs recommend realtime sessions for low-latency speech-to-speech and chained pipelines when the application needs more control over each stage. LiveKit and Pipecat follow the same pipeline pattern for production voice agents. Qwen3-TTS voice cloning takes reference audio plus its transcript as reference text for cloned synthesis, so this app keeps imported voice profiles, transcripts, blend metadata, and TTS adapters separate instead of assuming a realtime model can directly own multi-person voice blending.
+
+See `docs/research-review.md` for the dated source review used as the launch architecture rationale.
 
 ## Tests
 
