@@ -26,6 +26,7 @@ def generate_agent_clip(
     voice_profiles: dict[str, VoiceProfile] | None = None,
     tts_backend: TtsBackend = "local_development_wav",
     agent_trace: AgentTrace | None = None,
+    qwen_runtime_config: dict[str, str | None] | None = None,
 ) -> GenerationResult:
     validate_blend(blend)
     check_generation_request(prompt)
@@ -42,6 +43,7 @@ def generate_agent_clip(
         source_profile_details=build_source_profile_details(blend.profiles, voice_profiles),
         blend_strategy=blend.strategy,
         tts_backend=tts_backend,
+        qwen_runtime_config=qwen_runtime_config,
         agent_trace=agent_trace,
         watermark=MetadataWatermark(
             label=blend.synthetic_label,

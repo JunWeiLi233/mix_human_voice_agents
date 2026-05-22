@@ -101,6 +101,7 @@ class GenerationResult(BaseModel):
     source_profile_details: list[SourceProfileDetail] = Field(default_factory=list)
     blend_strategy: BlendStrategy
     tts_backend: TtsBackend = "local_development_wav"
+    qwen_runtime_config: dict[str, str | None] | None = None
     watermark: MetadataWatermark = Field(default_factory=MetadataWatermark)
     agent_trace: AgentTrace | None = None
 

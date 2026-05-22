@@ -106,6 +106,40 @@ def test_generation_metadata_records_imported_voice_source_details(tmp_path: Pat
     assert metadata["source_profile_details"][1]["display_name"] == "Bob"
 
 
+def test_generation_metadata_records_qwen_runtime_config(tmp_path: Path):
+    blend = create_blend(
+        name="Imported Pair",
+        profiles=[
+            BlendProfileInput(voice_profile_id="voice_a", weight=1),
+            BlendProfileInput(voice_profile_id="voice_b", weight=1),
+        ],
+        strategy="multi_reference_prompt",
+    )
+    adapter = LocalWavTtsAdapter(output_root=tmp_path)
+
+    result = generate_agent_clip(
+        prompt="Greet the user as a synthetic assistant.",
+        agent_reply="Hello from a traceable mixed voice.",
+        blend=blend,
+        adapter=adapter,
+        tts_backend="qwen3_tts",
+        qwen_runtime_config={
+            "model_id": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+            "device_map": "cuda:0",
+            "dtype": "bfloat16",
+            "attn_implementation": "flash_attention_2",
+        },
+    )
+
+    metadata = json.loads(Path(result.metadata_path).read_text(encoding="utf-8"))
+    assert metadata["qwen_runtime_config"] == {
+        "model_id": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+        "device_map": "cuda:0",
+        "dtype": "bfloat16",
+        "attn_implementation": "flash_attention_2",
+    }
+
+
 def voice_profile(profile_id: str, display_name: str, reference_text: str) -> VoiceProfile:
     return VoiceProfile.model_validate(
         {

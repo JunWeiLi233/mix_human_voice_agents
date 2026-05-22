@@ -40,6 +40,7 @@ export type GenerationResult = {
   };
   blend_strategy: BlendStrategy;
   tts_backend: TtsBackend;
+  qwen_runtime_config?: QwenRuntimeConfig | null;
   agent_trace?: {
     provider: AgentProviderKind;
     model: string;

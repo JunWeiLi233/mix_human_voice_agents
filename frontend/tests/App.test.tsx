@@ -342,6 +342,7 @@ describe("App", () => {
             label: body.blend.synthetic_label,
             disclosure: "Generated audio is synthetic and mixed from consented imported voice profiles.",
           },
+          qwen_runtime_config: body.qwen_runtime_config,
           agent_trace: body.agent_trace,
           synthetic_label: body.blend.synthetic_label,
           tts_backend: body.tts_backend,
@@ -486,6 +487,12 @@ describe("App", () => {
         model: "custom-voice-agent-model",
       },
       tts_backend: "qwen3_tts",
+      qwen_runtime_config: {
+        model_id: "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+        device_map: "cuda:0",
+        dtype: "bfloat16",
+        attn_implementation: "flash_attention_2",
+      },
     });
   });
 

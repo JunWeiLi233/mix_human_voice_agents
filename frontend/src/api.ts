@@ -143,6 +143,7 @@ export async function generateClip(
   agentReply: AgentReply,
   ttsBackend: TtsBackend,
   prompt: string,
+  runtime?: QwenRuntimeConfig,
 ): Promise<GenerationResult> {
   const response = await fetch("/api/generate", {
     method: "POST",
@@ -156,6 +157,11 @@ export async function generateClip(
       },
       blend,
       tts_backend: ttsBackend,
+      qwen_runtime_config: ttsBackend === "qwen3_tts" ? runtime : undefined,
+      model_id: ttsBackend === "qwen3_tts" ? runtime?.model_id || null : undefined,
+      device_map: ttsBackend === "qwen3_tts" ? runtime?.device_map || null : undefined,
+      dtype: ttsBackend === "qwen3_tts" ? runtime?.dtype || null : undefined,
+      attn_implementation: ttsBackend === "qwen3_tts" ? runtime?.attn_implementation || null : undefined,
     }),
   });
   if (!response.ok) {

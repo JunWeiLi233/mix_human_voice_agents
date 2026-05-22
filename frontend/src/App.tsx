@@ -203,7 +203,7 @@ export default function App() {
     setError(null);
     try {
       const agentReply = await requestAgentReply(agentConfig, prompt);
-      const result = await generateClip(blend, agentReply, ttsBackend, prompt);
+      const result = await generateClip(blend, agentReply, ttsBackend, prompt, qwenRuntimeConfig);
       setGenerations((current) => [result, ...current]);
       void refreshLaunchReadiness();
     } catch (err) {

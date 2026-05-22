@@ -73,6 +73,7 @@ After importing at least two consented profiles from distinct speakers, use the 
 6. Confirm the panel shows `Verification passed` and the verified output path exists.
 
 The studio writes the same report file as the CLI at `data/qwen-runtime-verification-report.json`.
+When `Qwen3-TTS` is selected for generation, the studio also sends the same model id, device map, dtype, and attention implementation to the generation endpoint, and generated metadata records them under `qwen_runtime_config`.
 
 ## CLI Verification
 

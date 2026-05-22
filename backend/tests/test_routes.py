@@ -327,7 +327,7 @@ def test_launch_readiness_reports_ready_after_full_qwen_verification(tmp_path: P
         name = "qwen3_tts"
 
         @classmethod
-        def from_pretrained(cls, output_root=None):
+        def from_pretrained(cls, output_root=None, **kwargs):
             cls.output_root = Path(output_root)
             cls.output_root.mkdir(parents=True, exist_ok=True)
             return cls()
@@ -460,7 +460,7 @@ def test_launch_readiness_blocks_when_qwen_verification_lacks_source_details(tmp
         name = "qwen3_tts"
 
         @classmethod
-        def from_pretrained(cls, output_root=None):
+        def from_pretrained(cls, output_root=None, **kwargs):
             cls.output_root = Path(output_root)
             cls.output_root.mkdir(parents=True, exist_ok=True)
             return cls()
@@ -901,11 +901,13 @@ def test_generate_endpoint_can_use_qwen_with_imported_profiles(tmp_path: Path, m
     class FakeQwenAdapter:
         name = "qwen3_tts"
         seen_profile_ids: list[str] = []
+        seen_load_kwargs: dict[str, object] = {}
 
         @classmethod
-        def from_pretrained(cls, output_root=None):
+        def from_pretrained(cls, output_root=None, **kwargs):
             cls.output_root = Path(output_root)
             cls.output_root.mkdir(parents=True, exist_ok=True)
+            cls.seen_load_kwargs = kwargs
             return cls()
 
         def synthesize(self, text, blend, voice_profiles=None):
@@ -934,14 +936,30 @@ def test_generate_endpoint_can_use_qwen_with_imported_profiles(tmp_path: Path, m
             "agent_reply": "Hello from a qwen mixed voice.",
             "blend": blend_response.json(),
             "tts_backend": "qwen3_tts",
+            "model_id": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+            "device_map": "cuda:0",
+            "dtype": "bfloat16",
+            "attn_implementation": "flash_attention_2",
         },
     )
 
     assert response.status_code == 200
     payload = response.json()
     assert payload["tts_backend"] == "qwen3_tts"
+    assert payload["qwen_runtime_config"] == {
+        "model_id": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+        "device_map": "cuda:0",
+        "dtype": "bfloat16",
+        "attn_implementation": "flash_attention_2",
+    }
     assert Path(payload["audio_path"]).exists()
     assert FakeQwenAdapter.seen_profile_ids == sorted([voices[0]["id"], voices[1]["id"]])
+    assert FakeQwenAdapter.seen_load_kwargs == {
+        "model_id": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+        "device_map": "cuda:0",
+        "dtype": "bfloat16",
+        "attn_implementation": "flash_attention_2",
+    }
 
 
 def test_agent_reply_route_accepts_local_llm_config(monkeypatch):

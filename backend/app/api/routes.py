@@ -68,6 +68,10 @@ class GenerateRequest(BaseModel):
     blend: VoiceBlend
     tts_backend: TtsBackend = "local_development_wav"
     agent_trace: AgentTrace | None = None
+    model_id: str | None = None
+    device_map: str | None = None
+    dtype: str | None = None
+    attn_implementation: str | None = None
 
 
 class RunQwenVerificationRequest(BaseModel):
@@ -237,8 +241,15 @@ def generate_route(request: GenerateRequest) -> GenerationResult:
     ensure_storage()
     source_ids = [profile.voice_profile_id for profile in request.blend.profiles]
     voice_profiles = _load_voice_profiles_for_generation(source_ids, strict=request.tts_backend == "qwen3_tts")
+    qwen_runtime_config = _qwen_runtime_config_from_request(request)
     if request.tts_backend == "qwen3_tts":
-        adapter = QwenTtsAdapter.from_pretrained(output_root=Path(GENERATION_ROOT))
+        adapter = QwenTtsAdapter.from_pretrained(
+            model_id=request.model_id,
+            device_map=request.device_map,
+            dtype=request.dtype,
+            attn_implementation=request.attn_implementation,
+            output_root=Path(GENERATION_ROOT),
+        )
     else:
         adapter = LocalWavTtsAdapter(output_root=Path(GENERATION_ROOT))
     try:
@@ -250,6 +261,7 @@ def generate_route(request: GenerateRequest) -> GenerationResult:
             voice_profiles=voice_profiles,
             tts_backend=request.tts_backend,
             agent_trace=request.agent_trace,
+            qwen_runtime_config=qwen_runtime_config,
         )
     except (BlendError, QwenTtsNotConfigured, SafetyError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -262,6 +274,17 @@ def _load_voice_profiles_for_generation(profile_ids: list[str], strict: bool) ->
         if strict:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         return None
+
+
+def _qwen_runtime_config_from_request(request: GenerateRequest) -> dict[str, str | None] | None:
+    if request.tts_backend != "qwen3_tts":
+        return None
+    return {
+        "model_id": request.model_id,
+        "device_map": request.device_map,
+        "dtype": request.dtype,
+        "attn_implementation": request.attn_implementation,
+    }
 
 
 @router.get("/generations", response_model=list[GenerationResult])
