@@ -494,9 +494,10 @@ def _generation_metadata_status(generation: GenerationResult) -> dict[str, objec
             "passed": False,
             "detail": "Qwen mixed voice metadata is invalid.",
         }
-    if metadata.id != generation.id or not _same_audio_path(
-        metadata.audio_path,
-        generation.audio_path,
+    if (
+        metadata.id != generation.id
+        or not _same_audio_path(metadata.audio_path, generation.audio_path)
+        or not _same_audio_path(metadata.metadata_path, generation.metadata_path)
     ):
         return {
             "passed": False,
