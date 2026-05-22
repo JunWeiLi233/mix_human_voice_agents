@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from app.models.schemas import VoiceProfile
 
 
@@ -13,3 +15,5 @@ def validate_qwen_voice_profiles(voice_profiles: dict[str, VoiceProfile]) -> Non
             raise ValueError(f"Voice profile {profile.id} must include reference text for Qwen synthesis.")
         if profile.quality.warnings:
             raise ValueError(f"Voice profile {profile.id} must not have audio quality warnings for Qwen synthesis.")
+        if not profile.cleaned_audio_path or not Path(profile.cleaned_audio_path).exists():
+            raise ValueError(f"Voice profile {profile.id} must have an existing cleaned audio file for Qwen synthesis.")

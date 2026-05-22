@@ -10,9 +10,23 @@ def test_verify_qwen_runtime_generates_report_with_selected_profiles(tmp_path: P
 
     def fake_get_profiles(profile_ids):
         seen["profile_ids"] = profile_ids
+        voice_a_audio = tmp_path / "voice_a.wav"
+        voice_b_audio = tmp_path / "voice_b.wav"
+        voice_a_audio.write_bytes(b"fake-audio-a")
+        voice_b_audio.write_bytes(b"fake-audio-b")
         return {
-            "voice_a": profile("voice_a", "Alice", "Alice reads the reference text."),
-            "voice_b": profile("voice_b", "Bob", "Bob reads the reference text."),
+            "voice_a": profile(
+                "voice_a",
+                "Alice",
+                "Alice reads the reference text.",
+                cleaned_audio_path=str(voice_a_audio),
+            ),
+            "voice_b": profile(
+                "voice_b",
+                "Bob",
+                "Bob reads the reference text.",
+                cleaned_audio_path=str(voice_b_audio),
+            ),
         }
 
     class FakeQwenAdapter:
@@ -173,8 +187,10 @@ def profile(
     display_name: str,
     reference_text: str,
     quality_warnings: list[str] | None = None,
+    cleaned_audio_path: str | None = None,
 ) -> VoiceProfile:
     resolved_quality_warnings = [] if quality_warnings is None else quality_warnings
+    resolved_cleaned_audio_path = cleaned_audio_path or f"data/voices/{profile_id}/source.wav"
     return VoiceProfile.model_validate(
         {
             "id": profile_id,
@@ -189,8 +205,8 @@ def profile(
                 "notes": "Written permission captured.",
                 "synthetic_voice_allowed": True,
             },
-            "source_audio_path": f"data/voices/{profile_id}/source.wav",
-            "cleaned_audio_path": f"data/voices/{profile_id}/source.wav",
+            "source_audio_path": resolved_cleaned_audio_path,
+            "cleaned_audio_path": resolved_cleaned_audio_path,
             "quality": {
                 "file_name": "source.wav",
                 "size_bytes": 10,
