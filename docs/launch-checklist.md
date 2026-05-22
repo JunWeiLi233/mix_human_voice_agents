@@ -28,3 +28,4 @@
 - Import two clean 5-30 second consented WAV samples.
 - Create a blend using `multi_reference_prompt`.
 - Generate a short reply and confirm the output WAV is produced by Qwen3-TTS rather than the local development adapter.
+- Follow `docs/qwen-runtime-verification.md` before claiming real acoustic cloning/mixing is verified on a target machine.
