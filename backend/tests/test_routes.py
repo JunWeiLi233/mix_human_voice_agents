@@ -1,6 +1,8 @@
 from fastapi.testclient import TestClient
 from pathlib import Path
 import json
+import math
+import struct
 import wave
 
 from app.main import app
@@ -502,6 +504,29 @@ def test_import_voice_rejects_invalid_wav(tmp_path: Path, monkeypatch):
     assert "WAV header" in response.json()["detail"]
 
 
+def test_import_voice_rejects_silent_wav(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    sample_path = tmp_path / "sample.wav"
+    write_silent_wav(sample_path)
+
+    with sample_path.open("rb") as sample:
+        response = client.post(
+            "/api/voices",
+            data={
+                "speaker_display_name": "Alice",
+                "consent_type": "self_or_written_permission",
+                "allowed_uses": "private_agent_voice,local_audio_export",
+                "confirmed_by": "local_user",
+                "notes": "approved for local prototype",
+                "reference_text": "Alice reads a clean reference sentence for Qwen cloning.",
+            },
+            files={"file": ("sample.wav", sample, "audio/wav")},
+        )
+
+    assert response.status_code == 400
+    assert "silence" in response.json()["detail"]
+
+
 def test_import_voice_blocks_public_figure_label(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     sample_path = tmp_path / "sample.wav"
@@ -636,9 +661,26 @@ def test_delete_voice_removes_profile_and_dependent_blends(tmp_path: Path, monke
 
 
 def write_reference_wav(path: Path, duration_seconds: int = 5, sample_rate: int = 16000) -> None:
+    frames = build_tone_frames(duration_seconds, sample_rate)
+    with wave.open(str(path), "wb") as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(sample_rate)
+        wav_file.writeframes(frames)
+
+
+def write_silent_wav(path: Path, duration_seconds: int = 5, sample_rate: int = 16000) -> None:
     frames = b"\x00\x00" * sample_rate * duration_seconds
     with wave.open(str(path), "wb") as wav_file:
         wav_file.setnchannels(1)
         wav_file.setsampwidth(2)
         wav_file.setframerate(sample_rate)
         wav_file.writeframes(frames)
+
+
+def build_tone_frames(duration_seconds: int, sample_rate: int) -> bytes:
+    samples = sample_rate * duration_seconds
+    return b"".join(
+        struct.pack("<h", int(8000 * math.sin(2 * math.pi * 440 * index / sample_rate)))
+        for index in range(samples)
+    )

@@ -11,7 +11,7 @@
 - Imported profile metadata records the user-provided reference transcript used by Qwen voice cloning.
 - Import rejects blank reference transcripts so every profile has usable Qwen cloning text.
 - Import rejects public-figure, celebrity, politician, and explicit no-permission consent claims.
-- Malformed, non-WAV, shorter-than-5-second, and longer-than-30-second samples are rejected.
+- Malformed, non-WAV, silent, shorter-than-5-second, and longer-than-30-second samples are rejected.
 - Blend creation with two distinct profiles succeeds and weights normalize to 100%.
 - Blend creation and Qwen verification reject duplicate voice profile IDs.
 - Agent provider settings accept either an OpenAI-compatible API configuration or an Ollama-compatible local endpoint.

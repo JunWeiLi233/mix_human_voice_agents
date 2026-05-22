@@ -1,4 +1,6 @@
 from pathlib import Path
+import math
+import struct
 import wave
 
 import pytest
@@ -89,10 +91,35 @@ def test_audio_analysis_accepts_clean_reference_wav(tmp_path: Path):
     assert quality.warnings == []
 
 
+def test_audio_analysis_rejects_silent_reference_wav(tmp_path: Path):
+    sample = tmp_path / "silent.wav"
+    write_silent_wav(sample)
+
+    with pytest.raises(AudioQualityError, match="silence"):
+        analyze_audio_sample(sample)
+
+
 def write_reference_wav(path: Path, duration_seconds: int = 5, sample_rate: int = 16000) -> None:
+    frames = build_tone_frames(duration_seconds, sample_rate)
+    with wave.open(str(path), "wb") as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(sample_rate)
+        wav_file.writeframes(frames)
+
+
+def write_silent_wav(path: Path, duration_seconds: int = 5, sample_rate: int = 16000) -> None:
     frames = b"\x00\x00" * sample_rate * duration_seconds
     with wave.open(str(path), "wb") as wav_file:
         wav_file.setnchannels(1)
         wav_file.setsampwidth(2)
         wav_file.setframerate(sample_rate)
         wav_file.writeframes(frames)
+
+
+def build_tone_frames(duration_seconds: int, sample_rate: int) -> bytes:
+    samples = sample_rate * duration_seconds
+    return b"".join(
+        struct.pack("<h", int(8000 * math.sin(2 * math.pi * 440 * index / sample_rate)))
+        for index in range(samples)
+    )
