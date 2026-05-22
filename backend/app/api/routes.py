@@ -245,6 +245,8 @@ def generate_route(request: GenerateRequest) -> GenerationResult:
         validate_blend(request.blend)
     except BlendError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if request.tts_backend == "qwen3_tts" and request.agent_trace is None:
+        raise HTTPException(status_code=400, detail="Qwen generation requires an agent provider trace.")
     source_ids = [profile.voice_profile_id for profile in request.blend.profiles]
     voice_profiles = _load_voice_profiles_for_generation(source_ids, strict=request.tts_backend == "qwen3_tts")
     qwen_runtime_config = _qwen_runtime_config_from_request(request)

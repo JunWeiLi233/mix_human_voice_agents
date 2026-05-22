@@ -454,141 +454,6 @@ def test_launch_readiness_reports_ready_after_full_qwen_verification(tmp_path: P
     assert all(check["passed"] for check in payload["checks"])
 
 
-def test_launch_readiness_blocks_qwen_generation_without_agent_trace(tmp_path: Path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    research_review_path = tmp_path / "docs" / "research-review.md"
-    research_review_path.parent.mkdir(parents=True)
-    research_review_path.write_text(
-        "# Mixed Voice Agent Research Review\n\n"
-        "## Sources Reviewed\n\n"
-        "- OpenAI Voice Agents\n"
-        "- LiveKit Agents\n"
-        "- Pipecat\n"
-        "- Qwen3-TTS\n",
-        encoding="utf-8",
-    )
-    sample_path = tmp_path / "sample.wav"
-    write_reference_wav(sample_path)
-    voices = []
-
-    for name in ("Alice", "Bob"):
-        with sample_path.open("rb") as sample:
-            response = client.post(
-                "/api/voices",
-                data={
-                    "speaker_display_name": name,
-                    "consent_type": "self_or_written_permission",
-                    "allowed_uses": "private_agent_voice,local_audio_export",
-                    "confirmed_by": "local_user",
-                    "notes": "approved for launch readiness",
-                    "reference_text": f"{name} reads a clean reference sentence for Qwen cloning.",
-                },
-                files={"file": ("sample.wav", sample, "audio/wav")},
-            )
-        voices.append(response.json())
-
-    blend = client.post(
-        "/api/blends",
-        json={
-            "name": "Launch Pair",
-            "profiles": [
-                {"voice_profile_id": voices[0]["id"], "weight": 1},
-                {"voice_profile_id": voices[1]["id"], "weight": 1},
-            ],
-            "strategy": "multi_reference_prompt",
-        },
-    ).json()
-
-    class FakeQwenAdapter:
-        name = "qwen3_tts"
-
-        @classmethod
-        def from_pretrained(cls, output_root=None, **kwargs):
-            cls.output_root = Path(output_root)
-            cls.output_root.mkdir(parents=True, exist_ok=True)
-            return cls()
-
-        def synthesize(self, text, blend, voice_profiles=None):
-            output = self.__class__.output_root / f"{blend.id}_qwen.wav"
-            output.write_bytes(b"fake-qwen-wav")
-            return output
-
-    monkeypatch.setattr("app.api.routes.QwenTtsAdapter", FakeQwenAdapter)
-    generated = client.post(
-        "/api/generate",
-        json={
-            "prompt": "Say hello as a disclosed synthetic assistant.",
-            "agent_reply": "Hello from a launch-ready mixed voice.",
-            "blend": blend,
-            "tts_backend": "qwen3_tts",
-        },
-    ).json()
-    provider_report_path = tmp_path / "data" / "agent-provider-verification-report.json"
-    provider_report_path.write_text(
-        json.dumps(
-            {
-                "status": "passed",
-                "provider": "openai",
-                "model": "gpt-4.1-mini",
-                "reply": "Provider ready.",
-                "report_path": str(Path("data") / "agent-provider-verification-report.json"),
-            }
-        ),
-        encoding="utf-8",
-    )
-    report_path = tmp_path / "data" / "qwen-runtime-verification-report.json"
-    report_path.write_text(
-        json.dumps(
-            {
-                "status": "passed",
-                "voice_profile_ids": [voices[0]["id"], voices[1]["id"]],
-                "source_profile_details": [
-                    {
-                        "voice_profile_id": voices[0]["id"],
-                        "display_name": "Alice",
-                        "weight": 0.5,
-                        "consent_confirmed_by": "local_user",
-                        "allowed_uses": ["private_agent_voice", "local_audio_export"],
-                        "reference_text_present": True,
-                    },
-                    {
-                        "voice_profile_id": voices[1]["id"],
-                        "display_name": "Bob",
-                        "weight": 0.5,
-                        "consent_confirmed_by": "local_user",
-                        "allowed_uses": ["private_agent_voice", "local_audio_export"],
-                        "reference_text_present": True,
-                    },
-                ],
-                "tts_backend": "qwen3_tts",
-                "blend_strategy": "multi_reference_prompt",
-                "output_audio_path": generated["audio_path"],
-                "text": "Launch readiness verification.",
-            }
-        ),
-        encoding="utf-8",
-    )
-    FakeQwenAdapter.runtime_status = staticmethod(
-        lambda: {
-            "backend": "qwen3_tts",
-            "available": True,
-            "model_id": "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
-            "message": "qwen-tts package is importable.",
-        }
-    )
-    monkeypatch.setattr("app.core.launch.QwenTtsAdapter.runtime_status", FakeQwenAdapter.runtime_status)
-
-    response = client.get("/api/launch/readiness")
-
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["status"] == "blocked"
-    assert "Generate at least one Qwen3-TTS mixed voice clip from imported profiles." in payload["blocking_reasons"]
-    generated_audio_check = next(check for check in payload["checks"] if check["id"] == "generated_audio")
-    assert generated_audio_check["passed"] is False
-    assert generated_audio_check["detail"] == "Qwen mixed voice clips must include an agent provider trace."
-
-
 def test_launch_readiness_blocks_when_qwen_verification_lacks_source_details(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     research_review_path = tmp_path / "docs" / "research-review.md"
@@ -656,6 +521,10 @@ def test_launch_readiness_blocks_when_qwen_verification_lacks_source_details(tmp
             "agent_reply": "Hello from a launch-ready mixed voice.",
             "blend": blend,
             "tts_backend": "qwen3_tts",
+            "agent_trace": {
+                "provider": "openai",
+                "model": "gpt-4.1-mini",
+            },
         },
     ).json()
     provider_report_path = tmp_path / "data" / "agent-provider-verification-report.json"
@@ -1042,6 +911,46 @@ def test_generate_endpoint_rejects_duplicate_qwen_profiles_before_loading_runtim
     assert "distinct" in response.json()["detail"]
 
 
+def test_generate_endpoint_rejects_qwen_without_agent_trace_before_loading_runtime(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+
+    def fail_if_qwen_loads(**kwargs):
+        raise AssertionError("missing agent trace should be rejected before loading Qwen")
+
+    monkeypatch.setattr("app.api.routes.QwenTtsAdapter.from_pretrained", fail_if_qwen_loads)
+    monkeypatch.setattr(
+        "app.api.routes.get_voice_profiles_by_ids",
+        lambda profile_ids: {
+            "voice_a": voice_profile("voice_a", "Alice"),
+            "voice_b": voice_profile("voice_b", "Bob"),
+        },
+    )
+
+    response = client.post(
+        "/api/generate",
+        json={
+            "prompt": "Say hello as a disclosed synthetic assistant.",
+            "agent_reply": "Hello from a synthetic mixed voice.",
+            "tts_backend": "qwen3_tts",
+            "blend": {
+                "id": "blend_missing_trace",
+                "name": "Missing trace",
+                "strategy": "multi_reference_prompt",
+                "synthetic_label": "synthetic mixed voice",
+                "profiles": [
+                    {"voice_profile_id": "voice_a", "weight": 0.5},
+                    {"voice_profile_id": "voice_b", "weight": 0.5},
+                ],
+            },
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Qwen generation requires an agent provider trace."
+
+
 def test_generate_endpoint_rejects_qwen_profile_without_private_voice_consent_before_loading_runtime(
     tmp_path: Path, monkeypatch
 ):
@@ -1065,6 +974,10 @@ def test_generate_endpoint_rejects_qwen_profile_without_private_voice_consent_be
             "prompt": "Say hello as a disclosed synthetic assistant.",
             "agent_reply": "Hello from a synthetic mixed voice.",
             "tts_backend": "qwen3_tts",
+            "agent_trace": {
+                "provider": "openai",
+                "model": "gpt-4.1-mini",
+            },
             "blend": {
                 "id": "blend_revoked",
                 "name": "Revoked consent",
@@ -1105,6 +1018,10 @@ def test_generate_endpoint_rejects_qwen_profile_without_reference_text_before_lo
             "prompt": "Say hello as a disclosed synthetic assistant.",
             "agent_reply": "Hello from a synthetic mixed voice.",
             "tts_backend": "qwen3_tts",
+            "agent_trace": {
+                "provider": "openai",
+                "model": "gpt-4.1-mini",
+            },
             "blend": {
                 "id": "blend_missing_text",
                 "name": "Missing text",
@@ -1149,6 +1066,10 @@ def test_generate_endpoint_rejects_qwen_profile_with_quality_warnings_before_loa
             "prompt": "Say hello as a disclosed synthetic assistant.",
             "agent_reply": "Hello from a synthetic mixed voice.",
             "tts_backend": "qwen3_tts",
+            "agent_trace": {
+                "provider": "openai",
+                "model": "gpt-4.1-mini",
+            },
             "blend": {
                 "id": "blend_warning",
                 "name": "Warning",
@@ -1272,6 +1193,10 @@ def test_generate_endpoint_can_use_qwen_with_imported_profiles(tmp_path: Path, m
             "agent_reply": "Hello from a qwen mixed voice.",
             "blend": blend_response.json(),
             "tts_backend": "qwen3_tts",
+            "agent_trace": {
+                "provider": "openai",
+                "model": "gpt-4.1-mini",
+            },
             "model_id": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
             "device_map": "cuda:0",
             "dtype": "bfloat16",
