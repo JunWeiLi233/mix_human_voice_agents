@@ -58,6 +58,7 @@ def evaluate_launch_readiness() -> LaunchReadinessReport:
         and Path(qwen_verification.output_audio_path).exists()
     )
     qwen_verification_status = _qwen_verification_status(qwen_verification, qwen_output_exists)
+    qwen_runtime = _qwen_runtime_status(qwen_status, qwen_verification)
     research_review = _research_review_status()
     qwen_generation = _qwen_mixed_generation_status(
         generations,
@@ -99,8 +100,8 @@ def evaluate_launch_readiness() -> LaunchReadinessReport:
         LaunchReadinessCheck(
             id="qwen_runtime",
             label="Qwen runtime",
-            passed=qwen_status.available,
-            detail=qwen_status.message,
+            passed=qwen_runtime["passed"],
+            detail=qwen_runtime["detail"],
         ),
         LaunchReadinessCheck(
             id="qwen_verification",
@@ -174,6 +175,26 @@ def _qwen_verification_status(report: QwenVerificationReport, output_exists: boo
     return {
         "passed": True,
         "detail": _qwen_verification_detail(report, output_exists),
+    }
+
+
+def _qwen_runtime_status(status: TtsRuntimeStatus, verification: QwenVerificationReport) -> dict[str, object]:
+    if not status.available:
+        return {
+            "passed": False,
+            "detail": status.message,
+        }
+    if verification.status == "passed" and verification.model_id and status.model_id != verification.model_id:
+        return {
+            "passed": False,
+            "detail": (
+                f"Loaded Qwen model {status.model_id} does not match verified model "
+                f"{verification.model_id}."
+            ),
+        }
+    return {
+        "passed": True,
+        "detail": status.message,
     }
 
 
