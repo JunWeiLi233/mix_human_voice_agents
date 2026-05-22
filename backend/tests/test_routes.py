@@ -6,6 +6,7 @@ import struct
 import wave
 
 from app.main import app
+from app.models.schemas import VoiceProfile
 
 client = TestClient(app)
 
@@ -1006,6 +1007,46 @@ def test_generate_endpoint_rejects_duplicate_qwen_profiles_before_loading_runtim
     assert "distinct" in response.json()["detail"]
 
 
+def test_generate_endpoint_rejects_qwen_profile_without_private_voice_consent_before_loading_runtime(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+
+    def fail_if_qwen_loads(**kwargs):
+        raise AssertionError("revoked voice consent should be rejected before loading Qwen")
+
+    monkeypatch.setattr("app.api.routes.QwenTtsAdapter.from_pretrained", fail_if_qwen_loads)
+    monkeypatch.setattr(
+        "app.api.routes.get_voice_profiles_by_ids",
+        lambda profile_ids: {
+            "voice_a": voice_profile("voice_a", "Alice", synthetic_voice_allowed=False),
+            "voice_b": voice_profile("voice_b", "Bob"),
+        },
+    )
+
+    response = client.post(
+        "/api/generate",
+        json={
+            "prompt": "Say hello as a disclosed synthetic assistant.",
+            "agent_reply": "Hello from a synthetic mixed voice.",
+            "tts_backend": "qwen3_tts",
+            "blend": {
+                "id": "blend_revoked",
+                "name": "Revoked consent",
+                "strategy": "multi_reference_prompt",
+                "synthetic_label": "synthetic mixed voice",
+                "profiles": [
+                    {"voice_profile_id": "voice_a", "weight": 0.5},
+                    {"voice_profile_id": "voice_b", "weight": 0.5},
+                ],
+            },
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Voice profile voice_a is not allowed for private agent voice use."
+
+
 def test_list_generations_returns_persisted_metadata(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     blend_response = client.post(
@@ -1481,6 +1522,36 @@ def write_clipped_wav(path: Path, duration_seconds: int = 5, sample_rate: int = 
         wav_file.setsampwidth(2)
         wav_file.setframerate(sample_rate)
         wav_file.writeframes(frames)
+
+
+def voice_profile(profile_id: str, display_name: str, synthetic_voice_allowed: bool = True) -> VoiceProfile:
+    return VoiceProfile.model_validate(
+        {
+            "id": profile_id,
+            "display_name": display_name,
+            "reference_text": f"{display_name} reads a clean reference sentence.",
+            "consent": {
+                "voice_profile_id": profile_id,
+                "speaker_display_name": display_name,
+                "consent_type": "self_or_written_permission",
+                "allowed_uses": ["private_agent_voice", "local_audio_export"],
+                "confirmed_by": "local_user",
+                "notes": "Written permission captured.",
+                "synthetic_voice_allowed": synthetic_voice_allowed,
+            },
+            "source_audio_path": f"data/voices/{profile_id}/source.wav",
+            "cleaned_audio_path": f"data/voices/{profile_id}/source.wav",
+            "quality": {
+                "file_name": "source.wav",
+                "size_bytes": 10,
+                "format": "wav",
+                "duration_seconds": 5,
+                "sample_rate_hz": 16000,
+                "channel_count": 1,
+                "warnings": [],
+            },
+        }
+    )
 
 
 def build_tone_frames(duration_seconds: int, sample_rate: int) -> bytes:
