@@ -84,6 +84,20 @@ def test_generate_endpoint_returns_audio_metadata(tmp_path: Path, monkeypatch):
     assert Path(payload["metadata_path"]).exists()
     assert payload["source_profile_ids"] == ["voice_a", "voice_b"]
 
+    audio_response = client.get(f"/api/generations/{payload['id']}/audio")
+
+    assert audio_response.status_code == 200
+    assert audio_response.headers["content-type"] == "audio/wav"
+    assert audio_response.content.startswith(b"RIFF")
+
+
+def test_generation_audio_endpoint_returns_not_found(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    response = client.get("/api/generations/missing/audio")
+
+    assert response.status_code == 404
+
 
 def test_generate_endpoint_can_use_qwen_with_imported_profiles(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)

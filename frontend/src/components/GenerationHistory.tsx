@@ -14,7 +14,10 @@ export function GenerationHistory({ generations }: Props) {
         <ul>
           {generations.map((item) => (
             <li key={item.id}>
-              {item.synthetic_label} using {item.source_profile_ids.join(" + ")}
+              <div>
+                {item.synthetic_label} using {item.source_profile_ids.join(" + ")}
+              </div>
+              <audio controls aria-label={`Play ${item.synthetic_label}`} src={`/api/generations/${item.id}/audio`} />
             </li>
           ))}
         </ul>
@@ -22,4 +25,3 @@ export function GenerationHistory({ generations }: Props) {
     </section>
   );
 }
-

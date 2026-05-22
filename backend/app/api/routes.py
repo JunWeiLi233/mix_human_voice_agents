@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from app.core.agent import AgentProviderError, generate_agent_reply_record
@@ -12,6 +13,7 @@ from app.core.safety import SafetyError
 from app.core.storage import (
     GENERATION_ROOT,
     ensure_storage,
+    get_generation_audio_path,
     get_voice_profiles_by_ids,
     list_voice_profiles,
     new_voice_profile_id,
@@ -94,6 +96,15 @@ def generate_route(request: GenerateRequest) -> GenerationResult:
         )
     except (QwenTtsNotConfigured, SafetyError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/generations/{generation_id}/audio")
+def generation_audio_route(generation_id: str) -> FileResponse:
+    try:
+        audio_path = get_generation_audio_path(generation_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return FileResponse(audio_path, media_type="audio/wav", filename=f"{generation_id}.wav")
 
 
 @router.post("/agent/reply", response_model=AgentReply)

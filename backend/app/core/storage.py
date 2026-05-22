@@ -52,3 +52,21 @@ def get_voice_profiles_by_ids(profile_ids: list[str]) -> dict[str, VoiceProfile]
     if missing:
         raise FileNotFoundError(f"Missing voice profiles: {', '.join(missing)}")
     return {profile_id: profiles[profile_id] for profile_id in profile_ids}
+
+
+def get_generation_audio_path(generation_id: str) -> Path:
+    ensure_storage()
+    generation_root = GENERATION_ROOT.resolve()
+    for metadata_path in sorted(GENERATION_ROOT.glob("*.json")):
+        payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+        if payload.get("id") != generation_id:
+            continue
+
+        audio_path = Path(payload["audio_path"]).resolve()
+        if generation_root not in (audio_path, *audio_path.parents):
+            raise FileNotFoundError(f"Generated audio is outside generation storage: {generation_id}")
+        if not audio_path.exists():
+            raise FileNotFoundError(f"Generated audio is missing: {generation_id}")
+        return audio_path
+
+    raise FileNotFoundError(f"Generated audio not found: {generation_id}")

@@ -137,6 +137,10 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Generate AI Voice" }));
 
     await screen.findByText("synthetic mixed voice using voice_alice + voice_bob");
+    expect(screen.getByLabelText("Play synthetic mixed voice")).toHaveAttribute(
+      "src",
+      "/api/generations/generation_1/audio",
+    );
 
     const agentCall = requestJson(fetchMock, "/api/agent/reply");
     expect(agentCall).toMatchObject({

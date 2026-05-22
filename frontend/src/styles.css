@@ -127,6 +127,11 @@ input {
   margin-bottom: 12px;
 }
 
+audio {
+  width: 100%;
+  margin-top: 8px;
+}
+
 .error {
   border: 1px solid #a93d3d;
   background: #fff0f0;
