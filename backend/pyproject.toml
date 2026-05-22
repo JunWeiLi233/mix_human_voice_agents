@@ -14,8 +14,13 @@ dependencies = [
 dev = [
   "pytest>=8.0"
 ]
+qwen = [
+  "numpy>=2.0.0",
+  "qwen-tts>=0.1.0",
+  "soundfile>=0.12.1",
+  "torch>=2.4.0"
+]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
-

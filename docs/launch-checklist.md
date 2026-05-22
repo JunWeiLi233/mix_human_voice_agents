@@ -21,3 +21,10 @@
 - Microphone input and realtime WebRTC conversation are deferred.
 - Public voice sharing and celebrity/public-figure cloning are out of scope.
 
+## Optional Real Qwen3-TTS Verification
+
+- Install Qwen dependencies with `cd backend && .\.venv\Scripts\python -m pip install -e ".[qwen]"`.
+- Configure `QwenTtsAdapter.from_pretrained()` with the desired model id.
+- Import two clean 5-30 second consented WAV samples.
+- Create a blend using `multi_reference_prompt`.
+- Generate a short reply and confirm the output WAV is produced by Qwen3-TTS rather than the local development adapter.
