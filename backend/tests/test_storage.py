@@ -88,6 +88,31 @@ def test_get_generation_audio_path_rejects_metadata_file_that_points_elsewhere(
         get_generation_audio_path("generation_stale")
 
 
+def test_get_generation_audio_path_skips_invalid_metadata_files(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    generation_root = tmp_path / "data" / "generations"
+    generation_root.mkdir(parents=True)
+    invalid_path = generation_root / "invalid.json"
+    metadata_path = generation_root / "valid.json"
+    audio_path = generation_root / "valid.wav"
+    audio_path.write_bytes(b"fake-qwen-wav")
+    valid = GenerationResult(
+        id="generation_valid",
+        audio_path=str(audio_path),
+        metadata_path=str(metadata_path),
+        synthetic_label="synthetic mixed voice",
+        source_profile_ids=["voice_a", "voice_b"],
+        blend_strategy="multi_reference_prompt",
+        tts_backend="qwen3_tts",
+    )
+    invalid_path.write_text("{invalid-json", encoding="utf-8")
+    metadata_path.write_text(valid.model_dump_json(), encoding="utf-8")
+
+    result = get_generation_audio_path("generation_valid")
+
+    assert result == audio_path.resolve()
+
+
 def test_get_generation_metadata_path_rejects_metadata_file_that_points_elsewhere(
     tmp_path, monkeypatch
 ):
@@ -108,3 +133,26 @@ def test_get_generation_metadata_path_rejects_metadata_file_that_points_elsewher
 
     with pytest.raises(FileNotFoundError, match="Generated metadata is stale"):
         get_generation_metadata_path("generation_stale")
+
+
+def test_get_generation_metadata_path_skips_invalid_metadata_files(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    generation_root = tmp_path / "data" / "generations"
+    generation_root.mkdir(parents=True)
+    invalid_path = generation_root / "invalid.json"
+    metadata_path = generation_root / "valid.json"
+    valid = GenerationResult(
+        id="generation_valid",
+        audio_path=str(generation_root / "valid.wav"),
+        metadata_path=str(metadata_path),
+        synthetic_label="synthetic mixed voice",
+        source_profile_ids=["voice_a", "voice_b"],
+        blend_strategy="multi_reference_prompt",
+        tts_backend="qwen3_tts",
+    )
+    invalid_path.write_text("{invalid-json", encoding="utf-8")
+    metadata_path.write_text(valid.model_dump_json(), encoding="utf-8")
+
+    result = get_generation_metadata_path("generation_valid")
+
+    assert result == metadata_path.resolve()

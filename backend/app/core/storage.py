@@ -157,15 +157,17 @@ def get_generation_audio_path(generation_id: str) -> Path:
     ensure_storage()
     generation_root = GENERATION_ROOT.resolve()
     for metadata_path in sorted(GENERATION_ROOT.glob("*.json")):
-        payload = json.loads(metadata_path.read_text(encoding="utf-8"))
-        if payload.get("id") != generation_id:
+        try:
+            result = GenerationResult.model_validate_json(metadata_path.read_text(encoding="utf-8"))
+        except ValidationError:
+            continue
+        if result.id != generation_id:
             continue
 
-        result = GenerationResult.model_validate(payload)
         if not _generation_metadata_path_matches_file(result, metadata_path):
             raise FileNotFoundError(f"Generated metadata is stale: {generation_id}")
 
-        audio_path = Path(payload["audio_path"]).resolve()
+        audio_path = Path(result.audio_path).resolve()
         if generation_root not in (audio_path, *audio_path.parents):
             raise FileNotFoundError(f"Generated audio is outside generation storage: {generation_id}")
         if not audio_path.exists():
@@ -179,11 +181,13 @@ def get_generation_metadata_path(generation_id: str) -> Path:
     ensure_storage()
     generation_root = GENERATION_ROOT.resolve()
     for metadata_path in sorted(GENERATION_ROOT.glob("*.json")):
-        payload = json.loads(metadata_path.read_text(encoding="utf-8"))
-        if payload.get("id") != generation_id:
+        try:
+            result = GenerationResult.model_validate_json(metadata_path.read_text(encoding="utf-8"))
+        except ValidationError:
+            continue
+        if result.id != generation_id:
             continue
 
-        result = GenerationResult.model_validate(payload)
         if not _generation_metadata_path_matches_file(result, metadata_path):
             raise FileNotFoundError(f"Generated metadata is stale: {generation_id}")
 
