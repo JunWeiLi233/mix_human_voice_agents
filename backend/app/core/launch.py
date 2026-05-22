@@ -353,6 +353,11 @@ def _qwen_mixed_generation_status(
                 "passed": False,
                 "detail": "Qwen verification output and generated mixed voice audio must be separate files.",
             }
+        if not generation.prompt.strip() or not generation.agent_reply.strip():
+            return {
+                "passed": False,
+                "detail": "Qwen mixed voice clips must include the agent prompt and spoken reply transcript.",
+            }
         if not Path(generation.audio_path).exists():
             continue
         return {
