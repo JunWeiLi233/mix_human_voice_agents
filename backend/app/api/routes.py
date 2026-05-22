@@ -249,6 +249,7 @@ def generate_route(request: GenerateRequest) -> GenerationResult:
         raise HTTPException(status_code=400, detail="Qwen generation requires an agent provider trace.")
     if request.tts_backend == "qwen3_tts":
         _validate_qwen_agent_provider_preflight(request.agent_trace)
+        _validate_qwen_runtime_verification(request)
     source_ids = [profile.voice_profile_id for profile in request.blend.profiles]
     voice_profiles = _load_voice_profiles_for_generation(source_ids, strict=request.tts_backend == "qwen3_tts")
     qwen_runtime_config = _qwen_runtime_config_from_request(request)
@@ -292,6 +293,18 @@ def _validate_qwen_agent_provider_preflight(agent_trace: AgentTrace | None) -> N
         raise HTTPException(
             status_code=400,
             detail="Qwen generation agent trace must match the passed agent provider preflight.",
+        )
+
+
+def _validate_qwen_runtime_verification(request: GenerateRequest) -> None:
+    report = get_qwen_verification_report()
+    if report.status != "passed":
+        raise HTTPException(status_code=400, detail="Qwen runtime verification must pass before Qwen generation.")
+    requested_voice_ids = sorted(profile.voice_profile_id for profile in request.blend.profiles)
+    if sorted(report.voice_profile_ids) != requested_voice_ids:
+        raise HTTPException(
+            status_code=400,
+            detail="Qwen generation voices must match the passed Qwen runtime verification.",
         )
 
 
