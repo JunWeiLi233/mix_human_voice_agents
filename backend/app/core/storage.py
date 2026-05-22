@@ -141,7 +141,10 @@ def list_generation_results() -> list[GenerationResult]:
         key=lambda path: path.stat().st_mtime,
         reverse=True,
     ):
-        results.append(GenerationResult.model_validate_json(metadata_path.read_text(encoding="utf-8")))
+        result = GenerationResult.model_validate_json(metadata_path.read_text(encoding="utf-8"))
+        if not _generation_metadata_path_matches_file(result, metadata_path):
+            continue
+        results.append(result)
     return results
 
 
@@ -177,3 +180,7 @@ def get_generation_metadata_path(generation_id: str) -> Path:
         return resolved_metadata_path
 
     raise FileNotFoundError(f"Generated metadata not found: {generation_id}")
+
+
+def _generation_metadata_path_matches_file(result: GenerationResult, metadata_path: Path) -> bool:
+    return Path(result.metadata_path).resolve(strict=False) == metadata_path.resolve(strict=False)
