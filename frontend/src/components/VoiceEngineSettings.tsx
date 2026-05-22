@@ -1,13 +1,30 @@
-import type { QwenVerificationReport, TtsBackend, TtsRuntimeStatus } from "../types";
+import type { QwenVerificationReport, TtsBackend, TtsRuntimeStatus, VoiceProfile } from "../types";
 
 type Props = {
   value: TtsBackend;
   status: TtsRuntimeStatus | null;
   verification: QwenVerificationReport | null;
+  voices: VoiceProfile[];
+  verificationText: string;
+  verificationBusy: boolean;
   onChange: (backend: TtsBackend) => void;
+  onVerificationTextChange: (text: string) => void;
+  onRunVerification: () => void;
 };
 
-export function VoiceEngineSettings({ value, status, verification, onChange }: Props) {
+export function VoiceEngineSettings({
+  value,
+  status,
+  verification,
+  voices,
+  verificationText,
+  verificationBusy,
+  onChange,
+  onVerificationTextChange,
+  onRunVerification,
+}: Props) {
+  const verificationDisabled = voices.length < 2 || verificationBusy;
+
   return (
     <section className="panel">
       <h2>Voice Engine</h2>
@@ -58,6 +75,17 @@ export function VoiceEngineSettings({ value, status, verification, onChange }: P
           </>
         ) : null}
       </dl>
+      <label>
+        Qwen verification text
+        <textarea
+          aria-label="Qwen verification text"
+          value={verificationText}
+          onChange={(event) => onVerificationTextChange(event.target.value)}
+        />
+      </label>
+      <button type="button" disabled={verificationDisabled} onClick={onRunVerification}>
+        {verificationBusy ? "Running Qwen verification" : "Run Qwen verification"}
+      </button>
     </section>
   );
 }

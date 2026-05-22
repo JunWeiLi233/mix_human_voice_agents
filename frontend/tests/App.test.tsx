@@ -114,6 +114,19 @@ describe("App", () => {
         });
       }
 
+      if (url === "/api/tts/qwen/verification" && init?.method === "POST") {
+        const body = JSON.parse(init.body?.toString() ?? "{}");
+        return jsonResponse({
+          status: "passed",
+          tts_backend: "qwen3_tts",
+          report_path: "data/qwen-runtime-verification-report.json",
+          voice_profile_ids: body.voice_profile_ids,
+          blend_strategy: "multi_reference_prompt",
+          output_audio_path: "data/generations/studio_qwen_verify.wav",
+          text: body.text,
+        });
+      }
+
       if (url === "/api/voices" && init?.method === "POST") {
         const form = init.body as FormData;
         const displayName = form.get("speaker_display_name")?.toString() ?? "Imported";
@@ -216,6 +229,17 @@ describe("App", () => {
     await importNamedVoice("Bob");
     fireEvent.change(screen.getByLabelText("Alice blend weight"), { target: { value: "0.7" } });
     fireEvent.change(screen.getByLabelText("Bob blend weight"), { target: { value: "0.3" } });
+    fireEvent.change(screen.getByLabelText("Qwen verification text"), {
+      target: { value: "Studio verification with imported Alice and Bob." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Run Qwen verification" }));
+
+    await screen.findByText("data/generations/studio_qwen_verify.wav");
+    const verificationCall = requestJson(fetchMock, "/api/tts/qwen/verification");
+    expect(verificationCall).toMatchObject({
+      voice_profile_ids: ["voice_alice", "voice_bob"],
+      text: "Studio verification with imported Alice and Bob.",
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "Create blend from imported voices" }));
     await screen.findByRole("button", { name: "Alice + Bob" });

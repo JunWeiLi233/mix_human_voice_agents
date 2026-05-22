@@ -57,6 +57,11 @@ class GenerateRequest(BaseModel):
     tts_backend: TtsBackend = "local_development_wav"
 
 
+class RunQwenVerificationRequest(BaseModel):
+    voice_profile_ids: list[str]
+    text: str = "This is a disclosed synthetic mixed voice runtime verification."
+
+
 class DeleteVoiceResponse(BaseModel):
     deleted_voice_profile_id: str
     deleted_blend_ids: list[str]
@@ -84,6 +89,53 @@ def qwen_verification_route() -> QwenVerificationReport:
         )
     payload = json.loads(report_path.read_text(encoding="utf-8"))
     payload.setdefault("report_path", str(report_path))
+    return QwenVerificationReport.model_validate(payload)
+
+
+@router.post("/tts/qwen/verification", response_model=QwenVerificationReport)
+def run_qwen_verification_route(request: RunQwenVerificationRequest) -> QwenVerificationReport:
+    profile_ids = request.voice_profile_ids
+    if len(profile_ids) < 2:
+        raise HTTPException(status_code=400, detail="Qwen runtime verification requires at least two voice profile ids.")
+
+    try:
+        voice_profiles = get_voice_profiles_by_ids(profile_ids)
+        blend = create_blend(
+            name="Qwen runtime verification blend",
+            profiles=[BlendProfileInput(voice_profile_id=profile_id, weight=1) for profile_id in profile_ids],
+            strategy="multi_reference_prompt",
+        )
+        adapter = QwenTtsAdapter.from_pretrained(output_root=Path(GENERATION_ROOT))
+        output_path = adapter.synthesize(request.text, blend, voice_profiles=voice_profiles)
+    except (FileNotFoundError, QwenTtsNotConfigured, ValueError) as exc:
+        return _write_qwen_verification_report(
+            {
+                "status": "failed",
+                "error": str(exc),
+                "voice_profile_ids": profile_ids,
+                "tts_backend": "qwen3_tts",
+                "text": request.text,
+            }
+        )
+
+    return _write_qwen_verification_report(
+        {
+            "status": "passed",
+            "voice_profile_ids": profile_ids,
+            "blend_id": blend.id,
+            "blend_strategy": blend.strategy,
+            "tts_backend": "qwen3_tts",
+            "output_audio_path": str(output_path),
+            "text": request.text,
+        }
+    )
+
+
+def _write_qwen_verification_report(payload: dict[str, object]) -> QwenVerificationReport:
+    report_path = QWEN_VERIFICATION_REPORT_PATH
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    payload["report_path"] = str(report_path)
+    report_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return QwenVerificationReport.model_validate(payload)
 
 

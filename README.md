@@ -13,6 +13,7 @@ Local-first prototype for an AI voice agent that imports multiple consented voic
   - `local_development_wav`: deterministic preview WAV for development.
   - `qwen3_tts`: Qwen3-TTS voice-clone path, then weighted waveform mixing across imported profiles.
 - Surfaces the saved Qwen runtime verification report in the Voice Engine panel.
+- Can run Qwen runtime verification from the studio after two or more consented voices are imported.
 - Labels generated audio as synthetic in metadata and UI.
 - Blocks high-risk impersonation/payment authorization language.
 
@@ -81,8 +82,9 @@ Open `http://127.0.0.1:5173`.
 3. For each voice, enter who confirmed consent, add consent notes, paste the reference transcript, check the consent confirmation box, and import a clean 5-30 second WAV sample where the speaker is you or has given written permission.
 4. Adjust each voice's blend weight in `Blend Mixer`.
 5. Select `Local preview` or `Qwen3-TTS` in `Voice Engine`.
-6. Create the blend.
-7. Enter the agent prompt and generate AI voice.
+6. For Qwen launch checks, run Qwen verification in `Voice Engine` and confirm the report passes.
+7. Create the blend.
+8. Enter the agent prompt and generate AI voice.
 
 ## Qwen Runtime
 

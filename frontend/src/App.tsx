@@ -9,6 +9,7 @@ import {
   listGenerations,
   listVoices,
   requestAgentReply,
+  runQwenVerification,
 } from "./api";
 import { AgentChat } from "./components/AgentChat";
 import { AgentProviderSettings } from "./components/AgentProviderSettings";
@@ -45,6 +46,10 @@ export default function App() {
   const [generations, setGenerations] = useState<GenerationResult[]>([]);
   const [qwenStatus, setQwenStatus] = useState<TtsRuntimeStatus | null>(null);
   const [qwenVerification, setQwenVerification] = useState<QwenVerificationReport | null>(null);
+  const [qwenVerificationText, setQwenVerificationText] = useState(
+    "This is a disclosed synthetic mixed voice runtime verification.",
+  );
+  const [qwenVerificationBusy, setQwenVerificationBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -169,6 +174,22 @@ export default function App() {
     }
   }
 
+  async function handleRunQwenVerification() {
+    setError(null);
+    setQwenVerificationBusy(true);
+    try {
+      const report = await runQwenVerification(
+        voices.map((voice) => voice.id),
+        qwenVerificationText,
+      );
+      setQwenVerification(report);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Qwen verification failed");
+    } finally {
+      setQwenVerificationBusy(false);
+    }
+  }
+
   return (
     <main>
       <header>
@@ -186,7 +207,12 @@ export default function App() {
           value={ttsBackend}
           status={qwenStatus}
           verification={qwenVerification}
+          voices={voices}
+          verificationText={qwenVerificationText}
+          verificationBusy={qwenVerificationBusy}
           onChange={setTtsBackend}
+          onVerificationTextChange={setQwenVerificationText}
+          onRunVerification={handleRunQwenVerification}
         />
         <VoiceLibrary voices={voices} onDeleteVoice={handleDeleteVoice} />
         <ImportVoice onImported={handleImported} />

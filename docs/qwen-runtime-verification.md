@@ -48,9 +48,20 @@ npm run dev -- --host 127.0.0.1 --port 5173
 
 9. Listen to the generated audio and confirm it reflects the selected imported voices.
 
+## Studio Verification
+
+After importing at least two consented profiles, use the `Voice Engine` panel:
+
+1. Select `Qwen3-TTS`.
+2. Edit `Qwen verification text` if needed.
+3. Click `Run Qwen verification`.
+4. Confirm the panel shows `Verification passed` and the verified output path exists.
+
+The studio writes the same report file as the CLI at `data/qwen-runtime-verification-report.json`.
+
 ## CLI Verification
 
-After importing two or more consented profiles, run this from `backend/` to exercise the real Qwen adapter and write a verification report:
+After importing two or more consented profiles, you can also run this from `backend/` to exercise the real Qwen adapter and write a verification report:
 
 ```powershell
 .\.venv\Scripts\python -m app.cli.verify_qwen_runtime `
@@ -64,7 +75,7 @@ The report must contain `"status": "passed"`, `"tts_backend": "qwen3_tts"`, and 
 
 If Qwen generation fails with a missing reference text error, re-import the voice sample with the matching transcript. The transcript should describe the words spoken in the reference clip, not the speaker's name.
 
-## Report in the Studio
+## Report Display
 
 The backend exposes the saved report at `/api/tts/qwen/verification`. The frontend reads that endpoint on load and shows `Verification passed`, `Verification failed`, or `Verification missing` in the `Voice Engine` panel. When a passed report includes `output_audio_path`, the panel shows the verified output file path.
 

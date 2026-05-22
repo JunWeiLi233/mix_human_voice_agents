@@ -44,6 +44,21 @@ export async function getQwenVerificationReport(): Promise<QwenVerificationRepor
   return response.json();
 }
 
+export async function runQwenVerification(voiceProfileIds: string[], text: string): Promise<QwenVerificationReport> {
+  const response = await fetch("/api/tts/qwen/verification", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      voice_profile_ids: voiceProfileIds,
+      text,
+    }),
+  });
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  return response.json();
+}
+
 export async function listGenerations(): Promise<GenerationResult[]> {
   const response = await fetch("/api/generations");
   if (!response.ok) {
