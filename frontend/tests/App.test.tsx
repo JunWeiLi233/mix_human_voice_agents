@@ -216,6 +216,14 @@ describe("App", () => {
       "src",
       "/api/generations/generation_existing/audio",
     );
+    expect(screen.getByRole("link", { name: "Download audio for generation_existing" })).toHaveAttribute(
+      "href",
+      "/api/generations/generation_existing/audio",
+    );
+    expect(screen.getByRole("link", { name: "Download metadata for generation_existing" })).toHaveAttribute(
+      "href",
+      "/api/generations/generation_existing/metadata",
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "API" }));
     fireEvent.change(screen.getByLabelText("Base URL"), { target: { value: "https://llm.example.test/v1" } });
@@ -266,6 +274,10 @@ describe("App", () => {
     expect(screen.getAllByLabelText("Play synthetic mixed voice")[0]).toHaveAttribute(
       "src",
       "/api/generations/generation_1/audio",
+    );
+    expect(screen.getByRole("link", { name: "Download metadata for generation_1" })).toHaveAttribute(
+      "href",
+      "/api/generations/generation_1/metadata",
     );
 
     const agentCall = requestJson(fetchMock, "/api/agent/reply");

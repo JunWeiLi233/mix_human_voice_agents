@@ -16,6 +16,7 @@ from app.core.storage import (
     delete_voice_profile,
     ensure_storage,
     get_generation_audio_path,
+    get_generation_metadata_path,
     get_voice_profiles_by_ids,
     list_blends,
     list_generation_results,
@@ -200,6 +201,15 @@ def generation_audio_route(generation_id: str) -> FileResponse:
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return FileResponse(audio_path, media_type="audio/wav", filename=f"{generation_id}.wav")
+
+
+@router.get("/generations/{generation_id}/metadata")
+def generation_metadata_route(generation_id: str) -> FileResponse:
+    try:
+        metadata_path = get_generation_metadata_path(generation_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return FileResponse(metadata_path, media_type="application/json", filename=f"{generation_id}.json")
 
 
 @router.post("/agent/reply", response_model=AgentReply)

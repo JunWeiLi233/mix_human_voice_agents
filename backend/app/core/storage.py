@@ -145,3 +145,19 @@ def get_generation_audio_path(generation_id: str) -> Path:
         return audio_path
 
     raise FileNotFoundError(f"Generated audio not found: {generation_id}")
+
+
+def get_generation_metadata_path(generation_id: str) -> Path:
+    ensure_storage()
+    generation_root = GENERATION_ROOT.resolve()
+    for metadata_path in sorted(GENERATION_ROOT.glob("*.json")):
+        payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+        if payload.get("id") != generation_id:
+            continue
+
+        resolved_metadata_path = metadata_path.resolve()
+        if generation_root not in (resolved_metadata_path, *resolved_metadata_path.parents):
+            raise FileNotFoundError(f"Generated metadata is outside generation storage: {generation_id}")
+        return resolved_metadata_path
+
+    raise FileNotFoundError(f"Generated metadata not found: {generation_id}")

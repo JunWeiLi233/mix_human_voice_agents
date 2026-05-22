@@ -248,6 +248,17 @@ def test_generate_endpoint_returns_audio_metadata(tmp_path: Path, monkeypatch):
     assert audio_response.headers["content-type"] == "audio/wav"
     assert audio_response.content.startswith(b"RIFF")
 
+    metadata_response = client.get(f"/api/generations/{payload['id']}/metadata")
+
+    assert metadata_response.status_code == 200
+    assert metadata_response.headers["content-type"] == "application/json"
+    assert metadata_response.json()["id"] == payload["id"]
+    assert metadata_response.json()["synthetic_label"] == "synthetic mixed voice"
+    assert metadata_response.json()["source_profiles"] == [
+        {"voice_profile_id": "voice_a", "weight": 0.5},
+        {"voice_profile_id": "voice_b", "weight": 0.5},
+    ]
+
 
 def test_generate_endpoint_rejects_duplicate_voice_profile_ids(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
@@ -308,6 +319,14 @@ def test_generation_audio_endpoint_returns_not_found(tmp_path: Path, monkeypatch
     monkeypatch.chdir(tmp_path)
 
     response = client.get("/api/generations/missing/audio")
+
+    assert response.status_code == 404
+
+
+def test_generation_metadata_endpoint_returns_not_found(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    response = client.get("/api/generations/missing/metadata")
 
     assert response.status_code == 404
 

@@ -18,6 +18,22 @@ export function GenerationHistory({ generations }: Props) {
                 {item.synthetic_label} using {formatGenerationSources(item)}
               </div>
               <audio controls aria-label={`Play ${item.synthetic_label}`} src={`/api/generations/${item.id}/audio`} />
+              <div className="history-actions">
+                <a
+                  aria-label={`Download audio for ${item.id}`}
+                  download={`${item.id}.wav`}
+                  href={`/api/generations/${item.id}/audio`}
+                >
+                  Audio
+                </a>
+                <a
+                  aria-label={`Download metadata for ${item.id}`}
+                  download={`${item.id}.json`}
+                  href={`/api/generations/${item.id}/metadata`}
+                >
+                  Metadata
+                </a>
+              </div>
             </li>
           ))}
         </ul>
