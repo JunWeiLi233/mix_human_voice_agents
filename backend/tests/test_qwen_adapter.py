@@ -30,7 +30,8 @@ class FakeQwenModel:
                 "voice_clone_prompt": voice_clone_prompt,
             }
         )
-        return [np.zeros(1600, dtype=np.float32)], 16000
+        value = 0.25 if voice_clone_prompt["prompt"] == "a" else 0.75
+        return [np.full(1600, value, dtype=np.float32)], 16000
 
 
 def profile(profile_id: str, audio_path: Path) -> VoiceProfile:
@@ -60,7 +61,7 @@ def profile(profile_id: str, audio_path: Path) -> VoiceProfile:
     )
 
 
-def test_qwen_adapter_builds_prompts_for_each_source_profile(tmp_path: Path):
+def test_qwen_adapter_mixes_each_source_profile_by_weight(tmp_path: Path):
     audio_a = tmp_path / "a.wav"
     audio_b = tmp_path / "b.wav"
     audio_a.write_bytes(b"fake-audio-a")
@@ -71,7 +72,7 @@ def test_qwen_adapter_builds_prompts_for_each_source_profile(tmp_path: Path):
         name="Pair",
         profiles=[
             BlendProfileInput(voice_profile_id="voice_a", weight=1),
-            BlendProfileInput(voice_profile_id="voice_b", weight=1),
+            BlendProfileInput(voice_profile_id="voice_b", weight=3),
         ],
         strategy="multi_reference_prompt",
     )
@@ -86,7 +87,10 @@ def test_qwen_adapter_builds_prompts_for_each_source_profile(tmp_path: Path):
     )
 
     assert output.exists()
+    mixed, sample_rate = adapter.read_output(output)
+    assert sample_rate == 16000
     assert len(fake_model.prompt_calls) == 2
-    assert fake_model.generate_calls[0]["voice_clone_prompt"][0]["prompt"] == "a"
-    assert fake_model.generate_calls[0]["voice_clone_prompt"][1]["prompt"] == "b"
-
+    assert len(fake_model.generate_calls) == 2
+    assert fake_model.generate_calls[0]["voice_clone_prompt"]["prompt"] == "a"
+    assert fake_model.generate_calls[1]["voice_clone_prompt"]["prompt"] == "b"
+    assert float(mixed[0]) == np.float32(0.625)
