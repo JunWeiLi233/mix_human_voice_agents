@@ -124,10 +124,15 @@ input {
   gap: 10px;
 }
 
-.voice-list div {
+.voice-row {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 10px;
+}
+
+.voice-row button {
+  width: auto;
 }
 
 .voice-list span {

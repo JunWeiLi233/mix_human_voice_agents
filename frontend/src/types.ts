@@ -64,6 +64,11 @@ export type VoiceProfile = {
   };
 };
 
+export type DeleteVoiceResult = {
+  deleted_voice_profile_id: string;
+  deleted_blend_ids: string[];
+};
+
 export type VoiceConsentInput = {
   confirmed_by: string;
   notes: string;

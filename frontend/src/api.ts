@@ -2,6 +2,7 @@ import type {
   AgentConfig,
   AgentReply,
   BlendDraftProfile,
+  DeleteVoiceResult,
   GenerationResult,
   TtsBackend,
   TtsRuntimeStatus,
@@ -12,6 +13,14 @@ import type {
 
 export async function listVoices(): Promise<VoiceProfile[]> {
   const response = await fetch("/api/voices");
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  return response.json();
+}
+
+export async function deleteVoice(voiceProfileId: string): Promise<DeleteVoiceResult> {
+  const response = await fetch(`/api/voices/${voiceProfileId}`, { method: "DELETE" });
   if (!response.ok) {
     throw new Error(await response.text());
   }

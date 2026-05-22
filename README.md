@@ -7,6 +7,7 @@ Local-first prototype for an AI voice agent that imports multiple consented voic
 - Imports 5-30 second WAV voice samples only after explicit self or written-permission consent confirmation.
 - Lists imported voice profiles from local storage.
 - Builds a mixed voice from two or more imported profiles with user-controlled weights.
+- Deletes imported voice profiles and removes saved blends that depend on deleted voices.
 - Lets the user choose an OpenAI-compatible API provider or an Ollama-compatible local LLM endpoint.
 - Generates an agent reply first, then synthesizes audio with either:
   - `local_development_wav`: deterministic preview WAV for development.
@@ -85,6 +86,10 @@ Install optional Qwen dependencies from `backend/`:
 ```
 
 If the selected model requires GPU acceleration, install the appropriate PyTorch build for the machine first. Then follow `docs/qwen-runtime-verification.md` with two or more consented samples.
+
+## Research Notes
+
+Current voice-agent practice splits into realtime speech-to-speech agents and chained STT/LLM/TTS pipelines. OpenAI's voice-agent docs recommend the Realtime API for low-latency speech-to-speech and chained pipelines when the application needs more control over each stage. LiveKit and Pipecat follow the same pipeline pattern for production voice agents. Qwen3-TTS voice cloning takes reference audio plus reference text for cloned synthesis, so this app keeps imported voice profiles, blend metadata, and TTS adapters separate instead of assuming a realtime model can directly own multi-person voice blending.
 
 ## Tests
 

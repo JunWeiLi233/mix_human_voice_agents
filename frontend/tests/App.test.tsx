@@ -224,6 +224,80 @@ describe("App", () => {
       tts_backend: "qwen3_tts",
     });
   });
+
+  it("lets the user delete an imported voice and removes dependent blends", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = input.toString();
+
+      if (url === "/api/voices" && !init) {
+        return jsonResponse([
+          voiceProfile("voice_alice", "Alice"),
+          voiceProfile("voice_bob", "Bob"),
+          voiceProfile("voice_cara", "Cara"),
+        ]);
+      }
+
+      if (url === "/api/blends" && !init) {
+        return jsonResponse([
+          {
+            id: "blend_alice_bob",
+            name: "Alice + Bob",
+            strategy: "local_development_wav",
+            synthetic_label: "synthetic mixed voice",
+            profiles: [
+              { voice_profile_id: "voice_alice", weight: 0.5 },
+              { voice_profile_id: "voice_bob", weight: 0.5 },
+            ],
+          },
+          {
+            id: "blend_bob_cara",
+            name: "Bob + Cara",
+            strategy: "local_development_wav",
+            synthetic_label: "synthetic mixed voice",
+            profiles: [
+              { voice_profile_id: "voice_bob", weight: 0.5 },
+              { voice_profile_id: "voice_cara", weight: 0.5 },
+            ],
+          },
+        ]);
+      }
+
+      if (url === "/api/generations" && !init) {
+        return jsonResponse([]);
+      }
+
+      if (url === "/api/tts/qwen/status" && !init) {
+        return jsonResponse({
+          backend: "qwen3_tts",
+          available: false,
+          model_id: "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+          message: "qwen-tts is not installed.",
+        });
+      }
+
+      if (url === "/api/voices/voice_alice" && init?.method === "DELETE") {
+        return jsonResponse({
+          deleted_voice_profile_id: "voice_alice",
+          deleted_blend_ids: ["blend_alice_bob"],
+        });
+      }
+
+      return new Response("not found", { status: 404 });
+    });
+
+    render(<App />);
+
+    await screen.findByRole("button", { name: "Alice + Bob" });
+    expect(screen.getByRole("button", { name: "Generate AI Voice" })).toBeEnabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete Alice voice" }));
+
+    await waitFor(() => expect(screen.queryByText("Alice")).not.toBeInTheDocument());
+    expect(screen.queryByRole("button", { name: "Alice + Bob" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Bob + Cara" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Generate AI Voice" })).toBeDisabled();
+    expect(fetchMock).toHaveBeenCalledWith("/api/voices/voice_alice", { method: "DELETE" });
+  });
 });
 
 async function importNamedVoice(name: string) {
@@ -241,6 +315,21 @@ function jsonResponse(body: unknown) {
       headers: { "Content-Type": "application/json" },
     }),
   );
+}
+
+function voiceProfile(id: string, displayName: string) {
+  return {
+    id,
+    display_name: displayName,
+    source_audio_path: `data/voices/${id}/sample.wav`,
+    cleaned_audio_path: `data/voices/${id}/sample.wav`,
+    consent: {
+      voice_profile_id: id,
+      speaker_display_name: displayName,
+      synthetic_voice_allowed: true,
+      allowed_uses: ["private_agent_voice", "local_audio_export"],
+    },
+  };
 }
 
 function requestJson(fetchMock: ReturnType<typeof vi.spyOn>, path: string) {

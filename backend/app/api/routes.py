@@ -12,6 +12,7 @@ from app.core.generation import generate_agent_clip
 from app.core.safety import SafetyError
 from app.core.storage import (
     GENERATION_ROOT,
+    delete_voice_profile,
     ensure_storage,
     get_generation_audio_path,
     get_voice_profiles_by_ids,
@@ -51,6 +52,11 @@ class GenerateRequest(BaseModel):
     agent_reply: str
     blend: VoiceBlend
     tts_backend: TtsBackend = "local_development_wav"
+
+
+class DeleteVoiceResponse(BaseModel):
+    deleted_voice_profile_id: str
+    deleted_blend_ids: list[str]
 
 
 @router.get("/health")
@@ -176,3 +182,12 @@ async def import_voice_route(
 @router.get("/voices", response_model=list[VoiceProfile])
 def list_voices_route() -> list[VoiceProfile]:
     return list_voice_profiles()
+
+
+@router.delete("/voices/{voice_profile_id}", response_model=DeleteVoiceResponse)
+def delete_voice_route(voice_profile_id: str) -> DeleteVoiceResponse:
+    try:
+        deleted_blend_ids = delete_voice_profile(voice_profile_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return DeleteVoiceResponse(deleted_voice_profile_id=voice_profile_id, deleted_blend_ids=deleted_blend_ids)

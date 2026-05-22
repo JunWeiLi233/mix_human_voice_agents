@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+import shutil
 from uuid import uuid4
 
 from app.models.schemas import GenerationResult, VoiceBlend, VoiceProfile
@@ -52,6 +53,23 @@ def get_voice_profiles_by_ids(profile_ids: list[str]) -> dict[str, VoiceProfile]
     if missing:
         raise FileNotFoundError(f"Missing voice profiles: {', '.join(missing)}")
     return {profile_id: profiles[profile_id] for profile_id in profile_ids}
+
+
+def delete_voice_profile(profile_id: str) -> list[str]:
+    ensure_storage()
+    voice_dir = VOICE_ROOT / profile_id
+    if not (voice_dir / "profile.json").exists():
+        raise FileNotFoundError(f"Voice profile not found: {profile_id}")
+
+    shutil.rmtree(voice_dir)
+
+    deleted_blend_ids: list[str] = []
+    for blend_path in sorted(BLEND_ROOT.glob("*.json")):
+        blend = VoiceBlend.model_validate_json(blend_path.read_text(encoding="utf-8"))
+        if any(profile.voice_profile_id == profile_id for profile in blend.profiles):
+            deleted_blend_ids.append(blend.id)
+            blend_path.unlink()
+    return deleted_blend_ids
 
 
 def save_blend(blend: VoiceBlend) -> VoiceBlend:

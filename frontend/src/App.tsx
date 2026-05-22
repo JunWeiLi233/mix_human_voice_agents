@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   createBlend,
+  deleteVoice,
   generateClip,
   getQwenRuntimeStatus,
   listBlends,
@@ -105,6 +106,28 @@ export default function App() {
     setBlend(null);
   }
 
+  async function handleDeleteVoice(voiceProfileId: string) {
+    setError(null);
+    try {
+      const result = await deleteVoice(voiceProfileId);
+      setVoices((current) => current.filter((voice) => voice.id !== result.deleted_voice_profile_id));
+      setBlendProfiles((current) =>
+        current.filter((profile) => profile.voice_profile_id !== result.deleted_voice_profile_id),
+      );
+      setSavedBlends((current) => current.filter((savedBlend) => !result.deleted_blend_ids.includes(savedBlend.id)));
+      setBlend((current) => {
+        if (!current) return null;
+        const deletedActiveBlend = result.deleted_blend_ids.includes(current.id);
+        const referencesDeletedVoice = current.profiles.some(
+          (profile) => profile.voice_profile_id === result.deleted_voice_profile_id,
+        );
+        return deletedActiveBlend || referencesDeletedVoice ? null : current;
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Voice deletion failed");
+    }
+  }
+
   function handleBlendWeightChange(voiceProfileId: string, weight: number) {
     setBlendProfiles((current) =>
       current.map((profile) =>
@@ -140,7 +163,7 @@ export default function App() {
       <div className="layout">
         <AgentProviderSettings value={agentConfig} onChange={setAgentConfig} />
         <VoiceEngineSettings value={ttsBackend} status={qwenStatus} onChange={setTtsBackend} />
-        <VoiceLibrary voices={voices} />
+        <VoiceLibrary voices={voices} onDeleteVoice={handleDeleteVoice} />
         <ImportVoice onImported={handleImported} />
         <BlendMixer
           blend={blend}

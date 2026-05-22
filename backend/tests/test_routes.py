@@ -322,6 +322,62 @@ def test_list_voices_returns_imported_profiles(tmp_path: Path, monkeypatch):
     assert payload[0]["display_name"] == "Alice"
 
 
+def test_delete_voice_removes_profile_and_dependent_blends(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    sample_path = tmp_path / "sample.wav"
+    write_reference_wav(sample_path)
+    imported = []
+
+    for name in ("Alice", "Bob", "Cara"):
+        with sample_path.open("rb") as sample:
+            response = client.post(
+                "/api/voices",
+                data={
+                    "speaker_display_name": name,
+                    "consent_type": "self_or_written_permission",
+                    "allowed_uses": "private_agent_voice,local_audio_export",
+                    "confirmed_by": "local_user",
+                    "notes": "approved for local prototype",
+                },
+                files={"file": ("sample.wav", sample, "audio/wav")},
+            )
+        imported.append(response.json())
+
+    removed_voice_id = imported[0]["id"]
+    dependent_blend = client.post(
+        "/api/blends",
+        json={
+            "name": "Alice + Bob",
+            "profiles": [
+                {"voice_profile_id": imported[0]["id"], "weight": 1},
+                {"voice_profile_id": imported[1]["id"], "weight": 1},
+            ],
+            "strategy": "local_development_wav",
+        },
+    ).json()
+    unrelated_blend = client.post(
+        "/api/blends",
+        json={
+            "name": "Bob + Cara",
+            "profiles": [
+                {"voice_profile_id": imported[1]["id"], "weight": 1},
+                {"voice_profile_id": imported[2]["id"], "weight": 1},
+            ],
+            "strategy": "local_development_wav",
+        },
+    ).json()
+
+    response = client.delete(f"/api/voices/{removed_voice_id}")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload == {"deleted_voice_profile_id": removed_voice_id, "deleted_blend_ids": [dependent_blend["id"]]}
+    assert not Path(imported[0]["source_audio_path"]).parent.exists()
+    remaining_voice_ids = {voice["id"] for voice in client.get("/api/voices").json()}
+    assert remaining_voice_ids == {imported[1]["id"], imported[2]["id"]}
+    assert [blend["id"] for blend in client.get("/api/blends").json()] == [unrelated_blend["id"]]
+
+
 def write_reference_wav(path: Path, duration_seconds: int = 5, sample_rate: int = 16000) -> None:
     frames = b"\x00\x00" * sample_rate * duration_seconds
     with wave.open(str(path), "wb") as wav_file:
