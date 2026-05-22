@@ -294,6 +294,15 @@ describe("App", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "API" }));
+    fireEvent.click(screen.getByRole("button", { name: "Claude" }));
+    expect(screen.getByLabelText("Base URL")).toHaveValue("https://api.anthropic.com");
+    expect(screen.getByLabelText("Model")).toHaveValue("claude-sonnet-4-5");
+    fireEvent.click(screen.getByRole("button", { name: "Grok" }));
+    expect(screen.getByLabelText("Base URL")).toHaveValue("https://api.x.ai/v1");
+    expect(screen.getByLabelText("Model")).toHaveValue("grok-4");
+    fireEvent.click(screen.getByRole("button", { name: "ChatGPT" }));
+    expect(screen.getByLabelText("Base URL")).toHaveValue("https://api.openai.com/v1");
+    expect(screen.getByLabelText("Model")).toHaveValue("gpt-4.1-mini");
     fireEvent.change(screen.getByLabelText("Base URL"), { target: { value: "https://llm.example.test/v1" } });
     fireEvent.change(screen.getByLabelText("Model"), { target: { value: "custom-voice-agent-model" } });
     fireEvent.change(screen.getByLabelText("API key"), { target: { value: "sk-test" } });
@@ -353,7 +362,7 @@ describe("App", () => {
     expect(agentCall).toMatchObject({
       prompt,
       config: {
-        provider: "openai_compatible",
+        provider: "openai",
         base_url: "https://llm.example.test/v1",
         model: "custom-voice-agent-model",
         api_key: "sk-test",

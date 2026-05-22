@@ -122,7 +122,7 @@ class LaunchReadinessReport(BaseModel):
     blocking_reasons: list[str]
 
 
-AgentProviderKind = Literal["openai_compatible", "ollama"]
+AgentProviderKind = Literal["openai", "anthropic", "xai", "openai_compatible", "ollama"]
 
 
 class AgentConfig(BaseModel):

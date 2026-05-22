@@ -10,18 +10,43 @@ export function AgentProviderSettings({ value, onChange }: Props) {
     onChange({ ...value, ...partial });
   }
 
+  const presets: Record<AgentProviderKind, Pick<AgentConfig, "base_url" | "model" | "api_key">> = {
+    openai: { base_url: "https://api.openai.com/v1", model: "gpt-4.1-mini", api_key: value.api_key },
+    anthropic: { base_url: "https://api.anthropic.com", model: "claude-sonnet-4-5", api_key: value.api_key },
+    xai: { base_url: "https://api.x.ai/v1", model: "grok-4", api_key: value.api_key },
+    openai_compatible: { base_url: "https://llm.example.test/v1", model: "custom-chat-model", api_key: value.api_key },
+    ollama: { base_url: "http://127.0.0.1:11434", model: "llama3.1", api_key: "" },
+  };
+
   function switchProvider(provider: AgentProviderKind) {
-    if (provider === "ollama") {
-      update({ provider, base_url: "http://127.0.0.1:11434", api_key: "", model: "llama3.1" });
-    } else {
-      update({ provider, base_url: "https://api.openai.com/v1", model: "gpt-4.1-mini" });
-    }
+    update({ provider, ...presets[provider] });
   }
 
   return (
     <section className="panel">
       <h2>Agent Provider</h2>
       <div className="segmented" role="group" aria-label="Agent provider">
+        <button
+          type="button"
+          className={value.provider === "openai" ? "active" : ""}
+          onClick={() => switchProvider("openai")}
+        >
+          ChatGPT
+        </button>
+        <button
+          type="button"
+          className={value.provider === "anthropic" ? "active" : ""}
+          onClick={() => switchProvider("anthropic")}
+        >
+          Claude
+        </button>
+        <button
+          type="button"
+          className={value.provider === "xai" ? "active" : ""}
+          onClick={() => switchProvider("xai")}
+        >
+          Grok
+        </button>
         <button
           type="button"
           className={value.provider === "openai_compatible" ? "active" : ""}
@@ -45,7 +70,7 @@ export function AgentProviderSettings({ value, onChange }: Props) {
         Model
         <input value={value.model} onChange={(event) => update({ model: event.target.value })} />
       </label>
-      {value.provider === "openai_compatible" ? (
+      {value.provider !== "ollama" ? (
         <label>
           API key
           <input type="password" value={value.api_key} onChange={(event) => update({ api_key: event.target.value })} />
@@ -54,4 +79,3 @@ export function AgentProviderSettings({ value, onChange }: Props) {
     </section>
   );
 }
-

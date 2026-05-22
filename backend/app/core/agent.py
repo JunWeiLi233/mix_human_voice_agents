@@ -43,16 +43,30 @@ def build_agent_payload(config: AgentConfig, prompt: str) -> dict[str, Any]:
     }
 
 
+def build_anthropic_payload(config: AgentConfig, prompt: str) -> dict[str, Any]:
+    if not config.model.strip():
+        raise AgentProviderError("Agent model is required.")
+    if not config.base_url.strip():
+        raise AgentProviderError("Agent base_url is required.")
+    check_generation_request(prompt)
+
+    return {
+        "model": config.model,
+        "system": config.system_prompt,
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": 1024,
+    }
+
+
 def generate_agent_reply(
     prompt: str,
     config: AgentConfig,
     http_client: HttpClient | None = None,
 ) -> str:
     client = http_client or httpx.Client()
-    payload = build_agent_payload(config, prompt)
     base_url = config.base_url.rstrip("/")
 
-    if config.provider == "openai_compatible":
+    if config.provider in {"openai", "xai", "openai_compatible"}:
         if not config.api_key.strip():
             raise AgentProviderError("API key is required for OpenAI-compatible providers.")
         response = client.post(
@@ -61,17 +75,42 @@ def generate_agent_reply(
                 "Authorization": f"Bearer {config.api_key}",
                 "Content-Type": "application/json",
             },
-            json=payload,
+            json=build_agent_payload(config, prompt),
             timeout=60,
         )
         response.raise_for_status()
         data = response.json()
         reply = data["choices"][0]["message"]["content"]
+    elif config.provider == "anthropic":
+        if not config.api_key.strip():
+            raise AgentProviderError("API key is required for Anthropic providers.")
+        response = client.post(
+            f"{base_url}/v1/messages",
+            headers={
+                "x-api-key": config.api_key,
+                "anthropic-version": "2023-06-01",
+                "Content-Type": "application/json",
+            },
+            json=build_anthropic_payload(config, prompt),
+            timeout=60,
+        )
+        response.raise_for_status()
+        data = response.json()
+        reply = next(
+            (
+                block.get("text", "")
+                for block in data.get("content", [])
+                if block.get("type") == "text"
+            ),
+            "",
+        )
+        if not reply:
+            raise AgentProviderError("Anthropic response did not include text content.")
     elif config.provider == "ollama":
         response = client.post(
             f"{base_url}/api/chat",
             headers={"Content-Type": "application/json"},
-            json={**payload, "stream": False},
+            json={**build_agent_payload(config, prompt), "stream": False},
             timeout=120,
         )
         response.raise_for_status()
@@ -87,4 +126,3 @@ def generate_agent_reply(
 def generate_agent_reply_record(prompt: str, config: AgentConfig) -> AgentReply:
     reply = generate_agent_reply(prompt=prompt, config=config)
     return AgentReply(reply=reply, provider=config.provider, model=config.model)
-

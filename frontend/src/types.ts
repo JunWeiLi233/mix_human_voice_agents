@@ -34,7 +34,7 @@ export type GenerationResult = {
   tts_backend: TtsBackend;
 };
 
-export type AgentProviderKind = "openai_compatible" | "ollama";
+export type AgentProviderKind = "openai" | "anthropic" | "xai" | "openai_compatible" | "ollama";
 
 export type AgentConfig = {
   provider: AgentProviderKind;
