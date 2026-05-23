@@ -70,6 +70,12 @@ export function VoiceEngineSettings({
         ) : null}
         <dt>Verification</dt>
         <dd>{verification ? verificationLabel(verification.status) : "Checking"}</dd>
+        {verification?.checked_at ? (
+          <>
+            <dt>Verified at</dt>
+            <dd>{verification.checked_at}</dd>
+          </>
+        ) : null}
         {verification?.output_audio_path ? (
           <>
             <dt>Verified output</dt>

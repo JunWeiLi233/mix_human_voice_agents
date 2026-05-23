@@ -171,6 +171,7 @@ describe("App", () => {
           status: "passed",
           tts_backend: "qwen3_tts",
           report_path: "data/qwen-runtime-verification-report.json",
+          checked_at: "2026-05-23T00:15:00+00:00",
           model_id: "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
           device_map: "cuda:0",
           dtype: "bfloat16",
@@ -363,6 +364,7 @@ describe("App", () => {
     await waitFor(() => expect(screen.getByText("No imported voices yet.")).toBeInTheDocument());
     await screen.findByText("Installed");
     expect((await screen.findAllByText("Verification passed")).length).toBeGreaterThan(0);
+    expect(screen.getByText("2026-05-23T00:15:00+00:00")).toBeInTheDocument();
     expect(screen.getByText("data/generations/qwen_verify.wav")).toBeInTheDocument();
     expect(screen.getByLabelText("Qwen model id")).toHaveValue("Qwen/Qwen3-TTS-12Hz-1.7B-Base");
     expect(screen.getByLabelText("Qwen device map")).toHaveValue("cuda:0");
@@ -605,7 +607,7 @@ describe("App", () => {
           status: "missing",
           tts_backend: "qwen3_tts",
           report_path: "data/qwen-runtime-verification-report.json",
-          checked_at: "2026-05-23T00:00:00+00:00",
+          checked_at: "2026-05-23T00:05:00+00:00",
           voice_profile_ids: [],
         });
       }
@@ -635,6 +637,7 @@ describe("App", () => {
     expect(await screen.findByText("Provider verified")).toBeInTheDocument();
     expect(screen.getByText("openai_compatible / local-qwen-agent")).toBeInTheDocument();
     expect(screen.getByText("http://127.0.0.1:1234/v1")).toBeInTheDocument();
+    expect(screen.getByText("2026-05-23T00:00:00+00:00")).toBeInTheDocument();
     expect(screen.getByLabelText("Base URL")).toHaveValue("http://127.0.0.1:1234/v1");
     expect(screen.getByLabelText("Model")).toHaveValue("local-qwen-agent");
     expect(screen.getByLabelText("API key (optional)")).toHaveValue("");

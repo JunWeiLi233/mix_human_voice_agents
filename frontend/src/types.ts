@@ -70,6 +70,7 @@ export type AgentReply = {
 export type AgentProviderVerificationReport = {
   status: "missing" | "passed" | "failed";
   report_path: string;
+  checked_at?: string;
   provider?: AgentProviderKind | null;
   model?: string | null;
   base_url?: string | null;

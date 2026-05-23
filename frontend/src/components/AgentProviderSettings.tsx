@@ -98,6 +98,12 @@ export function AgentProviderSettings({
       <dl>
         <dt>Provider verification</dt>
         <dd>{verification ? providerVerificationLabel(verification.status) : "Checking"}</dd>
+        {verification?.checked_at ? (
+          <>
+            <dt>Verified at</dt>
+            <dd>{verification.checked_at}</dd>
+          </>
+        ) : null}
         {verification?.provider && verification.model ? (
           <>
             <dt>Verified model</dt>
