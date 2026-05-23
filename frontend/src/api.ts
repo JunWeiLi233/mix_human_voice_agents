@@ -94,6 +94,14 @@ export async function getLaunchReadiness(): Promise<LaunchReadinessReport> {
   return response.json();
 }
 
+export async function getAgentProviderVerification(): Promise<AgentProviderVerificationReport> {
+  const response = await fetch("/api/agent/provider-verification");
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  return response.json();
+}
+
 export async function createBlend(profiles: BlendDraftProfile[], ttsBackend: TtsBackend): Promise<VoiceBlend> {
   const selected = profiles.filter((profile) => profile.weight > 0);
   const response = await fetch("/api/blends", {

@@ -572,6 +572,63 @@ describe("App", () => {
     });
   });
 
+  it("shows the persisted agent provider verification report on load", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = input.toString();
+      if (url === "/api/voices" && !init) {
+        return jsonResponse([]);
+      }
+      if (url === "/api/generations" && !init) {
+        return jsonResponse([]);
+      }
+      if (url === "/api/blends" && !init) {
+        return jsonResponse([]);
+      }
+      if (url === "/api/tts/qwen/status" && !init) {
+        return jsonResponse({
+          backend: "qwen3_tts",
+          available: false,
+          model_id: "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+          message: "qwen-tts is not installed.",
+        });
+      }
+      if (url === "/api/tts/qwen/verification" && !init) {
+        return jsonResponse({
+          status: "missing",
+          tts_backend: "qwen3_tts",
+          report_path: "data/qwen-runtime-verification-report.json",
+          checked_at: "2026-05-23T00:00:00+00:00",
+          voice_profile_ids: [],
+        });
+      }
+      if (url === "/api/agent/provider-verification" && !init) {
+        return jsonResponse({
+          status: "passed",
+          report_path: "data/agent-provider-verification-report.json",
+          checked_at: "2026-05-23T00:00:00+00:00",
+          provider: "openai_compatible",
+          model: "local-qwen-agent",
+          base_url: "http://127.0.0.1:1234/v1",
+          reply: "Provider ready.",
+        });
+      }
+      if (url === "/api/launch/readiness" && !init) {
+        return jsonResponse({
+          status: "blocked",
+          blocking_reasons: [],
+          checks: [],
+        });
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    render(<App />);
+
+    expect(await screen.findByText("Provider verified")).toBeInTheDocument();
+    expect(screen.getByText("openai_compatible / local-qwen-agent")).toBeInTheDocument();
+    expect(screen.getByText("http://127.0.0.1:1234/v1")).toBeInTheDocument();
+  });
+
   it("lets the user delete an imported voice and removes dependent blends", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = input.toString();

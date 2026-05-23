@@ -3,6 +3,7 @@ import {
   createBlend,
   deleteVoice,
   generateClip,
+  getAgentProviderVerification,
   getLaunchReadiness,
   getQwenRuntimeStatus,
   getQwenVerificationReport,
@@ -23,6 +24,7 @@ import { VoiceLibrary } from "./components/VoiceLibrary";
 import { VoiceEngineSettings } from "./components/VoiceEngineSettings";
 import type {
   AgentConfig,
+  AgentProviderVerificationReport,
   BlendDraftProfile,
   GenerationResult,
   LaunchReadinessReport,
@@ -63,6 +65,8 @@ export default function App() {
   });
   const [qwenVerificationVoiceIds, setQwenVerificationVoiceIds] = useState<string[]>([]);
   const [qwenVerificationBusy, setQwenVerificationBusy] = useState(false);
+  const [agentProviderVerification, setAgentProviderVerification] =
+    useState<AgentProviderVerificationReport | null>(null);
   const [agentProviderTestReply, setAgentProviderTestReply] = useState<string | null>(null);
   const [agentProviderTesting, setAgentProviderTesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -124,6 +128,18 @@ export default function App() {
           checked_at: new Date().toISOString(),
           voice_profile_ids: [],
           error: "Qwen runtime verification report is unavailable.",
+        });
+      });
+  }, []);
+
+  useEffect(() => {
+    void getAgentProviderVerification()
+      .then(setAgentProviderVerification)
+      .catch(() => {
+        setAgentProviderVerification({
+          status: "missing",
+          report_path: "data/agent-provider-verification-report.json",
+          error: "Agent provider verification report is unavailable.",
         });
       });
   }, []);
@@ -221,6 +237,7 @@ export default function App() {
         agentConfig,
         "Reply with one short sentence confirming this provider is connected.",
       );
+      setAgentProviderVerification(report);
       if (report.status === "passed" && report.reply) {
         setAgentProviderTestReply(report.reply);
         void refreshLaunchReadiness();
@@ -266,6 +283,7 @@ export default function App() {
       <div className="layout">
         <AgentProviderSettings
           value={agentConfig}
+          verification={agentProviderVerification}
           testReply={agentProviderTestReply}
           testing={agentProviderTesting}
           onChange={setAgentConfig}

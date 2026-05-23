@@ -1,14 +1,22 @@
-import type { AgentConfig, AgentProviderKind } from "../types";
+import type { AgentConfig, AgentProviderKind, AgentProviderVerificationReport } from "../types";
 
 type Props = {
   value: AgentConfig;
+  verification: AgentProviderVerificationReport | null;
   onChange: (config: AgentConfig) => void;
   testReply: string | null;
   testing: boolean;
   onTestProvider: () => void;
 };
 
-export function AgentProviderSettings({ value, onChange, testReply, testing, onTestProvider }: Props) {
+export function AgentProviderSettings({
+  value,
+  verification,
+  onChange,
+  testReply,
+  testing,
+  onTestProvider,
+}: Props) {
   function update(partial: Partial<AgentConfig>) {
     onChange({ ...value, ...partial });
   }
@@ -87,10 +95,40 @@ export function AgentProviderSettings({ value, onChange, testReply, testing, onT
           <input type="password" value={value.api_key} onChange={(event) => update({ api_key: event.target.value })} />
         </label>
       ) : null}
+      <dl>
+        <dt>Provider verification</dt>
+        <dd>{verification ? providerVerificationLabel(verification.status) : "Checking"}</dd>
+        {verification?.provider && verification.model ? (
+          <>
+            <dt>Verified model</dt>
+            <dd>
+              {verification.provider} / {verification.model}
+            </dd>
+          </>
+        ) : null}
+        {verification?.base_url ? (
+          <>
+            <dt>Verified endpoint</dt>
+            <dd>{verification.base_url}</dd>
+          </>
+        ) : null}
+        {verification?.error ? (
+          <>
+            <dt>Verification note</dt>
+            <dd>{verification.error}</dd>
+          </>
+        ) : null}
+      </dl>
       <button type="button" onClick={onTestProvider} disabled={testing}>
         {testing ? "Testing provider" : "Test provider"}
       </button>
       {testReply ? <p>{testReply}</p> : null}
     </section>
   );
+}
+
+function providerVerificationLabel(status: AgentProviderVerificationReport["status"]) {
+  if (status === "passed") return "Provider verified";
+  if (status === "failed") return "Provider failed";
+  return "Provider missing";
 }
