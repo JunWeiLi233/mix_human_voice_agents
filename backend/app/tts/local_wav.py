@@ -4,6 +4,7 @@ import struct
 import wave
 
 from app.models.schemas import VoiceBlend, VoiceProfile
+from app.tts.base import unique_tts_output_path
 
 
 class LocalWavTtsAdapter:
@@ -19,7 +20,7 @@ class LocalWavTtsAdapter:
         blend: VoiceBlend,
         voice_profiles: dict[str, VoiceProfile] | None = None,
     ) -> Path:
-        output_path = self.output_root / f"{blend.id}.wav"
+        output_path = unique_tts_output_path(self.output_root, blend.id)
         sample_rate = 16000
         duration_seconds = max(1.0, min(4.0, len(text) / 35.0))
         frames = int(sample_rate * duration_seconds)

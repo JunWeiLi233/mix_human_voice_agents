@@ -130,6 +130,33 @@ def test_qwen_adapter_uses_imported_reference_text_for_clone_prompt(tmp_path: Pa
     ]
 
 
+def test_qwen_adapter_keeps_repeated_generations_as_distinct_audio_files(tmp_path: Path):
+    audio_a = tmp_path / "a.wav"
+    audio_b = tmp_path / "b.wav"
+    audio_a.write_bytes(b"fake-audio-a")
+    audio_b.write_bytes(b"fake-audio-b")
+    adapter = QwenTtsAdapter(model=FakeQwenModel(), output_root=tmp_path)
+    blend = create_blend(
+        name="Pair",
+        profiles=[
+            BlendProfileInput(voice_profile_id="voice_a", weight=1),
+            BlendProfileInput(voice_profile_id="voice_b", weight=1),
+        ],
+        strategy="multi_reference_prompt",
+    )
+    voice_profiles = {
+        "voice_a": profile("voice_a", audio_a, "Alice says the first reference sentence."),
+        "voice_b": profile("voice_b", audio_b, "Bob says the second reference sentence."),
+    }
+
+    first_output = adapter.synthesize("First generated reply.", blend, voice_profiles=voice_profiles)
+    second_output = adapter.synthesize("Second generated reply.", blend, voice_profiles=voice_profiles)
+
+    assert first_output != second_output
+    assert first_output.exists()
+    assert second_output.exists()
+
+
 def test_qwen_adapter_loads_model_from_environment_config(monkeypatch, tmp_path: Path):
     seen: dict[str, object] = {}
 

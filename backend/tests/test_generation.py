@@ -144,6 +144,40 @@ def test_generation_metadata_records_qwen_runtime_config(tmp_path: Path):
     }
 
 
+def test_generation_keeps_repeated_clips_as_distinct_history_files(tmp_path: Path):
+    blend = create_blend(
+        name="Repeatable Pair",
+        profiles=[
+            BlendProfileInput(voice_profile_id="voice_a", weight=1),
+            BlendProfileInput(voice_profile_id="voice_b", weight=1),
+        ],
+        strategy="local_development_wav",
+    )
+    adapter = LocalWavTtsAdapter(output_root=tmp_path)
+
+    first = generate_agent_clip(
+        prompt="Greet the user as a synthetic assistant.",
+        agent_reply="First generated reply.",
+        blend=blend,
+        adapter=adapter,
+        agent_trace=AgentTrace(provider="openai", model="gpt-4.1-mini"),
+    )
+    second = generate_agent_clip(
+        prompt="Greet the user as a synthetic assistant.",
+        agent_reply="Second generated reply.",
+        blend=blend,
+        adapter=adapter,
+        agent_trace=AgentTrace(provider="openai", model="gpt-4.1-mini"),
+    )
+
+    assert first.audio_path != second.audio_path
+    assert first.metadata_path != second.metadata_path
+    assert Path(first.audio_path).exists()
+    assert Path(second.audio_path).exists()
+    assert json.loads(Path(first.metadata_path).read_text(encoding="utf-8"))["agent_reply"] == "First generated reply."
+    assert json.loads(Path(second.metadata_path).read_text(encoding="utf-8"))["agent_reply"] == "Second generated reply."
+
+
 def voice_profile(profile_id: str, display_name: str, reference_text: str) -> VoiceProfile:
     return VoiceProfile.model_validate(
         {

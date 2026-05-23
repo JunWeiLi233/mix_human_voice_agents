@@ -105,6 +105,8 @@ Only use samples where the speaker is the user or has provided written permissio
 
 ## Current Qwen Sources Checked
 
+Last checked: 2026-05-23.
+
 - QwenLM/Qwen3-TTS GitHub README: documents local demo commands for `Qwen/Qwen3-TTS-12Hz-1.7B-Base` and Qwen3-TTS API/runtime options.
-- Qwen/Qwen3-TTS-12Hz-1.7B-Base Hugging Face model card: lists released 1.7B and 0.6B Base voice-clone models, package install guidance, and the `create_voice_clone_prompt` / `generate_voice_clone` workflow.
+- Qwen/Qwen3-TTS-12Hz-1.7B-Base Hugging Face model card and model index: list released 1.7B and 0.6B Base, CustomVoice, and VoiceDesign model families, package install guidance, and the `create_voice_clone_prompt` / `generate_voice_clone` workflow.
 - qwen-tts PyPI package page: documents the same Python package workflow and reusable voice-clone prompts.

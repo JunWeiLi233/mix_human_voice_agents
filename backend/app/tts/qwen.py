@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from app.models.schemas import TtsRuntimeStatus, VoiceBlend, VoiceProfile
+from app.tts.base import unique_tts_output_path
 
 
 DEFAULT_QWEN_TTS_MODEL_ID = "Qwen/Qwen3-TTS-12Hz-0.6B-Base"
@@ -117,7 +118,7 @@ class QwenTtsAdapter:
             weighted_wavs.append(np.asarray(wavs[0], dtype=np.float32) * blend_profile.weight)
 
         mixed = self._mix_weighted_wavs(weighted_wavs)
-        output_path = self.output_root / f"{blend.id}_qwen.wav"
+        output_path = unique_tts_output_path(self.output_root, f"{blend.id}_qwen")
         sf.write(output_path, mixed, sample_rate or 16000)
         return output_path
 
