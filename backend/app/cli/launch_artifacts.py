@@ -41,7 +41,10 @@ def collect_launch_artifacts() -> dict[str, object]:
     agent_provider = get_agent_provider_verification_report()
     qwen_verification = get_qwen_verification_report()
     qwen_runtime = QwenTtsAdapter.runtime_status()
-    usable_voice_ids = [voice.id for voice in voices if _voice_is_usable(voice)]
+    voice_statuses = [_voice_status(voice) for voice in voices]
+    usable_voice_ids = [
+        voice.id for voice, status in zip(voices, voice_statuses, strict=True) if status["launch_usable"]
+    ]
     blend_statuses = [_blend_status(blend, usable_voice_ids) for blend in blends]
     launch_eligible_blend_ids = [
         blend.id for blend, status in zip(blends, blend_statuses, strict=True) if status["launch_eligible"]
@@ -52,11 +55,13 @@ def collect_launch_artifacts() -> dict[str, object]:
 
     return {
         "voice_count": len(voices),
+        "usable_voice_count": len(usable_voice_ids),
+        "unusable_voice_count": len(voices) - len(usable_voice_ids),
         "blend_count": len(blends),
         "launch_eligible_blend_count": len(launch_eligible_blend_ids),
         "stale_blend_count": len(stale_blend_ids),
         "generation_count": len(generations),
-        "voices": [_voice_payload(voice) for voice in voices],
+        "voices": [_voice_payload(voice, status) for voice, status in zip(voices, voice_statuses, strict=True)],
         "usable_voice_ids": usable_voice_ids,
         "launch_eligible_blend_ids": launch_eligible_blend_ids,
         "stale_blend_ids": stale_blend_ids,
@@ -77,7 +82,7 @@ def collect_launch_artifacts() -> dict[str, object]:
     }
 
 
-def _voice_payload(voice: VoiceProfile) -> dict[str, object]:
+def _voice_payload(voice: VoiceProfile, status: dict[str, object]) -> dict[str, object]:
     return {
         "id": voice.id,
         "display_name": voice.display_name,
@@ -86,6 +91,7 @@ def _voice_payload(voice: VoiceProfile) -> dict[str, object]:
         "quality_warnings": voice.quality.warnings,
         "source_audio_path": voice.source_audio_path,
         "cleaned_audio_path": voice.cleaned_audio_path,
+        **status,
     }
 
 
@@ -204,11 +210,21 @@ def _blend_status(blend: VoiceBlend, usable_voice_ids: list[str]) -> dict[str, o
 
 
 def _voice_is_usable(voice: VoiceProfile) -> bool:
-    return (
-        _voice_allows_private_agent_voice(voice)
-        and bool(voice.reference_text.strip())
-        and not voice.quality.warnings
-    )
+    return bool(_voice_status(voice)["launch_usable"])
+
+
+def _voice_status(voice: VoiceProfile) -> dict[str, object]:
+    reasons: list[str] = []
+    if not _voice_allows_private_agent_voice(voice):
+        reasons.append("Voice consent does not allow private agent voice synthesis.")
+    if not voice.reference_text.strip():
+        reasons.append("Reference transcript is missing.")
+    if voice.quality.warnings:
+        reasons.append("Audio quality warnings must be resolved before launch.")
+    return {
+        "launch_usable": not reasons,
+        "unusable_reasons": reasons,
+    }
 
 
 def _voice_allows_private_agent_voice(voice: VoiceProfile) -> bool:
@@ -220,12 +236,17 @@ def _print_summary(report: dict[str, object]) -> None:
         "Launch artifacts: "
         f"{report['voice_count']} voices, {report['blend_count']} blends, {report['generation_count']} generations"
     )
+    print(f"Usable voices: {report['usable_voice_count']}; unusable voices: {report['unusable_voice_count']}")
     print(
         "Launch-eligible blends: "
         f"{report['launch_eligible_blend_count']}; stale/nonmatching blends: {report['stale_blend_count']}"
     )
     for voice in report["voices"]:
-        print(f"{voice['id']}: {voice['display_name']}")
+        if voice["launch_usable"]:
+            print(f"{voice['id']}: {voice['display_name']}")
+        else:
+            reasons = "; ".join(voice["unusable_reasons"])
+            print(f"{voice['id']}: {voice['display_name']} (unusable: {reasons})")
     print("Provider command options:")
     provider_commands = report["agent_provider_commands"]
     for label, key in (

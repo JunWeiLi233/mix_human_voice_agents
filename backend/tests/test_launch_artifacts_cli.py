@@ -156,16 +156,85 @@ def test_launch_artifacts_cli_separates_launch_eligible_and_stale_blends(tmp_pat
     assert "Launch-eligible blends: 1; stale/nonmatching blends: 1" in output
 
 
-def voice_profile(profile_id: str, display_name: str) -> VoiceProfile:
+def test_launch_artifacts_cli_explains_unusable_imported_voices(tmp_path: Path, monkeypatch, capsys):
+    voices = [
+        voice_profile("voice_alice", "Alice"),
+        voice_profile(
+            "voice_no_consent",
+            "No Consent",
+            allowed_uses=["local_audio_export"],
+        ),
+        voice_profile("voice_no_text", "No Text", reference_text=""),
+        voice_profile(
+            "voice_clipped",
+            "Clipped",
+            warnings=["Reference audio appears clipped; record a cleaner sample."],
+        ),
+    ]
+    monkeypatch.setattr("app.cli.launch_artifacts.list_voice_profiles", lambda: voices)
+    monkeypatch.setattr("app.cli.launch_artifacts.list_blends", lambda: [])
+    monkeypatch.setattr("app.cli.launch_artifacts.list_generation_results", lambda: [])
+    monkeypatch.setattr(
+        "app.cli.launch_artifacts.get_agent_provider_verification_report",
+        lambda: AgentProviderVerificationReport(status="missing", report_path="data/agent-provider-verification-report.json"),
+    )
+    monkeypatch.setattr(
+        "app.cli.launch_artifacts.get_qwen_verification_report",
+        lambda: QwenVerificationReport(status="missing", report_path="data/qwen-runtime-verification-report.json"),
+    )
+    monkeypatch.setattr(
+        "app.cli.launch_artifacts.QwenTtsAdapter.runtime_status",
+        lambda: TtsRuntimeStatus(
+            backend="qwen3_tts",
+            available=True,
+            model_id="Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+            message="qwen-tts package is importable.",
+        ),
+    )
+    report_path = tmp_path / "launch-artifacts.json"
+
+    exit_code = main(["--report", str(report_path), "--summary"])
+
+    assert exit_code == 0
+    payload = json.loads(report_path.read_text(encoding="utf-8"))
+    assert payload["usable_voice_count"] == 1
+    assert payload["unusable_voice_count"] == 3
+    voices_by_id = {voice["id"]: voice for voice in payload["voices"]}
+    assert voices_by_id["voice_alice"]["launch_usable"] is True
+    assert voices_by_id["voice_alice"]["unusable_reasons"] == []
+    assert voices_by_id["voice_no_consent"]["launch_usable"] is False
+    assert voices_by_id["voice_no_consent"]["unusable_reasons"] == [
+        "Voice consent does not allow private agent voice synthesis."
+    ]
+    assert voices_by_id["voice_no_text"]["unusable_reasons"] == ["Reference transcript is missing."]
+    assert voices_by_id["voice_clipped"]["unusable_reasons"] == [
+        "Audio quality warnings must be resolved before launch."
+    ]
+    output = capsys.readouterr().out
+    assert "Usable voices: 1; unusable voices: 3" in output
+    assert "voice_no_consent: No Consent (unusable: Voice consent does not allow private agent voice synthesis.)" in output
+
+
+def voice_profile(
+    profile_id: str,
+    display_name: str,
+    reference_text: str | None = None,
+    allowed_uses: list[str] | None = None,
+    warnings: list[str] | None = None,
+) -> VoiceProfile:
     return VoiceProfile(
         id=profile_id,
         display_name=display_name,
-        reference_text=f"{display_name} reads a clean reference sentence for Qwen cloning.",
+        reference_text=(
+            reference_text
+            if reference_text is not None
+            else f"{display_name} reads a clean reference sentence for Qwen cloning."
+        ),
         consent=ConsentRecord(
             voice_profile_id=profile_id,
             speaker_display_name=display_name,
             consent_type="self_or_written_permission",
-            allowed_uses=["private_agent_voice", "local_audio_export"],
+            allowed_uses=allowed_uses or ["private_agent_voice", "local_audio_export"],
             confirmed_by="Junwei",
             synthetic_voice_allowed=True,
         ),
@@ -178,6 +247,6 @@ def voice_profile(profile_id: str, display_name: str) -> VoiceProfile:
             duration_seconds=8.0,
             sample_rate_hz=24000,
             channel_count=1,
-            warnings=[],
+            warnings=warnings or [],
         ),
     )
