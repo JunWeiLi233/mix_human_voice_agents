@@ -6,6 +6,7 @@ type Props = {
 
 export function LaunchArtifactInventory({ artifacts }: Props) {
   const staleBlendReasonCounts = artifacts ? Object.entries(artifacts.stale_blend_reason_counts) : [];
+  const staleGenerationReasonCounts = artifacts ? Object.entries(artifacts.stale_generation_reason_counts) : [];
   const providerCommands = artifacts
     ? [
         ["ChatGPT command", artifacts.agent_provider_commands.chatgpt],
@@ -110,6 +111,18 @@ export function LaunchArtifactInventory({ artifacts }: Props) {
               <h3>Stale blend reason summary</h3>
               <ul>
                 {staleBlendReasonCounts.map(([reason, count]) => (
+                  <li key={reason}>
+                    <code>{count}</code> {reason}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {staleGenerationReasonCounts.length > 0 ? (
+            <div className="artifact-list">
+              <h3>Stale generation reason summary</h3>
+              <ul>
+                {staleGenerationReasonCounts.map(([reason, count]) => (
                   <li key={reason}>
                     <code>{count}</code> {reason}
                   </li>

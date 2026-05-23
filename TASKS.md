@@ -34,7 +34,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T19:04:29.492464+00:00`
+- Checked at: `2026-05-23T19:08:16.898214+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Re-record or replace unusable voice samples, then import at least two clean consented WAV voices with matching transcripts.
@@ -105,6 +105,7 @@ Next artifact commands:
 
 ## Completed In Current Working Tree
 
+- Rendered stale generation reason summaries in the frontend Launch Artifact Inventory so browser users see the same Qwen clip blockers as terminal handoffs.
 - Added stale generation reason summaries to launch artifact reports and `TASKS.md` handoffs so future agents can triage non-launchable clips quickly.
 - Hardened launch artifact inventory so Qwen generation source-detail weights must match the saved blend weights.
 - Hardened launch artifact inventory so Qwen generation source details must match the current imported voice profiles.

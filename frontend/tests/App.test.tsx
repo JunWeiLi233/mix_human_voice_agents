@@ -222,10 +222,14 @@ describe("App", () => {
           stale_blend_reason_counts: {
             "Blend references voices that are missing or not launch-usable: voice_missing.": 1,
           },
-          generation_count: 0,
-          qwen_generation_count: 0,
+          generation_count: 2,
+          qwen_generation_count: 1,
           launch_eligible_generation_count: 0,
-          stale_generation_count: 0,
+          stale_generation_count: 2,
+          stale_generation_reason_counts: {
+            "Qwen generation audio is missing.": 1,
+            "Qwen generation requires a passed agent provider preflight.": 1,
+          },
           usable_voice_ids: ["voice_alice"],
           usable_distinct_voice_ids: ["voice_alice"],
           launch_eligible_blend_ids: [],
@@ -274,7 +278,17 @@ describe("App", () => {
               ],
             },
           ],
-          generations: [],
+          generations: [
+            {
+              id: "generation_missing_audio",
+              tts_backend: "qwen3_tts",
+              launch_eligible: false,
+              stale_reasons: [
+                "Qwen generation audio is missing.",
+                "Qwen generation requires a passed agent provider preflight.",
+              ],
+            },
+          ],
           next_commands: [
             "python -m app.cli.run_launch_sequence --write-template data/launch-sequence/launch-manifest.template.json",
           ],
@@ -308,6 +322,7 @@ describe("App", () => {
     expect(screen.getByText("Distinct-speaker voice IDs")).toBeInTheDocument();
     expect(screen.getAllByText("voice_alice").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("4 total / 0 eligible / 4 stale")).toBeInTheDocument();
+    expect(screen.getByText("2 total / 1 Qwen / 0 eligible")).toBeInTheDocument();
     expect(screen.getByText("Provider preflight commands")).toBeInTheDocument();
     expect(screen.getByText("ChatGPT command")).toBeInTheDocument();
     expect(screen.getByText("Claude command")).toBeInTheDocument();
@@ -326,6 +341,19 @@ describe("App", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("Stale blend reason summary")).toBeInTheDocument();
+    expect(screen.getByText("Stale generation reason summary")).toBeInTheDocument();
+    expect(
+      screen.getByText((_content, element) =>
+        element?.tagName.toLowerCase() === "li" &&
+        element.textContent === "1 Qwen generation audio is missing.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText((_content, element) =>
+        element?.tagName.toLowerCase() === "li" &&
+        element.textContent === "1 Qwen generation requires a passed agent provider preflight.",
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByText("Reviewed prune apply command")).toBeInTheDocument();
     expect(
       screen.getByText(
@@ -340,6 +368,14 @@ describe("App", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("Stale blends")).toBeInTheDocument();
+    expect(screen.getByText("Stale generations")).toBeInTheDocument();
+    expect(
+      screen.getByText((_content, element) =>
+        element?.tagName.toLowerCase() === "li" &&
+        element.textContent ===
+          "generation_missing_audio qwen3_tts: Qwen generation audio is missing.; Qwen generation requires a passed agent provider preflight.",
+      ),
+    ).toBeInTheDocument();
     expect(
       screen.getByText((_content, element) =>
         element?.tagName.toLowerCase() === "li" &&

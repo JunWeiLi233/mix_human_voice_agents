@@ -193,6 +193,7 @@ export type LaunchArtifactsReport = {
   qwen_generation_count: number;
   launch_eligible_generation_count: number;
   stale_generation_count: number;
+  stale_generation_reason_counts: Record<string, number>;
   usable_voice_ids: string[];
   usable_distinct_voice_ids: string[];
   launch_eligible_blend_ids: string[];
