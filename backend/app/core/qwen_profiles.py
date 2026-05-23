@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from app.core.audio import is_parseable_wav, wav_has_audible_signal
 from app.models.schemas import VoiceProfile
 
 
@@ -25,3 +26,7 @@ def validate_qwen_voice_profiles(voice_profiles: dict[str, VoiceProfile]) -> Non
             raise ValueError(f"Voice profile {profile.id} must not have audio quality warnings for Qwen synthesis.")
         if not profile.cleaned_audio_path or not Path(profile.cleaned_audio_path).exists():
             raise ValueError(f"Voice profile {profile.id} must have an existing cleaned audio file for Qwen synthesis.")
+        if not is_parseable_wav(Path(profile.cleaned_audio_path)):
+            raise ValueError(f"Voice profile {profile.id} must have a parseable cleaned WAV file for Qwen synthesis.")
+        if not wav_has_audible_signal(Path(profile.cleaned_audio_path)):
+            raise ValueError(f"Voice profile {profile.id} must have audible cleaned audio for Qwen synthesis.")

@@ -15,8 +15,8 @@ def test_verify_qwen_runtime_generates_report_with_selected_profiles(tmp_path: P
         seen["profile_ids"] = profile_ids
         voice_a_audio = tmp_path / "voice_a.wav"
         voice_b_audio = tmp_path / "voice_b.wav"
-        voice_a_audio.write_bytes(b"fake-audio-a")
-        voice_b_audio.write_bytes(b"fake-audio-b")
+        write_reference_wav(voice_a_audio)
+        write_reference_wav(voice_b_audio)
         return {
             "voice_a": profile(
                 "voice_a",
