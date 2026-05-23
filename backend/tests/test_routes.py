@@ -1400,6 +1400,83 @@ def test_generate_endpoint_rejects_qwen_with_mismatched_runtime_config_before_lo
     assert response.json()["detail"] == "Qwen generation runtime config must match the passed Qwen verification."
 
 
+def test_generate_endpoint_accepts_qwen_runtime_config_matching_non_null_verified_fields(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    write_agent_provider_verification_report()
+    write_qwen_runtime_verification_report(
+        model_id="Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+        device_map="auto",
+        dtype=None,
+        attn_implementation=None,
+    )
+    voice_a_audio = tmp_path / "voice_a.wav"
+    voice_b_audio = tmp_path / "voice_b.wav"
+    write_reference_wav(voice_a_audio)
+    write_reference_wav(voice_b_audio)
+
+    class FakeQwenAdapter:
+        name = "qwen3_tts"
+
+        @classmethod
+        def from_pretrained(cls, output_root=None, **kwargs):
+            cls.output_root = Path(output_root)
+            cls.output_root.mkdir(parents=True, exist_ok=True)
+            return cls()
+
+        def synthesize(self, text, blend, voice_profiles=None):
+            output = self.__class__.output_root / f"{blend.id}_qwen.wav"
+            write_reference_wav(output, duration_seconds=1)
+            return output
+
+    monkeypatch.setattr(
+        "app.api.routes.get_voice_profiles_by_ids",
+        lambda profile_ids: {
+            "voice_a": voice_profile("voice_a", "Alice").model_copy(
+                update={"source_audio_path": str(voice_a_audio), "cleaned_audio_path": str(voice_a_audio)}
+            ),
+            "voice_b": voice_profile("voice_b", "Bob").model_copy(
+                update={"source_audio_path": str(voice_b_audio), "cleaned_audio_path": str(voice_b_audio)}
+            ),
+        },
+    )
+    monkeypatch.setattr("app.api.routes.QwenTtsAdapter", FakeQwenAdapter)
+
+    response = client.post(
+        "/api/generate",
+        json={
+            "prompt": "Say hello as a disclosed synthetic assistant.",
+            "agent_reply": "Hello from a qwen mixed voice.",
+            "tts_backend": "qwen3_tts",
+            "agent_trace": {
+                "provider": "openai",
+                "model": "gpt-4.1-mini",
+            },
+            "model_id": "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+            "device_map": "auto",
+            "blend": {
+                "id": "blend_default_runtime",
+                "name": "Default Runtime",
+                "strategy": "multi_reference_prompt",
+                "synthetic_label": "synthetic mixed voice",
+                "profiles": [
+                    {"voice_profile_id": "voice_a", "weight": 0.5},
+                    {"voice_profile_id": "voice_b", "weight": 0.5},
+                ],
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["qwen_runtime_config"] == {
+        "model_id": "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+        "device_map": "auto",
+        "dtype": None,
+        "attn_implementation": None,
+    }
+
+
 def test_generate_endpoint_rejects_qwen_when_verification_output_is_missing_before_loading_profiles(
     tmp_path: Path, monkeypatch
 ):

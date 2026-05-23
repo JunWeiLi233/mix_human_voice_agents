@@ -366,7 +366,8 @@ def _validate_qwen_runtime_verification(request: GenerateRequest) -> None:
             detail="Qwen generation voices must match the passed Qwen runtime verification.",
         )
     verified_runtime_config = _qwen_runtime_config_from_report(report)
-    if verified_runtime_config and _qwen_runtime_config_from_request(request) != verified_runtime_config:
+    requested_runtime_config = _compact_qwen_runtime_config(_qwen_runtime_config_from_request(request) or {})
+    if verified_runtime_config and requested_runtime_config != verified_runtime_config:
         raise HTTPException(
             status_code=400,
             detail="Qwen generation runtime config must match the passed Qwen verification.",
@@ -405,16 +406,18 @@ def _qwen_runtime_config_from_verification_request(
 
 
 def _qwen_runtime_config_from_report(report: QwenVerificationReport) -> dict[str, str | None]:
-    return {
-        key: value
-        for key, value in {
+    return _compact_qwen_runtime_config(
+        {
             "model_id": report.model_id,
             "device_map": report.device_map,
             "dtype": report.dtype,
             "attn_implementation": report.attn_implementation,
-        }.items()
-        if value is not None
-    }
+        }
+    )
+
+
+def _compact_qwen_runtime_config(config: dict[str, str | None]) -> dict[str, str]:
+    return {key: value for key, value in config.items() if value is not None}
 
 
 @router.get("/generations", response_model=list[GenerationResult])
