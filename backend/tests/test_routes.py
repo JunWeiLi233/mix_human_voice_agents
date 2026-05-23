@@ -4,6 +4,7 @@ from datetime import datetime
 import httpx
 import json
 import math
+import pytest
 import struct
 import wave
 
@@ -11,6 +12,18 @@ from app.main import app
 from app.models.schemas import VoiceProfile
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def no_route_test_blend_leaks():
+    blend_root = Path(__file__).resolve().parents[1] / "data" / "blends"
+    before = {path.name for path in blend_root.glob("*.json")} if blend_root.exists() else set()
+
+    yield
+
+    after = {path.name for path in blend_root.glob("*.json")} if blend_root.exists() else set()
+    leaked = sorted(after - before)
+    assert leaked == []
 
 
 def test_health_route_returns_ok():
@@ -1224,7 +1237,9 @@ def test_launch_readiness_blocks_when_only_local_preview_audio_exists(tmp_path: 
     assert {check["id"]: check["passed"] for check in payload["checks"]}["generated_audio"] is False
 
 
-def test_create_blend_endpoint_normalizes_weights():
+def test_create_blend_endpoint_normalizes_weights(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
     response = client.post(
         "/api/blends",
         json={
