@@ -3,21 +3,12 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Sequence
 
-from app.core.launch import evaluate_launch_readiness as evaluate_core_launch_readiness
+from app.core.launch import LAUNCH_ACTIONS, evaluate_launch_readiness as evaluate_core_launch_readiness
 from app.models.schemas import LaunchReadinessReport
 
-
-TASK_ACTIONS = {
-    "research_review": "Refresh docs/research-review.md with a current Last checked date.",
-    "imported_voices": "Import two consented WAV voice samples with matching transcripts.",
-    "saved_blend": "Create and save a multi-reference blend from imported voices.",
-    "generated_audio": "Generate a Qwen mixed voice clip with imported source details.",
-    "agent_provider": "Run Test provider and keep the passed provider verification report.",
-    "qwen_runtime": "Install and load qwen-tts with the selected Qwen model.",
-    "qwen_verification": "Run Qwen verification with two imported voices and keep the passed report.",
-}
 
 TASKS_SECTION_HEADING = "## Launch Readiness Remaining Tasks"
 
@@ -79,16 +70,26 @@ def _tasks_handoff_section(report: LaunchReadinessReport) -> str:
         return "\n".join(lines) + "\n"
 
     lines.extend(["", "The following tasks are generated from failed launch-readiness checks:"])
-    for check in report.checks:
-        if check.passed:
-            continue
-        action = TASK_ACTIONS.get(check.id, check.label)
-        lines.append(f"- [ ] {check.id}: {action}")
-        lines.append(f"  Evidence: {check.detail}")
+    next_actions = report.next_actions or _fallback_next_actions(report)
+    for action in next_actions:
+        lines.append(f"- [ ] {action.check_id}: {action.action}")
+        lines.append(f"  Evidence: {action.evidence}")
     if report.blocking_reasons:
         lines.extend(["", "Blocking reasons:"])
         lines.extend(f"- {reason}" for reason in report.blocking_reasons)
     return "\n".join(lines) + "\n"
+
+
+def _fallback_next_actions(report: LaunchReadinessReport):
+    return [
+        SimpleNamespace(
+            check_id=check.id,
+            action=LAUNCH_ACTIONS.get(check.id, check.label),
+            evidence=check.detail,
+        )
+        for check in report.checks
+        if not check.passed
+    ]
 
 
 if __name__ == "__main__":

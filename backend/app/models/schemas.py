@@ -141,11 +141,19 @@ class LaunchReadinessCheck(BaseModel):
     detail: str
 
 
+class LaunchReadinessAction(BaseModel):
+    check_id: str
+    label: str
+    action: str
+    evidence: str
+
+
 class LaunchReadinessReport(BaseModel):
     status: LaunchReadinessStatus
     checked_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     checks: list[LaunchReadinessCheck]
     blocking_reasons: list[str]
+    next_actions: list[LaunchReadinessAction] = Field(default_factory=list)
 
 
 class AgentConfig(BaseModel):

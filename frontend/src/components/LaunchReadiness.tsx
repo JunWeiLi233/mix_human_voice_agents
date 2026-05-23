@@ -15,6 +15,9 @@ const LAUNCH_ACTIONS: Record<string, string> = {
 };
 
 function nextLaunchActions(readiness: LaunchReadinessReport) {
+  if (readiness.next_actions?.length) {
+    return readiness.next_actions.map((action) => action.action);
+  }
   return readiness.checks
     .filter((check) => !check.passed)
     .map((check) => LAUNCH_ACTIONS[check.id])

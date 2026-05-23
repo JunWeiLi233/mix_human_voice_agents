@@ -68,6 +68,8 @@ cd backend
 .\.venv\Scripts\python -m app.cli.launch_readiness --report data/launch-readiness-report.json
 ```
 
+The JSON report includes `next_actions`, a structured list of failed check ids, action text, and evidence for the UI and other agents.
+
 Refresh the handoff tasks from the same launch-readiness evidence:
 
 ```powershell

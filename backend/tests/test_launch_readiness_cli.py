@@ -40,6 +40,7 @@ def test_launch_readiness_cli_writes_report(tmp_path: Path, monkeypatch):
             }
         ],
         "blocking_reasons": ["Run Qwen runtime verification successfully before launch."],
+        "next_actions": [],
     }
 
 

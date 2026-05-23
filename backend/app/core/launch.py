@@ -13,6 +13,7 @@ from app.core.storage import GENERATION_ROOT, list_blends, list_generation_resul
 from app.models.schemas import (
     AgentProviderVerificationReport,
     GenerationResult,
+    LaunchReadinessAction,
     LaunchReadinessCheck,
     LaunchReadinessReport,
     QwenVerificationReport,
@@ -27,6 +28,15 @@ RESEARCH_REVIEW_PATH = Path("docs") / "research-review.md"
 RESEARCH_REVIEW_MAX_AGE_DAYS = 45
 REQUIRED_VOICE_USE = "private_agent_voice"
 REQUIRED_SYNTHETIC_LABEL = "synthetic mixed voice"
+LAUNCH_ACTIONS = {
+    "research_review": "Refresh docs/research-review.md with a current Last checked date.",
+    "imported_voices": "Import two consented WAV voice samples with matching transcripts.",
+    "saved_blend": "Create and save a multi-reference blend from imported voices.",
+    "generated_audio": "Generate a Qwen mixed voice clip with imported source details.",
+    "agent_provider": "Run Test provider and keep the passed provider verification report.",
+    "qwen_runtime": "Install and load qwen-tts with the selected Qwen model.",
+    "qwen_verification": "Run Qwen verification with two imported voices and keep the passed report.",
+}
 
 
 def get_qwen_verification_report() -> QwenVerificationReport:
@@ -192,6 +202,7 @@ def evaluate_launch_readiness() -> LaunchReadinessReport:
         checked_at=datetime.now(timezone.utc),
         checks=checks,
         blocking_reasons=blocking_reasons,
+        next_actions=_launch_next_actions(checks),
     )
 
 
@@ -763,3 +774,16 @@ def _launch_blocking_reasons(checks: list[LaunchReadinessCheck]) -> list[str]:
         "qwen_verification": "Run Qwen runtime verification successfully before launch.",
     }
     return [reasons[check.id] for check in checks if not check.passed]
+
+
+def _launch_next_actions(checks: list[LaunchReadinessCheck]) -> list[LaunchReadinessAction]:
+    return [
+        LaunchReadinessAction(
+            check_id=check.id,
+            label=check.label,
+            action=LAUNCH_ACTIONS.get(check.id, check.label),
+            evidence=check.detail,
+        )
+        for check in checks
+        if not check.passed
+    ]

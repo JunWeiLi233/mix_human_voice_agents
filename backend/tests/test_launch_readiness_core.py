@@ -30,6 +30,10 @@ def test_core_launch_readiness_evaluator_reports_missing_requirements(tmp_path, 
     assert report.status == "blocked"
     assert "Import at least two consented voice profiles." in report.blocking_reasons
     assert "Run Qwen runtime verification successfully before launch." in report.blocking_reasons
+    assert report.next_actions[0].check_id == "research_review"
+    assert report.next_actions[0].action == "Refresh docs/research-review.md with a current Last checked date."
+    assert report.next_actions[0].evidence.replace("\\", "/") == "Missing docs/research-review.md."
+    assert any(action.check_id == "qwen_verification" for action in report.next_actions)
 
 
 def test_core_launch_readiness_blocks_stale_research_review(tmp_path, monkeypatch):

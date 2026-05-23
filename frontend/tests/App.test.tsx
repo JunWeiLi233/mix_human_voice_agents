@@ -45,6 +45,20 @@ describe("App", () => {
             "Import at least two consented voice profiles.",
             "Run Qwen runtime verification successfully before launch.",
           ],
+          next_actions: [
+            {
+              check_id: "imported_voices",
+              label: "Imported voices",
+              action: "Backend action: import two consented source voices.",
+              evidence: "0 imported voices",
+            },
+            {
+              check_id: "qwen_verification",
+              label: "Qwen verification",
+              action: "Backend action: run Qwen verification with two profiles.",
+              evidence: "No passed Qwen runtime verification report",
+            },
+          ],
           checks: [
             {
               id: "imported_voices",
@@ -76,10 +90,8 @@ describe("App", () => {
       "/api/launch/readiness/report",
     );
     expect(screen.getByText("Next launch actions")).toBeInTheDocument();
-    expect(screen.getByText("Import two consented WAV voice samples with matching transcripts.")).toBeInTheDocument();
-    expect(
-      screen.getByText("Run Qwen verification with two imported voices and keep the passed report."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Backend action: import two consented source voices.")).toBeInTheDocument();
+    expect(screen.getByText("Backend action: run Qwen verification with two profiles.")).toBeInTheDocument();
     expect(screen.getByText("Run Qwen runtime verification successfully before launch.")).toBeInTheDocument();
     expect(screen.getByText("Blend Mixer")).toBeInTheDocument();
     expect(screen.getByText("Agent Provider")).toBeInTheDocument();

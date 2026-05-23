@@ -117,11 +117,19 @@ export type LaunchReadinessCheck = {
   detail: string;
 };
 
+export type LaunchReadinessAction = {
+  check_id: string;
+  label: string;
+  action: string;
+  evidence: string;
+};
+
 export type LaunchReadinessReport = {
   status: "ready" | "blocked";
   checked_at?: string;
   checks: LaunchReadinessCheck[];
   blocking_reasons: string[];
+  next_actions?: LaunchReadinessAction[];
 };
 
 export type VoiceProfile = {

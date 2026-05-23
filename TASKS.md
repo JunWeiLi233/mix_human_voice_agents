@@ -30,6 +30,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Added actionable `Next launch actions` in the launch-readiness panel so agents can convert failed readiness checks into concrete next steps.
 - Added `app.cli.launch_readiness --tasks ..\TASKS.md` so readiness failures can refresh this handoff file automatically before a usage/session limit.
 - Hardened provider URL handling so Claude accepts `https://api.anthropic.com` or `https://api.anthropic.com/v1`, and Local accepts `http://127.0.0.1:11434` or `http://127.0.0.1:11434/api`.
+- Added structured `next_actions` to launch-readiness reports and made the UI render those backend-provided actions.
 
 ## Verification Already Run
 
@@ -59,11 +60,10 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
    `git show -s --format="%h %an <%ae> | %cn <%ce> | %s" HEAD`
 7. Watch GitHub Actions for the pushed commit until it finishes.
 
-
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T05:45:18.486194+00:00`
+- Checked at: `2026-05-23T05:51:59.743741+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Import two consented WAV voice samples with matching transcripts.
