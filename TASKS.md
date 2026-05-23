@@ -98,6 +98,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Added launch-eligible vs stale blend counts to `app.cli.launch_artifacts --summary` so agents can see when saved blends do not match current imported voices.
 - Added per-voice launch usability reasons to `app.cli.launch_artifacts --summary` so agents can see whether consent, transcript, or audio quality blocks an imported voice.
 - Hardened launch readiness so the imported-voices check reports launch-usable voice count and unusable voice reasons before Qwen verification.
+- Updated launch readiness next actions so unusable imported voices tell agents to re-record or replace bad samples before importing two clean consented WAV voices.
 
 ## Verification Already Run
 
@@ -201,6 +202,14 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - `git diff --check` passed with line-ending normalization warnings only.
 - `cd backend; .\.venv\Scripts\python -m app.cli.launch_artifacts --report data\launch-artifacts-report.json --summary` passed and reported 1 voice, 0 usable voices, 1 unusable voice blocked by audio quality warnings, 249 stale/nonmatching blends, and 0 generations.
 - `cd backend; .\.venv\Scripts\python -m app.cli.launch_readiness --report data\launch-readiness-report.json --tasks ..\TASKS.md --summary` refreshed readiness tasks and now reports `[ ] Imported voices: 0 launch-usable imported voices; 1 imported voices; unusable: voice_93dc1ef39402 has audio quality warnings.`
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_launch_readiness_core.py -q -k "next_action_calls_out_unusable_imported_voices"` passed: 1 test.
+- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 273 tests.
+- `cd frontend; npm test -- --run` passed: 7 tests.
+- `cd frontend; npx tsc --noEmit` passed.
+- `cd frontend; npm run build` passed.
+- `git diff --check` passed with line-ending normalization warnings only.
+- `cd backend; .\.venv\Scripts\python -m app.cli.launch_artifacts --report data\launch-artifacts-report.json --summary` passed and reported 1 voice, 0 usable voices, 1 unusable voice blocked by audio quality warnings, 250 stale/nonmatching blends, and 0 generations.
+- `cd backend; .\.venv\Scripts\python -m app.cli.launch_readiness --report data\launch-readiness-report.json --tasks ..\TASKS.md --summary` refreshed readiness tasks and now prints `Next: Re-record or replace unusable voice samples, then import at least two clean consented WAV voices with matching transcripts.`
 
 ## Next Tasks
 
@@ -224,10 +233,10 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T15:13:32.679047+00:00`
+- Checked at: `2026-05-23T15:17:18.318665+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
-- [ ] imported_voices: Generate a launch manifest with `python -m app.cli.run_launch_sequence --write-template launch-manifest.template.json`, then fill in two consented WAV voice samples with matching transcripts.
+- [ ] imported_voices: Re-record or replace unusable voice samples, then import at least two clean consented WAV voices with matching transcripts.
   Evidence: 0 launch-usable imported voices; 1 imported voices; unusable: voice_93dc1ef39402 has audio quality warnings.
 - [ ] saved_blend: Create and save a multi-reference blend from imported voices.
   Evidence: No saved blend references at least two currently imported voices.

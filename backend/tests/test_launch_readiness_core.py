@@ -694,6 +694,38 @@ def test_core_launch_readiness_reports_launch_usable_voice_count_before_qwen_ver
     }
 
 
+def test_core_launch_readiness_next_action_calls_out_unusable_imported_voices(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        "app.core.launch.list_voice_profiles",
+        lambda: [
+            SimpleNamespace(
+                id="voice_alice",
+                display_name="Alice",
+                reference_text="Alice reads a clean reference sentence.",
+                consent=SimpleNamespace(
+                    synthetic_voice_allowed=True,
+                    allowed_uses=["private_agent_voice", "local_audio_export"],
+                ),
+                quality=SimpleNamespace(warnings=["Reference audio appears clipped; record a cleaner sample."]),
+            )
+        ],
+    )
+
+    report = evaluate_launch_readiness()
+
+    imported_voice_action = next(action for action in report.next_actions if action.check_id == "imported_voices")
+    assert imported_voice_action.evidence == (
+        "0 launch-usable imported voices; 1 imported voices; unusable: voice_alice has audio quality warnings."
+    )
+    assert imported_voice_action.action == (
+        "Re-record or replace unusable voice samples, then import at least two clean consented WAV voices "
+        "with matching transcripts."
+    )
+
+
 def test_core_launch_readiness_blocks_saved_blend_from_same_imported_speaker_before_qwen_verification(
     tmp_path, monkeypatch
 ):

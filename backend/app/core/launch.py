@@ -970,9 +970,18 @@ def _launch_next_actions(checks: list[LaunchReadinessCheck]) -> list[LaunchReadi
         LaunchReadinessAction(
             check_id=check.id,
             label=check.label,
-            action=LAUNCH_ACTIONS.get(check.id, check.label),
+            action=_launch_next_action_for_check(check),
             evidence=check.detail,
         )
         for check in checks
         if not check.passed
     ]
+
+
+def _launch_next_action_for_check(check: LaunchReadinessCheck) -> str:
+    if check.id == "imported_voices" and "unusable:" in check.detail:
+        return (
+            "Re-record or replace unusable voice samples, then import at least two clean consented WAV voices "
+            "with matching transcripts."
+        )
+    return LAUNCH_ACTIONS.get(check.id, check.label)
