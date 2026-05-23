@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from typing import Sequence
 
+from app.core.audio import is_parseable_wav
 from app.core.launch import get_agent_provider_verification_report, get_qwen_verification_report
 from app.core.storage import list_blends, list_generation_results, list_voice_profiles
 from app.models.schemas import GenerationResult, VoiceBlend, VoiceProfile
@@ -352,6 +353,8 @@ def _generation_status(generation: GenerationResult, blends: list[VoiceBlend]) -
         reasons.append("Qwen generation audio is missing.")
     elif audio_path.stat().st_size == 0:
         reasons.append("Qwen generation audio must be non-empty.")
+    elif not is_parseable_wav(audio_path):
+        reasons.append("Qwen generation audio must be a parseable WAV file.")
     return {
         "launch_eligible": not reasons,
         "stale_reasons": reasons,
