@@ -19,10 +19,11 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Recent pushed work includes structured launch-manifest voice diagnostics for browser and CLI dry-runs.
 - Latest work blocks clipped browser microphone recordings before import and keeps recorded imports inside the launch voice quality requirements.
 - Latest handoff work adds a dedicated usage-limit CLI that refreshes launch artifacts, readiness, and a `## Usage Limit Handoff` section in `TASKS.md`.
+- Latest cleanup work adds a dry-run-first stale blend prune command so agents can clear old nonmatching blends before creating the real launch blend.
 
 ## Usage Limit Handoff
 
-- Last refreshed: `2026-05-23T16:35:20.145840+00:00`
+- Last refreshed: `2026-05-23T16:40:08.446271+00:00`
 - Reason: Codex usage/session/context limit handoff.
 - Next agent should start from `## Next Tasks`, `## Launch Readiness Remaining Tasks`, and `## Launch Artifact Inventory`.
 - Preserve commit identity: `JunWeiLi233 <mcpejunwei@gmail.com>`.
@@ -30,7 +31,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T16:35:20.136841+00:00`
+- Checked at: `2026-05-23T16:40:08.437271+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Re-record or replace unusable voice samples, then import at least two clean consented WAV voices with matching transcripts.
@@ -54,7 +55,7 @@ Blocking reasons:
 ## Launch Artifact Inventory
 
 - Voices: `1` total; `0` usable; `1` unusable
-- Blends: `268` total; `0` launch-eligible; `268` stale/nonmatching
+- Blends: `269` total; `0` launch-eligible; `269` stale/nonmatching
 - Generations: `0` total; `0` Qwen; `0` launch-eligible; `0` stale/nonmatching
 - Usable voice IDs: `none`
 - Launch-eligible blend IDs: `none`
@@ -67,6 +68,7 @@ Unusable voices:
 - `voice_93dc1ef39402` Alice: Audio quality warnings must be resolved before launch.
 
 Next artifact commands:
+- [ ] `python -m app.cli.prune_launch_artifacts --report data/prune-launch-artifacts-report.json`
 - [ ] `python -m app.cli.run_launch_sequence --write-template data/launch-sequence/launch-manifest.template.json`
 
 ## Completed In Current Working Tree
@@ -168,6 +170,8 @@ Next artifact commands:
 - Added a browser recorder audible-signal guard so silent microphone captures are warned and blocked before upload.
 - Added a browser recorder clipping guard so full-scale distorted microphone captures are warned and blocked before upload.
 - Added `app.cli.handoff` so Codex can refresh `TASKS.md` with launch artifact inventory, readiness blockers, and a usage-limit handoff stamp before a session/context limit.
+- Added `app.cli.prune_launch_artifacts` so stale/nonmatching saved blends can be previewed with a dry-run report before optionally deleting them with `--apply`.
+- Added stale-blend cleanup as a launch artifact next command whenever inventory detects nonmatching blends.
 
 ## Verification Already Run
 
@@ -177,6 +181,12 @@ Next artifact commands:
 - `cd backend; .\.venv\Scripts\python -m pytest tests\test_launch_artifacts_cli.py -q -k "real_section_heading"` passed after fixing artifact TASKS section matching.
 - `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 283 tests.
 - `cd backend; .\.venv\Scripts\python -m app.cli.handoff --tasks ..\TASKS.md --no-summary` refreshed usage-limit handoff, launch readiness, and artifact inventory sections without duplicate headings.
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_prune_launch_artifacts_cli.py -q` first failed because `app.cli.prune_launch_artifacts` was missing, then passed after adding the dry-run-first cleanup command.
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_launch_artifacts_cli.py -q -k "separates_launch"` first failed because stale-blend cleanup was missing from artifact next commands, then passed after adding it.
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_prune_launch_artifacts_cli.py tests\test_launch_artifacts_cli.py -q` passed: 8 tests.
+- `cd backend; .\.venv\Scripts\python -m app.cli.prune_launch_artifacts --report data\prune-launch-artifacts-report.json` dry-ran stale blend cleanup and reported 268 stale blends would be deleted, with no deletions.
+- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 285 tests.
+- `cd backend; .\.venv\Scripts\python -m app.cli.handoff --tasks ..\TASKS.md --no-summary` refreshed usage-limit handoff, launch readiness, and artifact inventory with the prune command.
 - `cd frontend; npm test -- --run` passed: 7 tests.
 - `cd frontend; npx tsc --noEmit` passed.
 - `cd frontend; npm run build` passed.

@@ -100,6 +100,7 @@ def collect_launch_artifacts() -> dict[str, object]:
         "next_commands": _next_commands(
             usable_voice_ids=usable_voice_ids,
             blends=blends,
+            stale_blend_ids=stale_blend_ids,
             generation_statuses=generation_statuses,
             agent_provider_status=agent_provider.status,
             qwen_verification_status=qwen_verification.status,
@@ -149,12 +150,15 @@ def _next_commands(
     *,
     usable_voice_ids: list[str],
     blends: list[VoiceBlend],
+    stale_blend_ids: list[str],
     generation_statuses: list[dict[str, object]],
     agent_provider_status: str,
     qwen_verification_status: str,
     qwen_runtime_available: bool,
 ) -> list[str]:
     commands: list[str] = []
+    if stale_blend_ids:
+        commands.append("python -m app.cli.prune_launch_artifacts --report data/prune-launch-artifacts-report.json")
     if len(usable_voice_ids) < 2:
         commands.append(
             "python -m app.cli.run_launch_sequence --write-template data/launch-sequence/launch-manifest.template.json"

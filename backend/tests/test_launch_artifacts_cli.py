@@ -154,6 +154,10 @@ def test_launch_artifacts_cli_separates_launch_eligible_and_stale_blends(tmp_pat
     assert payload["blends"][0]["launch_eligible"] is True
     assert payload["blends"][1]["launch_eligible"] is False
     assert payload["blends"][1]["missing_voice_profile_ids"] == ["voice_missing"]
+    assert (
+        "python -m app.cli.prune_launch_artifacts --report data/prune-launch-artifacts-report.json"
+        in payload["next_commands"]
+    )
     assert 'python -m app.cli.create_blend --name "Launch mixed voice"' not in payload["next_commands"]
     output = capsys.readouterr().out
     assert "Launch-eligible blends: 1; stale/nonmatching blends: 1" in output
