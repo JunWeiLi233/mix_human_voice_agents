@@ -669,7 +669,13 @@ audio {
 
 .recorded-sample {
   border-top: 1px solid rgba(39, 54, 41, 0.12);
+  justify-content: space-between;
   padding-top: 10px;
+}
+
+.recorded-sample div {
+  display: grid;
+  gap: 3px;
 }
 
 .recorded-sample span {
@@ -677,6 +683,16 @@ audio {
   font-size: 13px;
   font-weight: 800;
   overflow-wrap: anywhere;
+}
+
+.recorded-sample small {
+  color: #68735f;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.recorded-sample .duration-warning {
+  color: #8b2f1d;
 }
 
 @media (max-width: 980px) {

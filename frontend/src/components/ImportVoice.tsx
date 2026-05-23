@@ -3,6 +3,9 @@ import { useEffect, useRef, useState } from "react";
 import { importVoice } from "../api";
 import type { VoiceProfile } from "../types";
 
+const minRecordedSeconds = 5;
+const maxRecordedSeconds = 30;
+
 type Props = {
   onImported?: (profile: VoiceProfile) => void;
 };
@@ -23,6 +26,7 @@ export function ImportVoice({ onImported }: Props) {
   const [referenceText, setReferenceText] = useState("");
   const [consentConfirmed, setConsentConfirmed] = useState(false);
   const [recordedFile, setRecordedFile] = useState<File | null>(null);
+  const [recordedSeconds, setRecordedSeconds] = useState<number | null>(null);
   const [recording, setRecording] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +74,7 @@ export function ImportVoice({ onImported }: Props) {
 
     setError(null);
     setRecordedFile(null);
+    setRecordedSeconds(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const context = new AudioContextConstructor();
@@ -116,8 +121,12 @@ export function ImportVoice({ onImported }: Props) {
       return;
     }
     const wavBlob = encodeMonoWav(session.chunks, session.sampleRate);
+    const durationSeconds = sampleCount(session.chunks) / session.sampleRate;
     setRecordedFile(new File([wavBlob], `${displayName}-recording.wav`, { type: "audio/wav" }));
+    setRecordedSeconds(durationSeconds);
   }
+
+  const recordedDurationError = recordedSeconds === null ? null : recordedDurationErrorText(recordedSeconds);
 
   return (
     <section className="panel">
@@ -174,8 +183,16 @@ export function ImportVoice({ onImported }: Props) {
       </div>
       {recordedFile ? (
         <div className="recorded-sample">
-          <span>{recordedFile.name}</span>
-          <button type="button" disabled={busy || !canImport} onClick={() => void handleFile(recordedFile)}>
+          <div>
+            <span>{recordedFile.name}</span>
+            {recordedSeconds !== null ? <small>{recordedSeconds.toFixed(1)}s recorded</small> : null}
+            {recordedDurationError ? <small className="duration-warning">{recordedDurationError}</small> : null}
+          </div>
+          <button
+            type="button"
+            disabled={busy || !canImport || recordedDurationError !== null}
+            onClick={() => void handleFile(recordedFile)}
+          >
             Import recorded sample
           </button>
         </div>
@@ -196,11 +213,11 @@ function getAudioContextConstructor(): typeof AudioContext | undefined {
 }
 
 function encodeMonoWav(chunks: Float32Array[], sampleRate: number): Blob {
-  const sampleCount = chunks.reduce((count, chunk) => count + chunk.length, 0);
-  const buffer = new ArrayBuffer(44 + sampleCount * 2);
+  const samples = sampleCount(chunks);
+  const buffer = new ArrayBuffer(44 + samples * 2);
   const view = new DataView(buffer);
   writeAscii(view, 0, "RIFF");
-  view.setUint32(4, 36 + sampleCount * 2, true);
+  view.setUint32(4, 36 + samples * 2, true);
   writeAscii(view, 8, "WAVE");
   writeAscii(view, 12, "fmt ");
   view.setUint32(16, 16, true);
@@ -211,7 +228,7 @@ function encodeMonoWav(chunks: Float32Array[], sampleRate: number): Blob {
   view.setUint16(32, 2, true);
   view.setUint16(34, 16, true);
   writeAscii(view, 36, "data");
-  view.setUint32(40, sampleCount * 2, true);
+  view.setUint32(40, samples * 2, true);
 
   let offset = 44;
   chunks.forEach((chunk) => {
@@ -223,6 +240,20 @@ function encodeMonoWav(chunks: Float32Array[], sampleRate: number): Blob {
   });
 
   return new Blob([view], { type: "audio/wav" });
+}
+
+function sampleCount(chunks: Float32Array[]): number {
+  return chunks.reduce((count, chunk) => count + chunk.length, 0);
+}
+
+function recordedDurationErrorText(durationSeconds: number): string | null {
+  if (durationSeconds < minRecordedSeconds) {
+    return `Record at least ${minRecordedSeconds} seconds before importing.`;
+  }
+  if (durationSeconds > maxRecordedSeconds) {
+    return `Record ${maxRecordedSeconds} seconds or less before importing.`;
+  }
+  return null;
 }
 
 function writeAscii(view: DataView, offset: number, text: string) {

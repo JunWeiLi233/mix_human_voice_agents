@@ -778,10 +778,11 @@ describe("App", () => {
 
       fireEvent.click(screen.getByRole("button", { name: "Start microphone recording" }));
       await screen.findByRole("button", { name: "Stop microphone recording" });
-      emitRecordingSamples([0.1, -0.1, 0.2, -0.2]);
+      emitRecordingSeconds(5);
       fireEvent.click(screen.getByRole("button", { name: "Stop microphone recording" }));
 
       expect(await screen.findByText("Recorded Alice-recording.wav")).toBeInTheDocument();
+      expect(screen.getByText("5.0s recorded")).toBeInTheDocument();
       fireEvent.click(screen.getByRole("button", { name: "Import recorded sample" }));
 
       expect(await screen.findByLabelText("Recorded Alice blend weight")).toBeInTheDocument();
@@ -793,6 +794,70 @@ describe("App", () => {
       expect((form.get("file") as File).type).toBe("audio/wav");
       expect((form.get("file") as File).name).toBe("Recorded Alice-recording.wav");
       expect(form.get("reference_text")).toBe("Recorded Alice reads a clean reference sentence for Qwen cloning.");
+    } finally {
+      restoreRecorder();
+    }
+  });
+
+  it("blocks recorded samples shorter than the launch voice minimum", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = input.toString();
+      if (url === "/api/voices" && !init) {
+        return jsonResponse([]);
+      }
+      if (url === "/api/generations" && !init) {
+        return jsonResponse([]);
+      }
+      if (url === "/api/blends" && !init) {
+        return jsonResponse([]);
+      }
+      if (url === "/api/tts/qwen/status" && !init) {
+        return jsonResponse({
+          backend: "qwen3_tts",
+          available: false,
+          model_id: "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+          message: "qwen-tts is not installed.",
+        });
+      }
+      if (url === "/api/tts/qwen/verification" && !init) {
+        return jsonResponse({
+          status: "missing",
+          tts_backend: "qwen3_tts",
+          report_path: "data/qwen-runtime-verification-report.json",
+          voice_profile_ids: [],
+        });
+      }
+      if (url === "/api/launch/readiness" && !init) {
+        return jsonResponse({
+          status: "blocked",
+          blocking_reasons: ["Import at least two consented voice profiles."],
+          checks: [],
+        });
+      }
+      if (url === "/api/voices" && init?.method === "POST") {
+        throw new Error("Short recordings should not be imported");
+      }
+      return new Response("not found", { status: 404 });
+    });
+    const restoreRecorder = installAudioRecorderMock();
+
+    try {
+      render(<App />);
+      await screen.findByText("No imported voices yet.");
+
+      fireEvent.change(screen.getByLabelText("Reference transcript"), {
+        target: { value: "Alice reads a clean reference sentence for Qwen cloning." },
+      });
+      fireEvent.click(screen.getByLabelText("Confirm voice consent"));
+
+      fireEvent.click(screen.getByRole("button", { name: "Start microphone recording" }));
+      await screen.findByRole("button", { name: "Stop microphone recording" });
+      emitRecordingSeconds(4);
+      fireEvent.click(screen.getByRole("button", { name: "Stop microphone recording" }));
+
+      expect(await screen.findByText("4.0s recorded")).toBeInTheDocument();
+      expect(screen.getByText("Record at least 5 seconds before importing.")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Import recorded sample" })).toBeDisabled();
     } finally {
       restoreRecorder();
     }
@@ -1235,6 +1300,10 @@ function emitRecordingSamples(samples: number[]) {
       getChannelData: () => Float32Array.from(samples),
     },
   } as unknown as AudioProcessingEvent);
+}
+
+function emitRecordingSeconds(seconds: number) {
+  emitRecordingSamples(Array.from({ length: 16000 * seconds }, (_, index) => (index % 2 === 0 ? 0.1 : -0.1)));
 }
 
 type FetchMock = {
