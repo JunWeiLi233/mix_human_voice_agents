@@ -23,6 +23,7 @@ from app.tts.qwen import QwenTtsAdapter
 REQUIRED_VOICE_USE = "private_agent_voice"
 TASKS_ARTIFACT_SECTION_HEADING = "## Launch Artifact Inventory"
 PRUNE_REPORT_PATH = Path("data") / "prune-launch-artifacts-report.json"
+GENERATION_ROOT = Path("data") / "generations"
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -372,7 +373,9 @@ def _generation_status(
     if not _generation_references_current_blend(generation, blends):
         reasons.append("Qwen generation must reference a current saved blend.")
     audio_path = Path(generation.audio_path)
-    if not audio_path.exists():
+    if not _path_is_under(audio_path, GENERATION_ROOT):
+        reasons.append("Qwen generation audio must be stored under data/generations.")
+    elif not audio_path.exists():
         reasons.append("Qwen generation audio is missing.")
     elif audio_path.stat().st_size == 0:
         reasons.append("Qwen generation audio must be non-empty.")
@@ -486,6 +489,12 @@ def _generation_metadata_stale_reason(generation: GenerationResult, metadata_pat
 
 def _same_artifact_path(left: str, right: str) -> bool:
     return Path(left).resolve(strict=False) == Path(right).resolve(strict=False)
+
+
+def _path_is_under(path: Path, root: Path) -> bool:
+    resolved_path = path.resolve(strict=False)
+    resolved_root = root.resolve(strict=False)
+    return resolved_path == resolved_root or resolved_root in resolved_path.parents
 
 
 def _generation_references_current_blend(generation: GenerationResult, blends: list[VoiceBlend]) -> bool:
