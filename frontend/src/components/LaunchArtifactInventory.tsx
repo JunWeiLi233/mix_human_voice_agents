@@ -1,10 +1,45 @@
+import { useState } from "react";
+import { pruneLaunchArtifacts } from "../api";
+import type { PruneLaunchArtifactsReport } from "../api";
 import type { LaunchArtifactsReport } from "../types";
 
 type Props = {
   artifacts: LaunchArtifactsReport | null;
+  onPruned?: () => void;
 };
 
-export function LaunchArtifactInventory({ artifacts }: Props) {
+export function LaunchArtifactInventory({ artifacts, onPruned }: Props) {
+  const [pruneStatus, setPruneStatus] = useState<string | null>(null);
+  const [pruneBusy, setPruneBusy] = useState(false);
+  const [lastPruneReport, setLastPruneReport] = useState<PruneLaunchArtifactsReport | null>(null);
+
+  async function runPrune(apply: boolean) {
+    if (pruneBusy) return;
+    if (apply && !window.confirm("Permanently delete stale blends and stale generations?")) {
+      return;
+    }
+    setPruneBusy(true);
+    setPruneStatus(apply ? "Applying prune..." : "Running dry run...");
+    try {
+      const report = await pruneLaunchArtifacts(apply);
+      setLastPruneReport(report);
+      if (apply) {
+        setPruneStatus(
+          `Deleted ${report.deleted_blend_ids.length} stale blends and ${report.deleted_generation_ids.length} stale generations.`,
+        );
+        onPruned?.();
+      } else {
+        setPruneStatus(
+          `Dry run: ${report.stale_blend_ids.length} stale blends and ${report.stale_generation_ids.length} stale generations would be deleted.`,
+        );
+      }
+    } catch (err) {
+      setPruneStatus(err instanceof Error ? err.message : "Prune failed");
+    } finally {
+      setPruneBusy(false);
+    }
+  }
+
   const staleBlendReasonCounts = artifacts ? Object.entries(artifacts.stale_blend_reason_counts) : [];
   const staleGenerationReasonCounts = artifacts ? Object.entries(artifacts.stale_generation_reason_counts) : [];
   const providerCommands = artifacts
@@ -166,6 +201,48 @@ export function LaunchArtifactInventory({ artifacts }: Props) {
                     </li>
                   ))}
               </ul>
+            </div>
+          ) : null}
+          {artifacts.stale_blend_count + artifacts.stale_generation_count > 0 ? (
+            <div className="artifact-list" aria-labelledby="prune-stale-artifacts-heading">
+              <h3 id="prune-stale-artifacts-heading">Prune stale artifacts</h3>
+              <div className="prune-actions">
+                <button
+                  type="button"
+                  onClick={() => void runPrune(false)}
+                  disabled={pruneBusy}
+                  aria-label="Dry-run prune stale launch artifacts"
+                >
+                  Dry-run prune
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void runPrune(true)}
+                  disabled={pruneBusy}
+                  aria-label="Apply prune stale launch artifacts"
+                >
+                  Apply prune
+                </button>
+              </div>
+              {pruneStatus ? (
+                <p role="status" aria-live="polite">
+                  {pruneStatus}
+                </p>
+              ) : null}
+              {lastPruneReport && lastPruneReport.mode === "dry_run" ? (
+                <ul>
+                  {lastPruneReport.stale_blend_ids.map((blendId) => (
+                    <li key={`prune-blend-${blendId}`}>
+                      <code>{blendId}</code>
+                    </li>
+                  ))}
+                  {lastPruneReport.stale_generation_ids.map((generationId) => (
+                    <li key={`prune-generation-${generationId}`}>
+                      <code>{generationId}</code>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
           ) : null}
           {artifacts.next_commands.length > 0 ? (

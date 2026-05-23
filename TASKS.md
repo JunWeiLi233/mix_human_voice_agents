@@ -226,6 +226,7 @@ Next artifact commands:
 - Updated the generated `TASKS.md` Launch Artifact Inventory handoff to include ChatGPT, Claude, Grok, Gemini, API, and local provider preflight command options.
 - Added a reviewed apply command to stale blend prune dry-run reports so agents can inspect the report before deleting stale blends.
 - Extended `app.cli.prune_launch_artifacts` to also detect, dry-run, and apply-delete stale Qwen generation metadata + audio files so the launch artifact store can be cleaned with a single command.
+- Added `POST /launch/artifacts/prune` and a Launch page "Prune stale artifacts" panel with dry-run and apply buttons so browser users can clean stale blends and generations without dropping to terminal.
 
 ## Verification Already Run
 

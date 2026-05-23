@@ -1508,6 +1508,101 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Generate AI Voice" })).toBeDisabled();
     expect(fetchMock).toHaveBeenCalledWith("/api/voices/voice_alice", { method: "DELETE" });
   });
+
+  it("lets the user dry-run the launch artifact prune from the Launch page", async () => {
+    let pruneCallCount = 0;
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = input.toString();
+      if (url === "/api/voices" && !init) return jsonResponse([]);
+      if (url === "/api/generations" && !init) return jsonResponse([]);
+      if (url === "/api/blends" && !init) return jsonResponse([]);
+      if (url === "/api/tts/qwen/status") {
+        return jsonResponse({ backend: "qwen3_tts", available: false, model_id: null, message: "unavailable" });
+      }
+      if (url === "/api/tts/qwen/verification" && !init) {
+        return jsonResponse({
+          status: "missing",
+          tts_backend: "qwen3_tts",
+          report_path: "data/qwen-runtime-verification-report.json",
+          voice_profile_ids: [],
+        });
+      }
+      if (url === "/api/agent/provider-verification" && !init) {
+        return jsonResponse({ status: "missing", report_path: "data/agent-provider-verification-report.json" });
+      }
+      if (url === "/api/launch/readiness") {
+        return jsonResponse({ status: "blocked", blocking_reasons: [], checks: [] });
+      }
+      if (url === "/api/launch/artifacts") {
+        return jsonResponse({
+          voice_count: 0,
+          usable_voice_count: 0,
+          unusable_voice_count: 0,
+          distinct_usable_speaker_count: 0,
+          blend_count: 1,
+          launch_eligible_blend_count: 0,
+          stale_blend_count: 1,
+          stale_blend_reason_counts: {},
+          generation_count: 1,
+          qwen_generation_count: 0,
+          launch_eligible_generation_count: 0,
+          stale_generation_count: 1,
+          stale_generation_reason_counts: {},
+          usable_voice_ids: [],
+          usable_distinct_voice_ids: [],
+          launch_eligible_blend_ids: [],
+          launch_eligible_generation_ids: [],
+          reviewed_prune_apply_command: null,
+          agent_provider: { status: "missing" },
+          agent_provider_commands: {
+            chatgpt: "",
+            claude: "",
+            grok: "",
+            gemini: "",
+            openai_compatible_api: "",
+            local_ollama: "",
+          },
+          qwen_verification: { status: "missing" },
+          qwen_runtime: { available: false, model_id: null },
+          voices: [],
+          blends: [],
+          generations: [],
+          next_commands: [],
+        });
+      }
+      if (url === "/api/launch/artifacts/prune" && init?.method === "POST") {
+        pruneCallCount += 1;
+        return jsonResponse({
+          mode: "dry_run",
+          stale_blend_ids: ["blend_stale_1"],
+          stale_generation_ids: ["generation_stale_1"],
+          deleted_blend_ids: [],
+          deleted_generation_ids: [],
+        });
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    render(<App />);
+    await screen.findByText("Mixed Voice Agent Studio");
+
+    fireEvent.click(screen.getByRole("button", { name: "Launch page" }));
+    expect(await screen.findByText("Launch Artifact Inventory")).toBeInTheDocument();
+    expect(screen.getByText("Prune stale artifacts")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Dry-run prune stale launch artifacts" }));
+
+    await waitFor(() => expect(pruneCallCount).toBe(1));
+    expect(
+      await screen.findByText("Dry run: 1 stale blends and 1 stale generations would be deleted."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("blend_stale_1")).toBeInTheDocument();
+    expect(screen.getByText("generation_stale_1")).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/launch/artifacts/prune",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
 });
 
 async function importNamedVoice(name: string) {

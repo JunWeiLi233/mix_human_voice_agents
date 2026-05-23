@@ -714,6 +714,58 @@ def test_launch_artifacts_route_returns_current_inventory(tmp_path: Path, monkey
     assert payload["qwen_verification"]["status"] == "passed"
 
 
+def test_launch_artifacts_prune_route_returns_dry_run_plan(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    captured: dict[str, object] = {}
+
+    def fake_plan(*, apply, reviewed_apply_command=None):
+        captured["apply"] = apply
+        captured["reviewed_apply_command"] = reviewed_apply_command
+        return {
+            "mode": "dry_run" if not apply else "apply",
+            "stale_blend_ids": ["blend_stale"],
+            "stale_generation_ids": [],
+            "deleted_blend_ids": [],
+            "deleted_generation_ids": [],
+        }
+
+    monkeypatch.setattr("app.api.routes.collect_prune_plan", fake_plan, raising=False)
+
+    response = client.post("/api/launch/artifacts/prune", json={"apply": False})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["mode"] == "dry_run"
+    assert payload["stale_blend_ids"] == ["blend_stale"]
+    assert captured["apply"] is False
+
+
+def test_launch_artifacts_prune_route_applies_when_requested(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    captured: dict[str, object] = {}
+
+    def fake_plan(*, apply, reviewed_apply_command=None):
+        captured["apply"] = apply
+        return {
+            "mode": "apply" if apply else "dry_run",
+            "stale_blend_ids": ["blend_stale"],
+            "stale_generation_ids": ["generation_stale"],
+            "deleted_blend_ids": ["blend_stale"],
+            "deleted_generation_ids": ["generation_stale"],
+        }
+
+    monkeypatch.setattr("app.api.routes.collect_prune_plan", fake_plan, raising=False)
+
+    response = client.post("/api/launch/artifacts/prune", json={"apply": True})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["mode"] == "apply"
+    assert payload["deleted_blend_ids"] == ["blend_stale"]
+    assert payload["deleted_generation_ids"] == ["generation_stale"]
+    assert captured["apply"] is True
+
+
 def test_launch_manifest_template_download_returns_starter_manifest(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
 

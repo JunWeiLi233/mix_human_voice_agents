@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from app.cli.run_launch_sequence import LaunchManifestValidationError, validate_launch_manifest
 from app.cli.launch_artifacts import collect_launch_artifacts
+from app.cli.prune_launch_artifacts import collect_prune_plan
 from app.core.agent import AgentProviderError, generate_agent_reply_record
 from app.core.audio import AudioQualityError, analyze_audio_sample, is_parseable_wav, wav_has_audible_signal
 from app.core.blends import BlendError, create_blend, validate_blend
@@ -162,6 +163,15 @@ def launch_readiness_report_route() -> FileResponse:
 @router.get("/launch/artifacts")
 def launch_artifacts_route() -> dict[str, object]:
     return collect_launch_artifacts()
+
+
+class PruneLaunchArtifactsRequest(BaseModel):
+    apply: bool = False
+
+
+@router.post("/launch/artifacts/prune")
+def launch_artifacts_prune_route(request: PruneLaunchArtifactsRequest) -> dict[str, object]:
+    return collect_prune_plan(apply=request.apply)
 
 
 @router.get("/launch/manifest-template")

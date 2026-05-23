@@ -446,7 +446,13 @@ export default function App() {
           </section>
           <div className="layout launch-layout">
             <LaunchReadiness readiness={launchReadiness} />
-            <LaunchArtifactInventory artifacts={launchArtifacts} />
+            <LaunchArtifactInventory
+              artifacts={launchArtifacts}
+              onPruned={() => {
+                void refreshLaunchArtifacts();
+                void refreshLaunchReadiness();
+              }}
+            />
             <AgentProviderSettings
               value={agentConfig}
               verification={agentProviderVerification}

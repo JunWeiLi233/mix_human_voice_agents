@@ -104,6 +104,26 @@ export async function getLaunchArtifacts(): Promise<LaunchArtifactsReport> {
   return response.json();
 }
 
+export type PruneLaunchArtifactsReport = {
+  mode: "dry_run" | "apply";
+  stale_blend_ids: string[];
+  stale_generation_ids: string[];
+  deleted_blend_ids: string[];
+  deleted_generation_ids: string[];
+};
+
+export async function pruneLaunchArtifacts(apply: boolean): Promise<PruneLaunchArtifactsReport> {
+  const response = await fetch("/api/launch/artifacts/prune", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ apply }),
+  });
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  return response.json();
+}
+
 export async function validateLaunchManifest(manifest: unknown): Promise<LaunchManifestValidationReport> {
   const response = await fetch("/api/launch/manifest/validate", {
     method: "POST",
