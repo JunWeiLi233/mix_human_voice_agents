@@ -12,6 +12,7 @@ from app.tts.qwen import QwenTtsAdapter
 
 
 REQUIRED_VOICE_USE = "private_agent_voice"
+TASKS_ARTIFACT_SECTION_HEADING = "## Launch Artifact Inventory"
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -21,6 +22,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         default="data/launch-artifacts-report.json",
         help="Path to write the JSON artifact inventory.",
     )
+    parser.add_argument(
+        "--tasks",
+        help="Optional TASKS.md path to update with launch artifact inventory.",
+    )
     parser.add_argument("--summary", action="store_true", help="Print a concise inventory and command summary.")
     args = parser.parse_args(argv)
 
@@ -28,6 +33,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     report_path = Path(args.report)
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    if args.tasks:
+        update_tasks_handoff(Path(args.tasks), report)
 
     if args.summary:
         _print_summary(report)
@@ -300,6 +307,72 @@ def _voice_status(voice: VoiceProfile) -> dict[str, object]:
 
 def _voice_allows_private_agent_voice(voice: VoiceProfile) -> bool:
     return voice.consent.synthetic_voice_allowed and REQUIRED_VOICE_USE in voice.consent.allowed_uses
+
+
+def update_tasks_handoff(tasks_path: Path, report: dict[str, object]) -> None:
+    tasks_path.parent.mkdir(parents=True, exist_ok=True)
+    existing = tasks_path.read_text(encoding="utf-8") if tasks_path.exists() else "# TASKS\n"
+    section = _tasks_handoff_section(report)
+    heading_index = existing.find(TASKS_ARTIFACT_SECTION_HEADING)
+    if heading_index == -1:
+        separator = "" if existing.endswith("\n\n") else "\n\n"
+        tasks_path.write_text(f"{existing}{separator}{section}", encoding="utf-8")
+        return
+
+    next_heading_index = existing.find("\n## ", heading_index + 1)
+    if next_heading_index == -1:
+        updated = f"{existing[:heading_index].rstrip()}\n\n{section}"
+    else:
+        updated = f"{existing[:heading_index].rstrip()}\n\n{section}\n{existing[next_heading_index + 1:].lstrip()}"
+    tasks_path.write_text(updated, encoding="utf-8")
+
+
+def _tasks_handoff_section(report: dict[str, object]) -> str:
+    qwen_runtime = report["qwen_runtime"]
+    runtime_label = "available" if qwen_runtime["available"] else "unavailable"
+    runtime_model = qwen_runtime.get("model_id") or "unknown model"
+    lines = [
+        TASKS_ARTIFACT_SECTION_HEADING,
+        "",
+        "- Voices: "
+        f"`{report['voice_count']}` total; `{report['usable_voice_count']}` usable; "
+        f"`{report['unusable_voice_count']}` unusable",
+        "- Blends: "
+        f"`{report['blend_count']}` total; `{report['launch_eligible_blend_count']}` launch-eligible; "
+        f"`{report['stale_blend_count']}` stale/nonmatching",
+        "- Generations: "
+        f"`{report['generation_count']}` total; `{report['qwen_generation_count']}` Qwen; "
+        f"`{report['launch_eligible_generation_count']}` launch-eligible; "
+        f"`{report['stale_generation_count']}` stale/nonmatching",
+        f"- Usable voice IDs: {_format_inline_ids(report['usable_voice_ids'])}",
+        f"- Launch-eligible blend IDs: {_format_inline_ids(report['launch_eligible_blend_ids'])}",
+        f"- Launch-eligible generation IDs: {_format_inline_ids(report['launch_eligible_generation_ids'])}",
+        f"- Provider preflight status: `{report['agent_provider']['status']}`",
+        f"- Qwen verification status: `{report['qwen_verification']['status']}`",
+        f"- Qwen runtime: `{runtime_label}` (`{runtime_model}`)",
+    ]
+    unusable_voices = [voice for voice in report["voices"] if not voice["launch_usable"]]
+    if unusable_voices:
+        lines.extend(["", "Unusable voices:"])
+        for voice in unusable_voices:
+            reasons = "; ".join(voice["unusable_reasons"])
+            lines.append(f"- `{voice['id']}` {voice['display_name']}: {reasons}")
+    stale_generations = [generation for generation in report["generations"] if not generation["launch_eligible"]]
+    if stale_generations:
+        lines.extend(["", "Stale/nonmatching generations:"])
+        for generation in stale_generations:
+            reasons = "; ".join(generation["stale_reasons"])
+            lines.append(f"- `{generation['id']}` {generation['tts_backend']}: {reasons}")
+    if report["next_commands"]:
+        lines.extend(["", "Next artifact commands:"])
+        lines.extend(f"- [ ] `{command}`" for command in report["next_commands"])
+    return "\n".join(lines) + "\n"
+
+
+def _format_inline_ids(ids: list[str]) -> str:
+    if not ids:
+        return "`none`"
+    return ", ".join(f"`{item}`" for item in ids)
 
 
 def _print_summary(report: dict[str, object]) -> None:

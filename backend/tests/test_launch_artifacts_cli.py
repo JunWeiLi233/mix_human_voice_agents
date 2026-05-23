@@ -325,6 +325,68 @@ def test_launch_artifacts_cli_explains_stale_qwen_generations(tmp_path: Path, mo
     )
 
 
+def test_launch_artifacts_cli_updates_tasks_handoff_with_artifact_inventory(tmp_path: Path, monkeypatch):
+    voices = [
+        voice_profile("voice_alice", "Alice"),
+        voice_profile("voice_bob", "Bob"),
+    ]
+    monkeypatch.setattr("app.cli.launch_artifacts.list_voice_profiles", lambda: voices)
+    monkeypatch.setattr("app.cli.launch_artifacts.list_blends", lambda: [])
+    monkeypatch.setattr("app.cli.launch_artifacts.list_generation_results", lambda: [])
+    monkeypatch.setattr(
+        "app.cli.launch_artifacts.get_agent_provider_verification_report",
+        lambda: AgentProviderVerificationReport(
+            status="missing",
+            report_path="data/agent-provider-verification-report.json",
+        ),
+    )
+    monkeypatch.setattr(
+        "app.cli.launch_artifacts.get_qwen_verification_report",
+        lambda: QwenVerificationReport(
+            status="missing",
+            report_path="data/qwen-runtime-verification-report.json",
+        ),
+    )
+    monkeypatch.setattr(
+        "app.cli.launch_artifacts.QwenTtsAdapter.runtime_status",
+        lambda: TtsRuntimeStatus(
+            backend="qwen3_tts",
+            available=True,
+            model_id="Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+            message="qwen-tts package is importable.",
+        ),
+    )
+    tasks_path = tmp_path / "TASKS.md"
+    tasks_path.write_text(
+        "# TASKS\n\nExisting handoff notes.\n\n## Launch Artifact Inventory\n\nold inventory\n",
+        encoding="utf-8",
+    )
+
+    exit_code = main(
+        [
+            "--report",
+            str(tmp_path / "launch-artifacts.json"),
+            "--tasks",
+            str(tasks_path),
+        ]
+    )
+
+    assert exit_code == 0
+    content = tasks_path.read_text(encoding="utf-8")
+    assert "old inventory" not in content
+    assert "## Launch Artifact Inventory" in content
+    assert "- Voices: `2` total; `2` usable; `0` unusable" in content
+    assert "- Blends: `0` total; `0` launch-eligible; `0` stale/nonmatching" in content
+    assert "- Generations: `0` total; `0` Qwen; `0` launch-eligible; `0` stale/nonmatching" in content
+    assert "- Usable voice IDs: `voice_alice`, `voice_bob`" in content
+    assert "- Provider preflight status: `missing`" in content
+    assert "- Qwen verification status: `missing`" in content
+    assert "- Qwen runtime: `available` (`Qwen/Qwen3-TTS-12Hz-0.6B-Base`)" in content
+    assert "Next artifact commands:" in content
+    assert "- [ ] `python -m app.cli.create_blend --name \"Launch mixed voice\"" in content
+    assert "- [ ] `python -m app.cli.verify_agent_provider --provider openai_compatible" in content
+
+
 def voice_profile(
     profile_id: str,
     display_name: str,
