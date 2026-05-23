@@ -230,6 +230,8 @@ describe("App", () => {
           usable_distinct_voice_ids: ["voice_alice"],
           launch_eligible_blend_ids: [],
           launch_eligible_generation_ids: [],
+          reviewed_prune_apply_command:
+            "python -m app.cli.prune_launch_artifacts --apply --report data/prune-launch-artifacts-report.json",
           agent_provider: { status: "missing" },
           agent_provider_commands: {
             chatgpt:
@@ -324,6 +326,12 @@ describe("App", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("Stale blend reason summary")).toBeInTheDocument();
+    expect(screen.getByText("Reviewed prune apply command")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "python -m app.cli.prune_launch_artifacts --apply --report data/prune-launch-artifacts-report.json",
+      ),
+    ).toBeInTheDocument();
     expect(
       screen.getByText((_content, element) =>
         element?.tagName.toLowerCase() === "li" &&

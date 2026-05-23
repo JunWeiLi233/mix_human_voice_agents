@@ -117,6 +117,16 @@ export function LaunchArtifactInventory({ artifacts }: Props) {
               </ul>
             </div>
           ) : null}
+          {artifacts.reviewed_prune_apply_command ? (
+            <div className="artifact-list">
+              <h3>Reviewed prune apply command</h3>
+              <ul>
+                <li>
+                  <code>{artifacts.reviewed_prune_apply_command}</code>
+                </li>
+              </ul>
+            </div>
+          ) : null}
           {artifacts.blends.some((blend) => !blend.launch_eligible) ? (
             <div className="artifact-list">
               <h3>Stale blends</h3>

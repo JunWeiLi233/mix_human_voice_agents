@@ -26,7 +26,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 
 ## Usage Limit Handoff
 
-- Last refreshed: `2026-05-23T17:28:42.701075+00:00`
+- Last refreshed: `2026-05-23T17:31:51.984272+00:00`
 - Reason: Codex usage/session/context limit handoff.
 - Next agent should start from `## Next Tasks`, `## Launch Readiness Remaining Tasks`, and `## Launch Artifact Inventory`.
 - Preserve commit identity: `JunWeiLi233 <mcpejunwei@gmail.com>`.
@@ -34,7 +34,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T17:28:42.691076+00:00`
+- Checked at: `2026-05-23T17:31:51.974272+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Re-record or replace unusable voice samples, then import at least two clean consented WAV voices with matching transcripts.
@@ -58,7 +58,7 @@ Blocking reasons:
 ## Launch Artifact Inventory
 
 - Voices: `2` total; `1` usable; `1` unusable; `1` distinct usable speakers
-- Blends: `279` total; `0` launch-eligible; `279` stale/nonmatching
+- Blends: `280` total; `0` launch-eligible; `280` stale/nonmatching
 - Generations: `0` total; `0` Qwen; `0` launch-eligible; `0` stale/nonmatching
 - Usable voice IDs: `voice_93f62f27a5b4`
 - Usable distinct-speaker voice IDs: `voice_93f62f27a5b4`
@@ -72,9 +72,9 @@ Unusable voices:
 - `voice_93dc1ef39402` Alice: Audio quality warnings must be resolved before launch.
 
 Stale blend reason summary:
-- `279` Blend must reference at least two distinct speaker display names.
-- `279` Blend must use the multi_reference_prompt strategy for Qwen launch.
-- `279` Blend references voices that are missing or not launch-usable: voice_a, voice_b.
+- `280` Blend must reference at least two distinct speaker display names.
+- `280` Blend must use the multi_reference_prompt strategy for Qwen launch.
+- `280` Blend references voices that are missing or not launch-usable: voice_a, voice_b.
 
 Reviewed prune apply command:
 - [ ] `python -m app.cli.prune_launch_artifacts --apply --report data\prune-launch-artifacts-report.json`
@@ -193,6 +193,7 @@ Next artifact commands:
 - Added `app.cli.prune_launch_artifacts` so stale/nonmatching saved blends can be previewed with a dry-run report before optionally deleting them with `--apply`.
 - Updated launch artifact handoff to surface a reviewed stale-blend prune apply command only when the dry-run report matches current stale blends.
 - Made the Vite dev proxy configurable with `VITE_BACKEND_URL` so the frontend can smoke-test against the current backend when port `8000` is occupied by a stale server.
+- Updated the Launch Artifact Inventory panel to show the reviewed stale-blend prune apply command when the current dry-run report matches the current stale blends.
 - Added stale-blend cleanup as a launch artifact next command whenever inventory detects nonmatching blends.
 - Added shared reference transcript validation requiring at least 5 words for Qwen voice cloning imports and launch manifests.
 - Hardened launch artifact inventory and stale-blend pruning so launch-eligible blends and next commands require at least two distinct usable speaker display names.

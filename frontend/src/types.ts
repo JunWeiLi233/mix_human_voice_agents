@@ -197,6 +197,7 @@ export type LaunchArtifactsReport = {
   usable_distinct_voice_ids: string[];
   launch_eligible_blend_ids: string[];
   launch_eligible_generation_ids: string[];
+  reviewed_prune_apply_command?: string | null;
   agent_provider: { status: "missing" | "passed" | "failed" };
   agent_provider_commands: {
     chatgpt: string;
