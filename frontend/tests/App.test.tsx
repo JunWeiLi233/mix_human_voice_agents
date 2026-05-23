@@ -715,6 +715,89 @@ describe("App", () => {
     });
   });
 
+  it("lets the user record a consented WAV sample before importing", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = input.toString();
+      if (url === "/api/voices" && !init) {
+        return jsonResponse([]);
+      }
+      if (url === "/api/generations" && !init) {
+        return jsonResponse([]);
+      }
+      if (url === "/api/blends" && !init) {
+        return jsonResponse([]);
+      }
+      if (url === "/api/tts/qwen/status" && !init) {
+        return jsonResponse({
+          backend: "qwen3_tts",
+          available: false,
+          model_id: "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+          message: "qwen-tts is not installed.",
+        });
+      }
+      if (url === "/api/tts/qwen/verification" && !init) {
+        return jsonResponse({
+          status: "missing",
+          tts_backend: "qwen3_tts",
+          report_path: "data/qwen-runtime-verification-report.json",
+          voice_profile_ids: [],
+        });
+      }
+      if (url === "/api/launch/readiness" && !init) {
+        return jsonResponse({
+          status: "blocked",
+          blocking_reasons: ["Import at least two consented voice profiles."],
+          checks: [],
+        });
+      }
+      if (url === "/api/voices" && init?.method === "POST") {
+        const form = init.body as FormData;
+        const file = form.get("file") as File;
+        if (file.type !== "audio/wav") {
+          return new Response("recording was not encoded as WAV", { status: 400 });
+        }
+        if (!file.name.endsWith(".wav")) {
+          return new Response("recording did not use a WAV filename", { status: 400 });
+        }
+        return jsonResponse(voiceProfile("voice_recorded", form.get("speaker_display_name")?.toString() ?? "Recorded"));
+      }
+      return new Response("not found", { status: 404 });
+    });
+    const restoreRecorder = installAudioRecorderMock();
+
+    try {
+      render(<App />);
+      await screen.findByText("No imported voices yet.");
+
+      fireEvent.change(screen.getByLabelText("Speaker name"), { target: { value: "Recorded Alice" } });
+      fireEvent.change(screen.getByLabelText("Confirmed by"), { target: { value: "Junwei" } });
+      fireEvent.change(screen.getByLabelText("Reference transcript"), {
+        target: { value: "Recorded Alice reads a clean reference sentence for Qwen cloning." },
+      });
+      fireEvent.click(screen.getByLabelText("Confirm voice consent"));
+
+      fireEvent.click(screen.getByRole("button", { name: "Start microphone recording" }));
+      await screen.findByRole("button", { name: "Stop microphone recording" });
+      emitRecordingSamples([0.1, -0.1, 0.2, -0.2]);
+      fireEvent.click(screen.getByRole("button", { name: "Stop microphone recording" }));
+
+      expect(await screen.findByText("Recorded Alice-recording.wav")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Import recorded sample" }));
+
+      expect(await screen.findByLabelText("Recorded Alice blend weight")).toBeInTheDocument();
+      const importCall = fetchMock.mock.calls.find(
+        ([input, init]) => input.toString() === "/api/voices" && init?.method === "POST",
+      );
+      expect(importCall).toBeTruthy();
+      const form = importCall?.[1]?.body as FormData;
+      expect((form.get("file") as File).type).toBe("audio/wav");
+      expect((form.get("file") as File).name).toBe("Recorded Alice-recording.wav");
+      expect(form.get("reference_text")).toBe("Recorded Alice reads a clean reference sentence for Qwen cloning.");
+    } finally {
+      restoreRecorder();
+    }
+  });
+
   it("lets the user test the selected agent provider before generating voice", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = input.toString();
@@ -1078,6 +1161,80 @@ function voiceProfile(id: string, displayName: string, warnings: string[] = []) 
       allowed_uses: ["private_agent_voice", "local_audio_export"],
     },
   };
+}
+
+let activeProcessor: { onaudioprocess: ((event: AudioProcessingEvent) => void) | null } | null = null;
+
+function installAudioRecorderMock() {
+  const originalMediaDevices = navigator.mediaDevices;
+  const originalAudioContext = globalThis.AudioContext;
+  const tracks = [{ stop: vi.fn() }];
+  const stream = { getTracks: () => tracks } as unknown as MediaStream;
+  Object.defineProperty(navigator, "mediaDevices", {
+    configurable: true,
+    value: {
+      getUserMedia: vi.fn().mockResolvedValue(stream),
+    },
+  });
+
+  class FakeAudioContext {
+    sampleRate = 16000;
+    destination = {};
+
+    createMediaStreamSource() {
+      return {
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+      };
+    }
+
+    createScriptProcessor() {
+      activeProcessor = {
+        onaudioprocess: null,
+      };
+      return {
+        get onaudioprocess() {
+          return activeProcessor?.onaudioprocess ?? null;
+        },
+        set onaudioprocess(handler: ((event: AudioProcessingEvent) => void) | null) {
+          if (activeProcessor) {
+            activeProcessor.onaudioprocess = handler;
+          }
+        },
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+      };
+    }
+
+    close() {
+      return Promise.resolve();
+    }
+  }
+
+  Object.defineProperty(globalThis, "AudioContext", {
+    configurable: true,
+    value: FakeAudioContext,
+  });
+
+  return () => {
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: originalMediaDevices,
+    });
+    Object.defineProperty(globalThis, "AudioContext", {
+      configurable: true,
+      value: originalAudioContext,
+    });
+    activeProcessor = null;
+  };
+}
+
+function emitRecordingSamples(samples: number[]) {
+  activeProcessor?.onaudioprocess?.({
+    inputBuffer: {
+      getChannelData: () => Float32Array.from(samples),
+    },
+  } as unknown as AudioProcessingEvent);
 }
 
 type FetchMock = {

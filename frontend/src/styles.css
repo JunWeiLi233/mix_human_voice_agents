@@ -651,6 +651,34 @@ audio {
   clip: rect(0 0 0 0);
 }
 
+.recorder-controls,
+.recorded-sample {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.recorder-controls button:nth-child(2),
+.recorded-sample button {
+  border-color: #c5c8b8;
+  background: #fffef9;
+  color: #20281b;
+}
+
+.recorded-sample {
+  border-top: 1px solid rgba(39, 54, 41, 0.12);
+  padding-top: 10px;
+}
+
+.recorded-sample span {
+  color: #416e43;
+  font-size: 13px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 980px) {
   .hero,
   .page-nav {
