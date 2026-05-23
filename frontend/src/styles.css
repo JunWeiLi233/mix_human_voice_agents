@@ -456,6 +456,30 @@ audio {
   padding-left: 18px;
 }
 
+.launch-actions {
+  margin-top: 14px;
+  border-top: 1px solid rgba(39, 54, 41, 0.12);
+  padding-top: 14px;
+}
+
+.launch-actions h3 {
+  margin: 0 0 8px;
+  color: #273629;
+  font-size: 14px;
+}
+
+.launch-actions ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.launch-actions li {
+  color: #5b6655;
+  line-height: 1.45;
+}
+
 .readiness-checks {
   list-style: none;
   padding-left: 0;

@@ -27,6 +27,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Redesigned the frontend shell with a responsive hero, status summary, page tabs, refined neutral palette, and mobile wrapping fixes.
 - Added a frontend test that first failed, then passed, for switching between Studio, Evidence, and Launch pages.
 - Added a stricter launch-readiness research gate: `docs/research-review.md` must include `Last checked: YYYY-MM-DD` and that date must be within 45 days before launch.
+- Added actionable `Next launch actions` in the launch-readiness panel so agents can convert failed readiness checks into concrete next steps.
 
 ## Verification Already Run
 

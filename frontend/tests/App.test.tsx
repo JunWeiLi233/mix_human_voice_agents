@@ -75,6 +75,11 @@ describe("App", () => {
       "href",
       "/api/launch/readiness/report",
     );
+    expect(screen.getByText("Next launch actions")).toBeInTheDocument();
+    expect(screen.getByText("Import two consented WAV voice samples with matching transcripts.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Run Qwen verification with two imported voices and keep the passed report."),
+    ).toBeInTheDocument();
     expect(screen.getByText("Run Qwen runtime verification successfully before launch.")).toBeInTheDocument();
     expect(screen.getByText("Blend Mixer")).toBeInTheDocument();
     expect(screen.getByText("Agent Provider")).toBeInTheDocument();

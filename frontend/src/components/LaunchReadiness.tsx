@@ -4,7 +4,26 @@ type Props = {
   readiness: LaunchReadinessReport | null;
 };
 
+const LAUNCH_ACTIONS: Record<string, string> = {
+  research_review: "Refresh docs/research-review.md with a current Last checked date.",
+  imported_voices: "Import two consented WAV voice samples with matching transcripts.",
+  saved_blend: "Create and save a multi-reference blend from imported voices.",
+  generated_audio: "Generate a Qwen mixed voice clip with imported source details.",
+  agent_provider: "Run Test provider and keep the passed provider verification report.",
+  qwen_runtime: "Install and load qwen-tts with the selected Qwen model.",
+  qwen_verification: "Run Qwen verification with two imported voices and keep the passed report.",
+};
+
+function nextLaunchActions(readiness: LaunchReadinessReport) {
+  return readiness.checks
+    .filter((check) => !check.passed)
+    .map((check) => LAUNCH_ACTIONS[check.id])
+    .filter((action): action is string => Boolean(action));
+}
+
 export function LaunchReadiness({ readiness }: Props) {
+  const launchActions = readiness ? nextLaunchActions(readiness) : [];
+
   return (
     <section className="panel launch-readiness" aria-labelledby="launch-readiness-heading">
       <h2 id="launch-readiness-heading">Launch Readiness</h2>
@@ -22,6 +41,16 @@ export function LaunchReadiness({ readiness }: Props) {
           <a download="launch-readiness-report.json" href="/api/launch/readiness/report">
             Download launch readiness audit
           </a>
+          {launchActions.length > 0 ? (
+            <div className="launch-actions" aria-labelledby="launch-actions-heading">
+              <h3 id="launch-actions-heading">Next launch actions</h3>
+              <ol>
+                {launchActions.map((action) => (
+                  <li key={action}>{action}</li>
+                ))}
+              </ol>
+            </div>
+          ) : null}
           {readiness.blocking_reasons.length > 0 ? (
             <ul className="readiness-reasons">
               {readiness.blocking_reasons.map((reason) => (
