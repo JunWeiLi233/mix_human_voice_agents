@@ -5,6 +5,7 @@ import type {
   BlendDraftProfile,
   DeleteVoiceResult,
   GenerationResult,
+  LaunchManifestValidationReport,
   LaunchReadinessReport,
   QwenRuntimeConfig,
   QwenVerificationReport,
@@ -90,6 +91,19 @@ export async function getLaunchReadiness(): Promise<LaunchReadinessReport> {
   const response = await fetch("/api/launch/readiness");
   if (!response.ok) {
     throw new Error(await response.text());
+  }
+  return response.json();
+}
+
+export async function validateLaunchManifest(manifest: unknown): Promise<LaunchManifestValidationReport> {
+  const response = await fetch("/api/launch/manifest/validate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(manifest),
+  });
+  if (!response.ok) {
+    const detail = await response.text();
+    return { status: "failed", error: detail };
   }
   return response.json();
 }

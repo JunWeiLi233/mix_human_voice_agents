@@ -1,4 +1,6 @@
-import type { LaunchReadinessReport } from "../types";
+import { useState } from "react";
+import { validateLaunchManifest } from "../api";
+import type { LaunchManifestValidationReport, LaunchReadinessReport } from "../types";
 
 type Props = {
   readiness: LaunchReadinessReport | null;
@@ -25,8 +27,41 @@ function nextLaunchActions(readiness: LaunchReadinessReport) {
     .filter((action): action is string => Boolean(action));
 }
 
+function readManifestFile(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => {
+      resolve(typeof reader.result === "string" ? reader.result : "");
+    });
+    reader.addEventListener("error", () => {
+      reject(reader.error ?? new Error("Launch manifest could not be read."));
+    });
+    reader.readAsText(file);
+  });
+}
+
 export function LaunchReadiness({ readiness }: Props) {
   const launchActions = readiness ? nextLaunchActions(readiness) : [];
+  const [manifestValidation, setManifestValidation] = useState<LaunchManifestValidationReport | null>(null);
+  const [isValidatingManifest, setIsValidatingManifest] = useState(false);
+
+  async function handleManifestFile(file: File | undefined) {
+    if (!file) {
+      return;
+    }
+    setIsValidatingManifest(true);
+    try {
+      const manifest = JSON.parse(await readManifestFile(file));
+      setManifestValidation(await validateLaunchManifest(manifest));
+    } catch (error) {
+      setManifestValidation({
+        status: "failed",
+        error: error instanceof Error ? error.message : "Launch manifest could not be read.",
+      });
+    } finally {
+      setIsValidatingManifest(false);
+    }
+  }
 
   return (
     <section className="panel launch-readiness" aria-labelledby="launch-readiness-heading">
@@ -49,6 +84,26 @@ export function LaunchReadiness({ readiness }: Props) {
             <a download="launch-manifest.template.json" href="/api/launch/manifest-template">
               Download launch manifest template
             </a>
+          </div>
+          <div className="manifest-validator">
+            <label className="file-button">
+              <span>{isValidatingManifest ? "Validating manifest" : "Validate launch manifest"}</span>
+              <input
+                accept="application/json,.json"
+                aria-label="Validate launch manifest file"
+                type="file"
+                onChange={(event) => {
+                  void handleManifestFile(event.currentTarget.files?.[0]);
+                }}
+              />
+            </label>
+            {manifestValidation ? (
+              <p className={manifestValidation.status === "passed" ? "manifest-pass" : "manifest-fail"}>
+                {manifestValidation.status === "passed"
+                  ? `Manifest dry run passed for ${manifestValidation.voice_count ?? 0} voices: ${(manifestValidation.speaker_display_names ?? []).join(", ")}`
+                  : `Manifest dry run failed: ${manifestValidation.error ?? "Validation failed."}`}
+              </p>
+            ) : null}
           </div>
           {launchActions.length > 0 ? (
             <div className="launch-actions" aria-labelledby="launch-actions-heading">

@@ -89,6 +89,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Added `app.cli.run_launch_sequence --write-template` so another agent can generate a launch manifest skeleton before filling in real consented voice files and provider details.
 - Updated Launch Readiness next actions so the imported-voices blocker points directly to the `run_launch_sequence --write-template` manifest flow.
 - Added `/api/launch/manifest-template` and a Launch page download link so browser users can get the same launch manifest template as terminal agents.
+- Added `/api/launch/manifest/validate` and a Launch page JSON file validator so browser users can dry-run a filled launch manifest without importing voices or calling providers.
 
 ## Verification Already Run
 
@@ -107,6 +108,14 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - `cd frontend; npx tsc --noEmit` passed.
 - `cd frontend; npm run build` passed.
 - `git diff --check` passed with line-ending normalization warnings only.
+- `cd frontend; npm test -- --run -t "renders the mixed voice studio"` passed: 1 test.
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_routes.py tests\test_run_launch_sequence_cli.py -q -k "manifest"` passed: 8 tests.
+- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 267 tests.
+- `cd frontend; npm test -- --run` passed: 7 tests.
+- `cd frontend; npx tsc --noEmit` passed.
+- `cd frontend; npm run build` passed.
+- `git diff --check` passed with line-ending normalization warnings only.
+- `cd backend; .\.venv\Scripts\python -m app.cli.launch_readiness --report data\launch-readiness-report.json --tasks ..\TASKS.md` refreshed readiness tasks and still exits 1 until real launch artifacts are present.
 - `cd backend; .\.venv\Scripts\python -m pytest tests\test_routes.py tests\test_run_launch_sequence_cli.py -q -k "manifest_template"` passed: 2 tests.
 - `cd backend; .\.venv\Scripts\python -m app.cli.run_launch_sequence --write-template data\launch-sequence\launch-manifest.template.json --report data\launch-sequence\template-report.json` passed.
 - `cd frontend; npm test -- --run -t "renders the mixed voice studio"` passed: 1 test.
@@ -150,7 +159,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T14:36:12.075619+00:00`
+- Checked at: `2026-05-23T14:43:51.309787+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Generate a launch manifest with `python -m app.cli.run_launch_sequence --write-template launch-manifest.template.json`, then fill in two consented WAV voice samples with matching transcripts.

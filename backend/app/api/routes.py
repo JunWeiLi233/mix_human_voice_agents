@@ -6,6 +6,7 @@ from fastapi.responses import FileResponse
 import httpx
 from pydantic import BaseModel
 
+from app.cli.run_launch_sequence import validate_launch_manifest
 from app.core.agent import AgentProviderError, generate_agent_reply_record
 from app.core.audio import AudioQualityError, analyze_audio_sample, is_parseable_wav, wav_has_audible_signal
 from app.core.blends import BlendError, create_blend, validate_blend
@@ -162,6 +163,14 @@ def launch_manifest_template_route() -> FileResponse:
     template_path.parent.mkdir(parents=True, exist_ok=True)
     template_path.write_text(json.dumps(launch_manifest_template(), indent=2), encoding="utf-8")
     return FileResponse(template_path, media_type="application/json", filename="launch-manifest.template.json")
+
+
+@router.post("/launch/manifest/validate")
+def launch_manifest_validate_route(manifest: dict[str, object]) -> dict[str, object]:
+    try:
+        return validate_launch_manifest(manifest)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post("/tts/qwen/verification", response_model=QwenVerificationReport)

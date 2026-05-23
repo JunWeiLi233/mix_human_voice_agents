@@ -56,19 +56,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         if not args.manifest:
             raise ValueError("--manifest is required unless --write-template is used.")
         manifest = _load_manifest(Path(args.manifest))
-        _validate_manifest(manifest)
+        validation_report = validate_launch_manifest(manifest)
         if args.dry_run:
-            _write_report(
-                report_path,
-                {
-                    "status": "passed",
-                    "mode": "dry_run",
-                    "voice_count": len(manifest["voices"]),
-                    "speaker_display_names": [
-                        str(voice["speaker_display_name"]).strip() for voice in manifest["voices"]
-                    ],
-                },
-            )
+            _write_report(report_path, validation_report)
             return 0
         output_dir = Path(args.output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -117,6 +107,18 @@ def _load_manifest(manifest_path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError("Launch sequence manifest must be a JSON object.")
     return payload
+
+
+def validate_launch_manifest(manifest: dict[str, Any]) -> dict[str, object]:
+    _validate_manifest(manifest)
+    return {
+        "status": "passed",
+        "mode": "dry_run",
+        "voice_count": len(manifest["voices"]),
+        "speaker_display_names": [
+            str(voice["speaker_display_name"]).strip() for voice in manifest["voices"]
+        ],
+    }
 
 
 def _write_launch_manifest_template(template_path: Path) -> None:

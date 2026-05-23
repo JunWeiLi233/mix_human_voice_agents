@@ -466,6 +466,31 @@ audio {
   text-decoration: none;
 }
 
+.manifest-validator {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.manifest-pass,
+.manifest-fail {
+  margin: 0;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.manifest-pass {
+  background: rgba(64, 110, 67, 0.12);
+  color: #2f6735;
+}
+
+.manifest-fail {
+  background: rgba(149, 50, 32, 0.12);
+  color: #8b2f1d;
+}
+
 .readiness-reasons,
 .readiness-checks {
   display: grid;

@@ -10,7 +10,7 @@ describe("App", () => {
   });
 
   it("renders the mixed voice studio", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = input.toString();
       if (url === "/api/voices") {
         return jsonResponse([]);
@@ -76,6 +76,14 @@ describe("App", () => {
           ],
         });
       }
+      if (url === "/api/launch/manifest/validate" && init?.method === "POST") {
+        return jsonResponse({
+          status: "passed",
+          mode: "dry_run",
+          voice_count: 2,
+          speaker_display_names: ["Alice", "Bob"],
+        });
+      }
       return new Response("not found", { status: 404 });
     });
 
@@ -94,6 +102,25 @@ describe("App", () => {
       "href",
       "/api/launch/manifest-template",
     );
+    fireEvent.change(screen.getByLabelText("Validate launch manifest file"), {
+      target: {
+        files: [
+          new File(
+            [
+              JSON.stringify({
+                voices: [
+                  { speaker_display_name: "Alice" },
+                  { speaker_display_name: "Bob" },
+                ],
+              }),
+            ],
+            "launch-manifest.json",
+            { type: "application/json" },
+          ),
+        ],
+      },
+    });
+    expect(await screen.findByText("Manifest dry run passed for 2 voices: Alice, Bob")).toBeInTheDocument();
     expect(screen.getByText("Next launch actions")).toBeInTheDocument();
     expect(screen.getByText("Backend action: import two consented source voices.")).toBeInTheDocument();
     expect(screen.getByText("Backend action: run Qwen verification with two profiles.")).toBeInTheDocument();
@@ -119,7 +146,7 @@ describe("App", () => {
   });
 
   it("switches between the studio, evidence, and launch interface pages", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = input.toString();
       if (url === "/api/voices") {
         return jsonResponse([]);

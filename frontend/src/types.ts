@@ -134,6 +134,14 @@ export type LaunchReadinessReport = {
   next_actions?: LaunchReadinessAction[];
 };
 
+export type LaunchManifestValidationReport = {
+  status: "passed" | "failed";
+  mode?: "dry_run";
+  voice_count?: number;
+  speaker_display_names?: string[];
+  error?: string;
+};
+
 export type VoiceProfile = {
   id: string;
   display_name: string;
