@@ -101,6 +101,8 @@ def _load_manifest(manifest_path: Path) -> dict[str, Any]:
 
 def _validate_manifest(manifest: dict[str, Any]) -> None:
     voices = manifest.get("voices", [])
+    if not isinstance(voices, list):
+        raise ValueError("voices must be an array.")
     if len(voices) < 2:
         raise ValueError("Launch sequence manifest requires at least two voices.")
     normalized_speakers: set[str] = set()
