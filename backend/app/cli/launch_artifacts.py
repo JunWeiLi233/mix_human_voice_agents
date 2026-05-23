@@ -361,6 +361,8 @@ def _generation_status(
         reasons.append("Qwen generation must match each verified Qwen voice id exactly once.")
     if not _generation_matches_qwen_runtime_config(generation, qwen_verification):
         reasons.append("Qwen generation runtime config must match the passed Qwen verification.")
+    if not _generation_audio_differs_from_qwen_verification(generation, qwen_verification):
+        reasons.append("Qwen generation audio must be separate from the Qwen verification output.")
     if generation.agent_trace is None:
         reasons.append("Qwen generation must include an agent provider trace.")
     elif not _generation_matches_agent_provider(generation, agent_provider):
@@ -410,6 +412,15 @@ def _generation_matches_qwen_runtime_config(
     if not verified_config:
         return True
     return _compact_qwen_runtime_config(generation.qwen_runtime_config) == verified_config
+
+
+def _generation_audio_differs_from_qwen_verification(
+    generation: GenerationResult,
+    qwen_verification: QwenVerificationReport,
+) -> bool:
+    if qwen_verification.status != "passed" or not qwen_verification.output_audio_path:
+        return True
+    return not _same_artifact_path(generation.audio_path, qwen_verification.output_audio_path)
 
 
 def _qwen_verification_runtime_config(qwen_verification: QwenVerificationReport) -> dict[str, str]:

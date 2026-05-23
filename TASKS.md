@@ -34,7 +34,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T18:24:49.685963+00:00`
+- Checked at: `2026-05-23T18:28:14.633308+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Re-record or replace unusable voice samples, then import at least two clean consented WAV voices with matching transcripts.
@@ -93,6 +93,7 @@ Next artifact commands:
 
 ## Completed In Current Working Tree
 
+- Hardened launch artifact inventory so Qwen generation audio must be separate from the passed Qwen verification output.
 - Hardened `app.cli.handoff` so a usage/session/context limit handoff creates a real `## Next Tasks` continuation checklist when the section is missing.
 - Added frontend page navigation for `Studio`, `Evidence`, and `Launch`.
 - Kept `Studio` as the default full workflow page.
