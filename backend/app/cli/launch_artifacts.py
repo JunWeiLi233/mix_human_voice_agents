@@ -313,18 +313,36 @@ def update_tasks_handoff(tasks_path: Path, report: dict[str, object]) -> None:
     tasks_path.parent.mkdir(parents=True, exist_ok=True)
     existing = tasks_path.read_text(encoding="utf-8") if tasks_path.exists() else "# TASKS\n"
     section = _tasks_handoff_section(report)
-    heading_index = existing.find(TASKS_ARTIFACT_SECTION_HEADING)
+    heading_index = _find_heading_index(existing, TASKS_ARTIFACT_SECTION_HEADING)
     if heading_index == -1:
         separator = "" if existing.endswith("\n\n") else "\n\n"
         tasks_path.write_text(f"{existing}{separator}{section}", encoding="utf-8")
         return
 
-    next_heading_index = existing.find("\n## ", heading_index + 1)
+    next_heading_index = _find_next_section_heading_index(existing, heading_index + 1)
     if next_heading_index == -1:
         updated = f"{existing[:heading_index].rstrip()}\n\n{section}"
     else:
-        updated = f"{existing[:heading_index].rstrip()}\n\n{section}\n{existing[next_heading_index + 1:].lstrip()}"
+        updated = f"{existing[:heading_index].rstrip()}\n\n{section}\n{existing[next_heading_index:].lstrip()}"
     tasks_path.write_text(updated, encoding="utf-8")
+
+
+def _find_heading_index(content: str, heading: str) -> int:
+    offset = 0
+    for line in content.splitlines(keepends=True):
+        if line.strip() == heading:
+            return offset
+        offset += len(line)
+    return -1
+
+
+def _find_next_section_heading_index(content: str, start: int) -> int:
+    offset = 0
+    for line in content.splitlines(keepends=True):
+        if offset >= start and line.startswith("## "):
+            return offset
+        offset += len(line)
+    return -1
 
 
 def _tasks_handoff_section(report: dict[str, object]) -> str:

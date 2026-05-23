@@ -1,7 +1,7 @@
 from pathlib import Path
 import json
 
-from app.cli.launch_artifacts import main
+from app.cli.launch_artifacts import main, update_tasks_handoff
 from app.models.schemas import (
     AgentProviderVerificationReport,
     AgentTrace,
@@ -385,6 +385,49 @@ def test_launch_artifacts_cli_updates_tasks_handoff_with_artifact_inventory(tmp_
     assert "Next artifact commands:" in content
     assert "- [ ] `python -m app.cli.create_blend --name \"Launch mixed voice\"" in content
     assert "- [ ] `python -m app.cli.verify_agent_provider --provider openai_compatible" in content
+
+
+def test_launch_artifacts_tasks_update_only_replaces_real_section_heading(tmp_path: Path, monkeypatch):
+    report = {
+        "voice_count": 0,
+        "usable_voice_count": 0,
+        "unusable_voice_count": 0,
+        "blend_count": 0,
+        "launch_eligible_blend_count": 0,
+        "stale_blend_count": 0,
+        "generation_count": 0,
+        "qwen_generation_count": 0,
+        "launch_eligible_generation_count": 0,
+        "stale_generation_count": 0,
+        "voices": [],
+        "usable_voice_ids": [],
+        "launch_eligible_blend_ids": [],
+        "launch_eligible_generation_ids": [],
+        "generations": [],
+        "agent_provider": {"status": "missing"},
+        "qwen_verification": {"status": "missing"},
+        "qwen_runtime": {"available": True, "model_id": "Qwen/Qwen3-TTS-12Hz-0.6B-Base"},
+        "next_commands": [],
+    }
+    tasks_path = tmp_path / "TASKS.md"
+    tasks_path.write_text(
+        "# TASKS\n\n"
+        "## Usage Limit Handoff\n\n"
+        "- Next agent should start from `## Launch Artifact Inventory`.\n\n"
+        "## Launch Artifact Inventory\n\n"
+        "old inventory\n\n"
+        "## Next Tasks\n\n"
+        "1. Keep going.\n",
+        encoding="utf-8",
+    )
+
+    update_tasks_handoff(tasks_path, report)
+
+    content = tasks_path.read_text(encoding="utf-8")
+    assert "- Next agent should start from `## Launch Artifact Inventory`." in content
+    assert "old inventory" not in content
+    assert content.count("\n## Launch Artifact Inventory\n") == 1
+    assert "## Next Tasks\n\n1. Keep going." in content
 
 
 def voice_profile(

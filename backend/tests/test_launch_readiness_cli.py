@@ -3,6 +3,7 @@ from datetime import datetime
 import json
 
 from app.cli.launch_readiness import main
+from app.cli.launch_readiness import update_tasks_handoff
 from app.models.schemas import LaunchReadinessCheck, LaunchReadinessReport
 
 
@@ -108,6 +109,40 @@ def test_launch_readiness_cli_updates_tasks_handoff_with_remaining_launch_work(
     assert "Evidence: 0 imported voices" in content
     assert "- [ ] qwen_verification: Run Qwen verification with two imported voices and keep the passed report." in content
     assert "Evidence: No passed Qwen runtime verification report." in content
+
+
+def test_launch_readiness_tasks_update_only_replaces_real_section_heading(tmp_path: Path):
+    report = LaunchReadinessReport(
+        status="blocked",
+        checks=[
+            LaunchReadinessCheck(
+                id="imported_voices",
+                label="Imported voices",
+                passed=False,
+                detail="0 imported voices",
+            )
+        ],
+        blocking_reasons=["Import at least two consented voice profiles."],
+    )
+    tasks_path = tmp_path / "TASKS.md"
+    tasks_path.write_text(
+        "# TASKS\n\n"
+        "## Usage Limit Handoff\n\n"
+        "- Next agent should start from `## Launch Readiness Remaining Tasks`.\n\n"
+        "## Launch Readiness Remaining Tasks\n\n"
+        "old readiness\n\n"
+        "## Launch Artifact Inventory\n\n"
+        "artifact inventory\n",
+        encoding="utf-8",
+    )
+
+    update_tasks_handoff(tasks_path, report)
+
+    content = tasks_path.read_text(encoding="utf-8")
+    assert "- Next agent should start from `## Launch Readiness Remaining Tasks`." in content
+    assert "old readiness" not in content
+    assert content.count("\n## Launch Readiness Remaining Tasks\n") == 1
+    assert "## Launch Artifact Inventory\n\nartifact inventory" in content
 
 
 def test_launch_readiness_cli_prints_actionable_summary(tmp_path: Path, monkeypatch, capsys):

@@ -5,6 +5,8 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Handoff Rule
 
 - Refresh this file before ending a limited session.
+- Preferred limit-session command:
+  `cd backend; .\.venv\Scripts\python -m app.cli.handoff --tasks ..\TASKS.md`
 - Include the latest branch, commit, verification status, running server URL, and unresolved blockers.
 - Keep tasks concrete and checkable.
 - Do not mark the launch goal complete unless real imported consented voices, saved blend, provider preflight, installed/loadable Qwen runtime, Qwen verification with two profiles, and real Qwen mixed-voice generation are all verified.
@@ -16,9 +18,56 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Remote: `https://github.com/JunWeiLi233/mix_human_voice_agents.git`
 - Recent pushed work includes structured launch-manifest voice diagnostics for browser and CLI dry-runs.
 - Latest work blocks clipped browser microphone recordings before import and keeps recorded imports inside the launch voice quality requirements.
-- Latest pushed CI status for the provider research-source gate: passed.
-- Local Vite dev servers for review: `http://127.0.0.1:5173/` and `http://127.0.0.1:5174/`
-- Backend launch readiness is still blocked because the repo does not yet have two real imported voices, a saved real blend, agent-provider preflight, Qwen verification with two profiles, or real Qwen mixed-voice output. The local backend venv now has `qwen-tts` installed and importable.
+- Latest handoff work adds a dedicated usage-limit CLI that refreshes launch artifacts, readiness, and a `## Usage Limit Handoff` section in `TASKS.md`.
+
+## Usage Limit Handoff
+
+- Last refreshed: `2026-05-23T16:35:20.145840+00:00`
+- Reason: Codex usage/session/context limit handoff.
+- Next agent should start from `## Next Tasks`, `## Launch Readiness Remaining Tasks`, and `## Launch Artifact Inventory`.
+- Preserve commit identity: `JunWeiLi233 <mcpejunwei@gmail.com>`.
+
+## Launch Readiness Remaining Tasks
+
+- Status: `blocked`
+- Checked at: `2026-05-23T16:35:20.136841+00:00`
+
+The following tasks are generated from failed launch-readiness checks:
+- [ ] imported_voices: Re-record or replace unusable voice samples, then import at least two clean consented WAV voices with matching transcripts.
+  Evidence: 0 launch-usable imported voices; 1 imported voices; unusable: voice_93dc1ef39402 has audio quality warnings.
+- [ ] saved_blend: Create and save a multi-reference blend from imported voices.
+  Evidence: No saved blend references at least two currently imported voices.
+- [ ] generated_audio: Generate a Qwen mixed voice clip with imported source details.
+  Evidence: 0 Qwen mixed voice clips with imported source details
+- [ ] agent_provider: Run Test provider and keep the passed provider verification report.
+  Evidence: Run the Agent Provider Test provider preflight before launch.
+- [ ] qwen_verification: Run Qwen verification with two imported voices and keep the passed report.
+  Evidence: Run python -m app.cli.verify_qwen_runtime with two consented voice profile ids.
+
+Blocking reasons:
+- Import at least two consented voice profiles.
+- Create and save a mixed voice blend.
+- Generate at least one Qwen3-TTS mixed voice clip from imported profiles.
+- Test the selected agent provider successfully before launch.
+- Run Qwen runtime verification successfully before launch.
+
+## Launch Artifact Inventory
+
+- Voices: `1` total; `0` usable; `1` unusable
+- Blends: `268` total; `0` launch-eligible; `268` stale/nonmatching
+- Generations: `0` total; `0` Qwen; `0` launch-eligible; `0` stale/nonmatching
+- Usable voice IDs: `none`
+- Launch-eligible blend IDs: `none`
+- Launch-eligible generation IDs: `none`
+- Provider preflight status: `missing`
+- Qwen verification status: `missing`
+- Qwen runtime: `available` (`Qwen/Qwen3-TTS-12Hz-0.6B-Base`)
+
+Unusable voices:
+- `voice_93dc1ef39402` Alice: Audio quality warnings must be resolved before launch.
+
+Next artifact commands:
+- [ ] `python -m app.cli.run_launch_sequence --write-template data/launch-sequence/launch-manifest.template.json`
 
 ## Completed In Current Working Tree
 
@@ -118,9 +167,16 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Added browser recorder auto-stop at 30 seconds so overlong microphone captures are capped to a launch-valid WAV before import.
 - Added a browser recorder audible-signal guard so silent microphone captures are warned and blocked before upload.
 - Added a browser recorder clipping guard so full-scale distorted microphone captures are warned and blocked before upload.
+- Added `app.cli.handoff` so Codex can refresh `TASKS.md` with launch artifact inventory, readiness blockers, and a usage-limit handoff stamp before a session/context limit.
 
 ## Verification Already Run
 
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_handoff_cli.py -q` first failed because `app.cli.handoff` was missing, then passed after adding the usage-limit handoff CLI.
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_handoff_cli.py -q` caught and verified fixes for Markdown section replacement edge cases in `TASKS.md`.
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_launch_readiness_cli.py -q -k "real_section_heading"` passed after fixing readiness TASKS section matching.
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_launch_artifacts_cli.py -q -k "real_section_heading"` passed after fixing artifact TASKS section matching.
+- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 283 tests.
+- `cd backend; .\.venv\Scripts\python -m app.cli.handoff --tasks ..\TASKS.md --no-summary` refreshed usage-limit handoff, launch readiness, and artifact inventory sections without duplicate headings.
 - `cd frontend; npm test -- --run` passed: 7 tests.
 - `cd frontend; npx tsc --noEmit` passed.
 - `cd frontend; npm run build` passed.
@@ -354,45 +410,3 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 7. Audit the latest commit identity after commit:
    `git show -s --format="%h %an <%ae> | %cn <%ce> | %s" HEAD`
 8. Watch GitHub Actions for any pushed commit until it finishes.
-
-## Launch Readiness Remaining Tasks
-
-- Status: `blocked`
-- Checked at: `2026-05-23T16:20:05.178906+00:00`
-
-The following tasks are generated from failed launch-readiness checks:
-- [ ] imported_voices: Re-record or replace unusable voice samples, then import at least two clean consented WAV voices with matching transcripts.
-  Evidence: 0 launch-usable imported voices; 1 imported voices; unusable: voice_93dc1ef39402 has audio quality warnings.
-- [ ] saved_blend: Create and save a multi-reference blend from imported voices.
-  Evidence: No saved blend references at least two currently imported voices.
-- [ ] generated_audio: Generate a Qwen mixed voice clip with imported source details.
-  Evidence: 0 Qwen mixed voice clips with imported source details
-- [ ] agent_provider: Run Test provider and keep the passed provider verification report.
-  Evidence: Run the Agent Provider Test provider preflight before launch.
-- [ ] qwen_verification: Run Qwen verification with two imported voices and keep the passed report.
-  Evidence: Run python -m app.cli.verify_qwen_runtime with two consented voice profile ids.
-
-Blocking reasons:
-- Import at least two consented voice profiles.
-- Create and save a mixed voice blend.
-- Generate at least one Qwen3-TTS mixed voice clip from imported profiles.
-- Test the selected agent provider successfully before launch.
-- Run Qwen runtime verification successfully before launch.
-
-## Launch Artifact Inventory
-
-- Voices: `1` total; `0` usable; `1` unusable
-- Blends: `265` total; `0` launch-eligible; `265` stale/nonmatching
-- Generations: `0` total; `0` Qwen; `0` launch-eligible; `0` stale/nonmatching
-- Usable voice IDs: `none`
-- Launch-eligible blend IDs: `none`
-- Launch-eligible generation IDs: `none`
-- Provider preflight status: `missing`
-- Qwen verification status: `missing`
-- Qwen runtime: `available` (`Qwen/Qwen3-TTS-12Hz-0.6B-Base`)
-
-Unusable voices:
-- `voice_93dc1ef39402` Alice: Audio quality warnings must be resolved before launch.
-
-Next artifact commands:
-- [ ] `python -m app.cli.run_launch_sequence --write-template data/launch-sequence/launch-manifest.template.json`
