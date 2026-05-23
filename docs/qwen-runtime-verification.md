@@ -91,7 +91,7 @@ After importing two or more consented profiles, you can also run this from `back
   --report data/qwen-runtime-verification-report.json
 ```
 
-The report must contain `"status": "passed"`, `"tts_backend": "qwen3_tts"`, a persisted `checked_at` timestamp, `source_profile_details` for at least two imported consented profiles, and an `output_audio_path` that exists before claiming real Qwen mixed-voice synthesis is verified.
+The report must contain `"status": "passed"`, `"tts_backend": "qwen3_tts"`, `"blend_strategy": "multi_reference_prompt"`, a persisted `checked_at` timestamp, `source_profile_details` for at least two imported consented profiles, and an `output_audio_path` that exists before claiming real Qwen mixed-voice synthesis is verified. The terminal generation command applies the same Qwen verification evidence checks before it calls the agent provider or Qwen adapter.
 
 If Qwen generation fails with a missing reference text error, re-import the voice sample with the matching transcript. The transcript should describe the words spoken in the reference clip, not the speaker's name.
 

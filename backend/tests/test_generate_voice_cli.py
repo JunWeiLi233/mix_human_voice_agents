@@ -129,6 +129,82 @@ def test_generate_voice_cli_requires_passed_agent_provider_preflight(tmp_path: P
     assert list((tmp_path / "data" / "generations").glob("*.json")) == []
 
 
+def test_generate_voice_cli_rejects_qwen_report_from_wrong_backend_before_generation(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    save_profile("voice_a", "Alice")
+    save_profile("voice_b", "Bob")
+    blend = save_blend("voice_a", "voice_b")
+    write_passed_agent_report()
+    output_path = write_reference_wav(Path("data") / "generations" / "qwen_verify.wav")
+    report_path = Path("data") / "qwen-runtime-verification-report.json"
+    report_path.write_text(
+        json.dumps(
+            {
+                "status": "passed",
+                "checked_at": "2026-05-23T00:00:00+00:00",
+                "report_path": str(report_path),
+                "voice_profile_ids": ["voice_a", "voice_b"],
+                "tts_backend": "local_development_wav",
+                "blend_strategy": "multi_reference_prompt",
+                "source_profile_details": [
+                    {
+                        "voice_profile_id": "voice_a",
+                        "display_name": "Alice",
+                        "weight": 0.5,
+                        "consent_confirmed_by": "Junwei",
+                        "allowed_uses": ["private_agent_voice", "local_audio_export"],
+                        "reference_text_present": True,
+                    },
+                    {
+                        "voice_profile_id": "voice_b",
+                        "display_name": "Bob",
+                        "weight": 0.5,
+                        "consent_confirmed_by": "Junwei",
+                        "allowed_uses": ["private_agent_voice", "local_audio_export"],
+                        "reference_text_present": True,
+                    },
+                ],
+                "output_audio_path": str(output_path),
+                "text": "This is a Qwen verification.",
+            }
+        ),
+        encoding="utf-8",
+    )
+    metadata_path = tmp_path / "failed-generation.json"
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("invalid Qwen verification should stop before generation")
+
+    monkeypatch.setattr("app.cli.generate_voice.generate_agent_reply_record", fail_if_called)
+    monkeypatch.setattr("app.cli.generate_voice.QwenTtsAdapter.from_pretrained", fail_if_called)
+
+    exit_code = main(
+        [
+            "--blend-id",
+            blend.id,
+            "--prompt",
+            "Greet the user as a disclosed synthetic assistant.",
+            "--provider",
+            "openai_compatible",
+            "--model",
+            "local-qwen-agent",
+            "--base-url",
+            "http://127.0.0.1:1234/v1",
+            "--metadata",
+            str(metadata_path),
+        ]
+    )
+
+    assert exit_code == 1
+    report = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert report == {
+        "status": "failed",
+        "error": "Qwen verification report was not produced by the Qwen3-TTS backend.",
+    }
+
+
 def save_profile(profile_id: str, display_name: str) -> VoiceProfile:
     voice_dir = Path("data") / "voices" / profile_id
     voice_dir.mkdir(parents=True, exist_ok=True)

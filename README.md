@@ -99,6 +99,8 @@ cd backend
 .\.venv\Scripts\python -m app.cli.generate_voice --blend-id blend_launch --prompt "Greet the user as a disclosed synthetic assistant." --provider openai_compatible --model local-qwen-agent --base-url http://127.0.0.1:1234/v1 --metadata data\generations\last-generated-mixed-voice.json
 ```
 
+This generation command refuses Qwen verification evidence that launch readiness would reject, including wrong backend, wrong strategy, missing source details, missing or invalid verified WAV output, or mismatched verified voice ids.
+
 Single-command launch sequence from a JSON manifest:
 
 ```powershell

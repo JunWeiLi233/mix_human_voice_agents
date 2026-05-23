@@ -267,6 +267,10 @@ def _qwen_verification_detail(report: QwenVerificationReport, output_exists: boo
 
 
 def _qwen_verification_status(report: QwenVerificationReport, output_exists: bool) -> dict[str, object]:
+    return qwen_verification_status(report, output_exists)
+
+
+def qwen_verification_status(report: QwenVerificationReport, output_exists: bool) -> dict[str, object]:
     if report.status != "passed":
         return {
             "passed": False,

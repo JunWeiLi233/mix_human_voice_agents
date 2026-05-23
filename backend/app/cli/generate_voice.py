@@ -7,7 +7,11 @@ from typing import Sequence
 
 from app.core.agent import AgentProviderError, generate_agent_reply_record
 from app.core.generation import generate_agent_clip
-from app.core.launch import get_agent_provider_verification_report, get_qwen_verification_report
+from app.core.launch import (
+    get_agent_provider_verification_report,
+    get_qwen_verification_report,
+    qwen_verification_status,
+)
 from app.core.qwen_runtime import resolved_qwen_runtime_config
 from app.core.safety import SafetyError
 from app.core.storage import GENERATION_ROOT, get_voice_profiles_by_ids, list_blends
@@ -115,8 +119,12 @@ def _validate_qwen_verification(blend: VoiceBlend) -> None:
     report = get_qwen_verification_report()
     if report.status != "passed":
         raise ValueError("Qwen runtime verification must pass before Qwen generation.")
-    if not report.output_audio_path or not Path(report.output_audio_path).exists():
+    output_exists = bool(report.output_audio_path and Path(report.output_audio_path).exists())
+    if not output_exists:
         raise ValueError("Qwen verification output audio must exist before Qwen generation.")
+    verification_status = qwen_verification_status(report, output_exists=output_exists)
+    if not verification_status["passed"]:
+        raise ValueError(str(verification_status["detail"]))
     requested_voice_ids = sorted(profile.voice_profile_id for profile in blend.profiles)
     if sorted(report.voice_profile_ids) != requested_voice_ids:
         raise ValueError("Qwen generation voices must match the passed Qwen runtime verification.")
