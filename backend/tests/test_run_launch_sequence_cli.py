@@ -68,6 +68,39 @@ def test_run_launch_sequence_dry_run_validates_manifest_without_side_effects(
     }
 
 
+def test_run_launch_sequence_writes_manifest_template_without_side_effects(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    template_path = tmp_path / "launch-manifest.template.json"
+
+    def fail_if_called(argv):
+        raise AssertionError("template writing should not call launch subcommands")
+
+    monkeypatch.setattr("app.cli.run_launch_sequence.import_voice_main", fail_if_called)
+    monkeypatch.setattr("app.cli.run_launch_sequence.create_blend_main", fail_if_called)
+    monkeypatch.setattr("app.cli.run_launch_sequence.verify_agent_provider_main", fail_if_called)
+    monkeypatch.setattr("app.cli.run_launch_sequence.verify_qwen_runtime_main", fail_if_called)
+    monkeypatch.setattr("app.cli.run_launch_sequence.generate_voice_main", fail_if_called)
+    monkeypatch.setattr("app.cli.run_launch_sequence.launch_readiness_main", fail_if_called)
+
+    exit_code = main(["--write-template", str(template_path), "--report", "sequence-report.json"])
+
+    assert exit_code == 0
+    template = json.loads(template_path.read_text(encoding="utf-8"))
+    assert [voice["speaker_display_name"] for voice in template["voices"]] == ["Alice", "Bob"]
+    assert template["blend"] == {"name": "Launch mixed voice", "strategy": "multi_reference_prompt"}
+    assert template["agent_provider"]["provider"] == "openai_compatible"
+    assert template["agent_provider"]["base_url"] == "http://127.0.0.1:1234/v1"
+    assert template["qwen"]["model_id"] == "Qwen/Qwen3-TTS-12Hz-0.6B-Base"
+    report = json.loads(Path("sequence-report.json").read_text(encoding="utf-8"))
+    assert report == {
+        "status": "passed",
+        "mode": "template",
+        "template_path": str(template_path),
+    }
+
+
 def test_run_launch_sequence_dry_run_rejects_non_object_manifest(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     manifest_path = tmp_path / "launch-manifest.json"

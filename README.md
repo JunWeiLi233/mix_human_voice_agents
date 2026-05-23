@@ -110,6 +110,13 @@ cd backend
 .\.venv\Scripts\python -m app.cli.run_launch_sequence --manifest launch-manifest.json --tasks ..\TASKS.md
 ```
 
+Generate a starter manifest for other agents to fill with real consented voice files and provider details:
+
+```powershell
+cd backend
+.\.venv\Scripts\python -m app.cli.run_launch_sequence --write-template launch-manifest.template.json --report data\launch-sequence\template-report.json
+```
+
 Validate a launch manifest without importing voices, calling the agent provider, running Qwen, or refreshing readiness:
 
 ```powershell

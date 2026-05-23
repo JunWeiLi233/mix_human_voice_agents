@@ -24,10 +24,14 @@ LAUNCH_BLEND_STRATEGY = "multi_reference_prompt"
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run the full terminal launch sequence from a JSON manifest.")
-    parser.add_argument("--manifest", required=True, help="Path to the launch sequence JSON manifest.")
+    parser.add_argument("--manifest", help="Path to the launch sequence JSON manifest.")
     parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR), help="Directory for intermediate reports.")
     parser.add_argument("--report", default=str(DEFAULT_OUTPUT_DIR / "sequence-report.json"))
     parser.add_argument("--tasks", default="../TASKS.md", help="TASKS.md path to refresh at the end.")
+    parser.add_argument(
+        "--write-template",
+        help="Write a launch manifest template JSON file and exit without running launch steps.",
+    )
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -37,6 +41,20 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     report_path = Path(args.report)
     try:
+        if args.write_template:
+            template_path = Path(args.write_template)
+            _write_launch_manifest_template(template_path)
+            _write_report(
+                report_path,
+                {
+                    "status": "passed",
+                    "mode": "template",
+                    "template_path": str(template_path),
+                },
+            )
+            return 0
+        if not args.manifest:
+            raise ValueError("--manifest is required unless --write-template is used.")
         manifest = _load_manifest(Path(args.manifest))
         _validate_manifest(manifest)
         if args.dry_run:
@@ -99,6 +117,55 @@ def _load_manifest(manifest_path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError("Launch sequence manifest must be a JSON object.")
     return payload
+
+
+def _write_launch_manifest_template(template_path: Path) -> None:
+    template_path.parent.mkdir(parents=True, exist_ok=True)
+    template_path.write_text(json.dumps(_launch_manifest_template(), indent=2), encoding="utf-8")
+
+
+def _launch_manifest_template() -> dict[str, Any]:
+    return {
+        "voices": [
+            {
+                "speaker_display_name": "Alice",
+                "confirmed_by": "Junwei",
+                "notes": "Self or written permission captured for private local mixed voice testing.",
+                "reference_text": "Alice reads a clean five to thirty second reference for Qwen cloning.",
+                "audio": "C:\\path\\to\\alice.wav",
+                "weight": 1,
+            },
+            {
+                "speaker_display_name": "Bob",
+                "confirmed_by": "Junwei",
+                "notes": "Self or written permission captured for private local mixed voice testing.",
+                "reference_text": "Bob reads a clean five to thirty second reference for Qwen cloning.",
+                "audio": "C:\\path\\to\\bob.wav",
+                "weight": 1,
+            },
+        ],
+        "blend": {
+            "name": "Launch mixed voice",
+            "strategy": LAUNCH_BLEND_STRATEGY,
+        },
+        "agent_provider": {
+            "provider": "openai_compatible",
+            "model": "local-qwen-agent",
+            "base_url": "http://127.0.0.1:1234/v1",
+            "api_key": "",
+            "system_prompt": "You are a disclosed synthetic mixed-voice assistant.",
+            "prompt": "Reply with one short disclosed synthetic assistant sentence.",
+        },
+        "qwen": {
+            "text": "This is a disclosed synthetic mixed voice runtime verification.",
+            "model_id": "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+            "device_map": "auto",
+            "dtype": "auto",
+        },
+        "generation": {
+            "prompt": "Greet the user as a disclosed synthetic assistant.",
+        },
+    }
 
 
 def _validate_manifest(manifest: dict[str, Any]) -> None:

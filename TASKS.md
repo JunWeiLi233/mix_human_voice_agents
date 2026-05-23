@@ -86,6 +86,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Added generated-clip blend traceability so audio metadata and history show the saved blend id/name that produced each mixed voice clip.
 - Hardened launch readiness so Qwen generated clips must reference a current saved blend whose name, strategy, and source weights match the generated metadata.
 - Hardened the `/api/generate` Qwen path so it rejects unsaved or stale blend payloads before loading voice profiles or Qwen.
+- Added `app.cli.run_launch_sequence --write-template` so another agent can generate a launch manifest skeleton before filling in real consented voice files and provider details.
 
 ## Verification Already Run
 
@@ -105,6 +106,10 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - `cd frontend; npm run build` passed.
 - `git diff --check` passed with line-ending normalization warnings only.
 - `cd backend; .\.venv\Scripts\python -m app.cli.launch_readiness --report data\launch-readiness-report.json --tasks ..\TASKS.md` refreshed readiness tasks and still exits 1 until real launch artifacts are present.
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_run_launch_sequence_cli.py -q -k "template"` passed: 1 test.
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_run_launch_sequence_cli.py -q` passed: 29 tests.
+- `cd backend; .\.venv\Scripts\python -m app.cli.run_launch_sequence --write-template data\launch-sequence\launch-manifest.template.json --report data\launch-sequence\template-report.json` passed and wrote the manifest skeleton.
+- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 264 tests.
 
 ## Next Tasks
 
@@ -128,7 +133,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T14:22:57.886005+00:00`
+- Checked at: `2026-05-23T14:27:48.080258+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Import two consented WAV voice samples with matching transcripts.
