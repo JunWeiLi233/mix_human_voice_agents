@@ -97,6 +97,7 @@ Open `http://127.0.0.1:5173`.
    - `Gemini`: Google Gemini `generateContent` endpoint, model, and API key.
    - `API`: custom OpenAI-compatible base URL, model, and API key.
    - `Local`: Ollama-compatible endpoint such as `http://127.0.0.1:11434`.
+   Versioned base URLs are accepted for providers that commonly expose them, such as `https://api.anthropic.com/v1` and `http://127.0.0.1:11434/api`.
 3. For each voice, enter who confirmed consent, add consent notes, paste the reference transcript, check the consent confirmation box, and import a clean 5-30 second WAV sample where the speaker is you or has given written permission.
 4. Adjust each voice's blend weight in `Blend Mixer`.
 5. Select `Local preview` or `Qwen3-TTS` in `Voice Engine`.

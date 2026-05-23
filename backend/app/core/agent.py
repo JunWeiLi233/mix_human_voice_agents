@@ -111,7 +111,7 @@ def generate_agent_reply(
             raise AgentProviderError("API key is required for Anthropic providers.")
         response = _post_provider_request(
             client,
-            f"{base_url}/v1/messages",
+            _anthropic_messages_url(base_url),
             headers={
                 "x-api-key": config.api_key,
                 "anthropic-version": "2023-06-01",
@@ -142,7 +142,7 @@ def generate_agent_reply(
     elif config.provider == "ollama":
         response = _post_provider_request(
             client,
-            f"{base_url}/api/chat",
+            _ollama_chat_url(base_url),
             headers={"Content-Type": "application/json"},
             json={**build_agent_payload(config, prompt), "stream": False},
             timeout=120,
@@ -210,6 +210,18 @@ def _extract_anthropic_reply(data: dict[str, Any]) -> str:
         if isinstance(block, dict) and block.get("type") == "text" and block.get("text"):
             return block["text"]
     raise AgentProviderError("Anthropic response did not include text content.")
+
+
+def _anthropic_messages_url(base_url: str) -> str:
+    if base_url.endswith("/v1"):
+        return f"{base_url}/messages"
+    return f"{base_url}/v1/messages"
+
+
+def _ollama_chat_url(base_url: str) -> str:
+    if base_url.endswith("/api"):
+        return f"{base_url}/chat"
+    return f"{base_url}/api/chat"
 
 
 def _google_model_path(model: str) -> str:

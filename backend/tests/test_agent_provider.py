@@ -155,6 +155,20 @@ def test_anthropic_provider_uses_claude_messages_api_settings():
     assert client.requests[0]["json"]["max_tokens"] == 1024
 
 
+def test_anthropic_provider_accepts_versioned_base_url_without_duplicate_v1():
+    client = FakeHttpClient({"content": [{"type": "text", "text": "Hello from Claude."}]})
+    versioned_config = config("anthropic").model_copy(update={"base_url": "https://api.anthropic.com/v1"})
+
+    reply = generate_agent_reply(
+        prompt="Say hello.",
+        config=versioned_config,
+        http_client=client,
+    )
+
+    assert reply == "Hello from Claude."
+    assert client.requests[0]["url"] == "https://api.anthropic.com/v1/messages"
+
+
 def test_anthropic_provider_rejects_malformed_content_blocks():
     client = FakeHttpClient({"content": ["not-a-content-block"]})
 
@@ -243,6 +257,20 @@ def test_ollama_provider_uses_local_endpoint_without_api_key():
     assert reply == "Hello from local LLM."
     assert client.requests[0]["url"] == "http://127.0.0.1:11434/api/chat"
     assert "Authorization" not in client.requests[0]["headers"]
+
+
+def test_ollama_provider_accepts_api_base_url_without_duplicate_api_path():
+    client = FakeHttpClient({"message": {"content": "Hello from local LLM."}})
+    api_config = config("ollama").model_copy(update={"base_url": "http://127.0.0.1:11434/api"})
+
+    reply = generate_agent_reply(
+        prompt="Say hello.",
+        config=api_config,
+        http_client=client,
+    )
+
+    assert reply == "Hello from local LLM."
+    assert client.requests[0]["url"] == "http://127.0.0.1:11434/api/chat"
 
 
 def test_openai_compatible_provider_rejects_blank_reply():

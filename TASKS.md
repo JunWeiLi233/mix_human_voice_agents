@@ -29,6 +29,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Added a stricter launch-readiness research gate: `docs/research-review.md` must include `Last checked: YYYY-MM-DD` and that date must be within 45 days before launch.
 - Added actionable `Next launch actions` in the launch-readiness panel so agents can convert failed readiness checks into concrete next steps.
 - Added `app.cli.launch_readiness --tasks ..\TASKS.md` so readiness failures can refresh this handoff file automatically before a usage/session limit.
+- Hardened provider URL handling so Claude accepts `https://api.anthropic.com` or `https://api.anthropic.com/v1`, and Local accepts `http://127.0.0.1:11434` or `http://127.0.0.1:11434/api`.
 
 ## Verification Already Run
 
