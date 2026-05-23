@@ -12,9 +12,11 @@ from app.cli.launch_readiness import main as launch_readiness_main
 from app.cli.verify_agent_provider import main as verify_agent_provider_main
 from app.cli.verify_qwen_runtime import main as verify_qwen_runtime_main
 from app.core.audio import is_parseable_wav, wav_has_audible_signal
+from app.models.schemas import AgentProviderKind
 
 
 DEFAULT_OUTPUT_DIR = Path("data") / "launch-sequence"
+SUPPORTED_AGENT_PROVIDERS = list(AgentProviderKind.__args__)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -119,6 +121,11 @@ def _validate_manifest(manifest: dict[str, Any]) -> None:
     _require(provider, "provider", "agent_provider")
     _require(provider, "model", "agent_provider")
     _require(provider, "base_url", "agent_provider")
+    if str(provider["provider"]) not in SUPPORTED_AGENT_PROVIDERS:
+        raise ValueError(
+            "agent_provider.provider must be one of: "
+            f"{', '.join(SUPPORTED_AGENT_PROVIDERS)}."
+        )
     generation = manifest.get("generation") or {}
     _require(generation, "prompt", "generation")
 
