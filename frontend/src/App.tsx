@@ -134,7 +134,21 @@ export default function App() {
 
   useEffect(() => {
     void getAgentProviderVerification()
-      .then(setAgentProviderVerification)
+      .then((report) => {
+        setAgentProviderVerification(report);
+        if (report.status === "passed" && report.provider && report.model && report.base_url) {
+          const provider = report.provider;
+          const model = report.model;
+          const baseUrl = report.base_url;
+          setAgentConfig((current) => ({
+            ...current,
+            provider,
+            model,
+            base_url: baseUrl,
+            api_key: "",
+          }));
+        }
+      })
       .catch(() => {
         setAgentProviderVerification({
           status: "missing",

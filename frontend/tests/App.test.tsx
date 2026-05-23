@@ -627,6 +627,9 @@ describe("App", () => {
     expect(await screen.findByText("Provider verified")).toBeInTheDocument();
     expect(screen.getByText("openai_compatible / local-qwen-agent")).toBeInTheDocument();
     expect(screen.getByText("http://127.0.0.1:1234/v1")).toBeInTheDocument();
+    expect(screen.getByLabelText("Base URL")).toHaveValue("http://127.0.0.1:1234/v1");
+    expect(screen.getByLabelText("Model")).toHaveValue("local-qwen-agent");
+    expect(screen.getByLabelText("API key (optional)")).toHaveValue("");
   });
 
   it("lets the user delete an imported voice and removes dependent blends", async () => {
