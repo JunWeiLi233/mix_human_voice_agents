@@ -81,6 +81,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Hardened launch readiness so verified imported voice audio must still live under the managed `data/voices/<id>` profile storage.
 - Hardened voice profile listing so malformed profile metadata is ignored instead of crashing launch readiness.
 - Hardened blend listing so malformed blend metadata is ignored instead of crashing launch readiness.
+- Hardened voice deletion cleanup so malformed blend or generation metadata is ignored while valid references are still removed.
 
 ## Verification Already Run
 
@@ -89,7 +90,8 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - `cd frontend; npm run build` passed.
 - Chrome headless desktop screenshot was captured from `http://127.0.0.1:5174/`.
 - Chrome headless mobile screenshot was captured and mobile clipping was fixed.
-- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 259 tests.
+- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 261 tests.
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_storage.py -q` passed: 10 tests.
 
 ## Next Tasks
 
@@ -113,7 +115,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T08:58:08.471528+00:00`
+- Checked at: `2026-05-23T09:02:53.607190+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Import two consented WAV voice samples with matching transcripts.

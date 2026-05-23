@@ -110,7 +110,10 @@ def delete_voice_profile(profile_id: str) -> VoiceProfileDeleteResult:
 
     deleted_blend_ids: list[str] = []
     for blend_path in sorted(BLEND_ROOT.glob("*.json")):
-        blend = VoiceBlend.model_validate_json(blend_path.read_text(encoding="utf-8"))
+        try:
+            blend = VoiceBlend.model_validate_json(blend_path.read_text(encoding="utf-8"))
+        except ValidationError:
+            continue
         if any(profile.voice_profile_id == profile_id for profile in blend.profiles):
             deleted_blend_ids.append(blend.id)
             blend_path.unlink()
@@ -118,7 +121,10 @@ def delete_voice_profile(profile_id: str) -> VoiceProfileDeleteResult:
     deleted_generation_ids: list[str] = []
     generation_root = GENERATION_ROOT.resolve()
     for metadata_path in sorted(GENERATION_ROOT.glob("*.json")):
-        result = GenerationResult.model_validate_json(metadata_path.read_text(encoding="utf-8"))
+        try:
+            result = GenerationResult.model_validate_json(metadata_path.read_text(encoding="utf-8"))
+        except ValidationError:
+            continue
         if profile_id not in result.source_profile_ids:
             continue
 

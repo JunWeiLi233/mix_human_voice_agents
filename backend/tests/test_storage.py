@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from app.core.storage import (
+    delete_voice_profile,
     get_generation_audio_path,
     get_generation_metadata_path,
     list_blends,
@@ -229,3 +230,116 @@ def test_list_blends_skips_invalid_blend_metadata(tmp_path, monkeypatch):
     blends = list_blends()
 
     assert [blend.id for blend in blends] == ["blend_valid"]
+
+
+def test_delete_voice_profile_skips_invalid_blend_metadata(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    voice_dir = tmp_path / "data" / "voices" / "voice_a"
+    blend_root = tmp_path / "data" / "blends"
+    voice_dir.mkdir(parents=True)
+    blend_root.mkdir(parents=True)
+    source_path = voice_dir / "sample.wav"
+    source_path.write_bytes(b"fake-wav")
+    profile = VoiceProfile(
+        id="voice_a",
+        display_name="Alice",
+        reference_text="Alice reads a clean reference sentence.",
+        consent=ConsentRecord(
+            voice_profile_id="voice_a",
+            speaker_display_name="Alice",
+            consent_type="self_or_written_permission",
+            allowed_uses=["private_agent_voice", "local_audio_export"],
+            confirmed_by="local_user",
+            synthetic_voice_allowed=True,
+        ),
+        source_audio_path=str(source_path),
+        cleaned_audio_path=str(source_path),
+        quality=AudioQuality(
+            file_name="sample.wav",
+            size_bytes=12,
+            format="wav",
+            duration_seconds=8,
+            sample_rate_hz=16000,
+            channel_count=1,
+            warnings=[],
+        ),
+    )
+    blend = VoiceBlend(
+        id="blend_valid",
+        name="Valid launch blend",
+        profiles=[
+            BlendProfile(voice_profile_id="voice_a", weight=0.5),
+            BlendProfile(voice_profile_id="voice_b", weight=0.5),
+        ],
+        strategy="multi_reference_prompt",
+    )
+    (voice_dir / "profile.json").write_text(profile.model_dump_json(), encoding="utf-8")
+    valid_blend_path = blend_root / "valid.json"
+    invalid_blend_path = blend_root / "invalid.json"
+    valid_blend_path.write_text(blend.model_dump_json(), encoding="utf-8")
+    invalid_blend_path.write_text("{invalid-json", encoding="utf-8")
+
+    result = delete_voice_profile("voice_a")
+
+    assert result.deleted_blend_ids == ["blend_valid"]
+    assert not valid_blend_path.exists()
+    assert invalid_blend_path.exists()
+    assert not voice_dir.exists()
+
+
+def test_delete_voice_profile_skips_invalid_generation_metadata(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    voice_dir = tmp_path / "data" / "voices" / "voice_a"
+    generation_root = tmp_path / "data" / "generations"
+    voice_dir.mkdir(parents=True)
+    generation_root.mkdir(parents=True)
+    source_path = voice_dir / "sample.wav"
+    source_path.write_bytes(b"fake-wav")
+    profile = VoiceProfile(
+        id="voice_a",
+        display_name="Alice",
+        reference_text="Alice reads a clean reference sentence.",
+        consent=ConsentRecord(
+            voice_profile_id="voice_a",
+            speaker_display_name="Alice",
+            consent_type="self_or_written_permission",
+            allowed_uses=["private_agent_voice", "local_audio_export"],
+            confirmed_by="local_user",
+            synthetic_voice_allowed=True,
+        ),
+        source_audio_path=str(source_path),
+        cleaned_audio_path=str(source_path),
+        quality=AudioQuality(
+            file_name="sample.wav",
+            size_bytes=12,
+            format="wav",
+            duration_seconds=8,
+            sample_rate_hz=16000,
+            channel_count=1,
+            warnings=[],
+        ),
+    )
+    metadata_path = generation_root / "valid.json"
+    audio_path = generation_root / "valid.wav"
+    generation = GenerationResult(
+        id="generation_valid",
+        audio_path=str(audio_path),
+        metadata_path=str(metadata_path),
+        synthetic_label="synthetic mixed voice",
+        source_profile_ids=["voice_a", "voice_b"],
+        blend_strategy="multi_reference_prompt",
+        tts_backend="qwen3_tts",
+    )
+    (voice_dir / "profile.json").write_text(profile.model_dump_json(), encoding="utf-8")
+    audio_path.write_bytes(b"fake-qwen-wav")
+    metadata_path.write_text(generation.model_dump_json(), encoding="utf-8")
+    invalid_metadata_path = generation_root / "invalid.json"
+    invalid_metadata_path.write_text("{invalid-json", encoding="utf-8")
+
+    result = delete_voice_profile("voice_a")
+
+    assert result.deleted_generation_ids == ["generation_valid"]
+    assert not metadata_path.exists()
+    assert not audio_path.exists()
+    assert invalid_metadata_path.exists()
+    assert not voice_dir.exists()
