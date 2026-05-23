@@ -2711,6 +2711,29 @@ def test_import_voice_requires_reference_text(tmp_path: Path, monkeypatch):
     assert "reference transcript" in response.json()["detail"]
 
 
+def test_import_voice_rejects_reference_text_that_is_too_short(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    sample_path = tmp_path / "sample.wav"
+    write_reference_wav(sample_path)
+
+    with sample_path.open("rb") as sample:
+        response = client.post(
+            "/api/voices",
+            data={
+                "speaker_display_name": "Alice",
+                "consent_type": "self_or_written_permission",
+                "allowed_uses": "private_agent_voice,local_audio_export",
+                "confirmed_by": "local_user",
+                "notes": "approved for local prototype",
+                "reference_text": "hello",
+            },
+            files={"file": ("sample.wav", sample, "audio/wav")},
+        )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Reference transcript must include at least 5 words for Qwen voice cloning."
+
+
 def test_import_voice_requires_speaker_display_name(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     sample_path = tmp_path / "sample.wav"

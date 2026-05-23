@@ -15,6 +15,7 @@ from app.cli.verify_qwen_runtime import main as verify_qwen_runtime_main
 from app.core.audio import AudioQualityError, analyze_audio_sample, is_parseable_wav, wav_has_audible_signal
 from app.core.consent import ConsentError, create_consent_record
 from app.core.launch_manifest import LAUNCH_BLEND_STRATEGY, launch_manifest_template
+from app.core.reference_text import REFERENCE_TEXT_ERROR, reference_text_error
 from app.core.safety import SafetyError, check_generation_request
 from app.models.schemas import AgentProviderKind, ConsentRequest
 
@@ -163,6 +164,13 @@ def _validate_manifest(manifest: dict[str, Any]) -> list[dict[str, object]]:
         _require_string(voice, "speaker_display_name", f"voices[{index}]")
         _require_string(voice, "confirmed_by", f"voices[{index}]")
         _require_string(voice, "reference_text", f"voices[{index}]")
+        transcript_error = reference_text_error(str(voice["reference_text"]))
+        if transcript_error:
+            if transcript_error == REFERENCE_TEXT_ERROR:
+                raise ValueError(
+                    f"voices[{index}].reference_text must include at least 5 words for Qwen voice cloning."
+                )
+            raise ValueError(f"voices[{index}].reference_text is required.")
         _require_string(voice, "audio", f"voices[{index}]")
         _validate_optional_string(voice, "notes", f"voices[{index}]", allow_blank=True)
         _validate_consent_claim(voice, index)

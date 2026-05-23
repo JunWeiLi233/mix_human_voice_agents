@@ -68,6 +68,32 @@ def test_import_voice_cli_rejects_blank_reference_text(tmp_path: Path):
     assert payload["error"] == "A reference transcript is required for voice import."
 
 
+def test_import_voice_cli_rejects_reference_text_that_is_too_short(tmp_path: Path):
+    sample_path = tmp_path / "sample.wav"
+    write_reference_wav(sample_path)
+    metadata_path = tmp_path / "voice.json"
+
+    exit_code = main(
+        [
+            "--speaker-display-name",
+            "Alice",
+            "--confirmed-by",
+            "Junwei",
+            "--reference-text",
+            "hello",
+            "--audio",
+            str(sample_path),
+            "--metadata",
+            str(metadata_path),
+        ]
+    )
+
+    assert exit_code == 2
+    payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert payload["status"] == "failed"
+    assert payload["error"] == "Reference transcript must include at least 5 words for Qwen voice cloning."
+
+
 def test_import_voice_cli_rejects_public_figure_label(tmp_path: Path):
     sample_path = tmp_path / "sample.wav"
     write_reference_wav(sample_path)

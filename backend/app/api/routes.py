@@ -23,6 +23,7 @@ from app.core.launch import (
 )
 from app.core.launch_manifest import launch_manifest_template
 from app.core.qwen_profiles import validate_qwen_voice_profiles
+from app.core.reference_text import reference_text_error
 from app.core.qwen_runtime import resolved_qwen_runtime_config
 from app.core.safety import SafetyError, check_generation_request
 from app.core.storage import (
@@ -564,8 +565,9 @@ async def import_voice_route(
         raise HTTPException(status_code=400, detail="A consent confirmer is required for voice import.")
 
     cleaned_reference_text = reference_text.strip()
-    if not cleaned_reference_text:
-        raise HTTPException(status_code=400, detail="A reference transcript is required for voice import.")
+    transcript_error = reference_text_error(cleaned_reference_text)
+    if transcript_error:
+        raise HTTPException(status_code=400, detail=transcript_error)
 
     voice_id = new_voice_profile_id()
     consent_request = ConsentRequest(

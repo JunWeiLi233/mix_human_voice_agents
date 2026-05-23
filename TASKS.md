@@ -20,10 +20,11 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Latest work blocks clipped browser microphone recordings before import and keeps recorded imports inside the launch voice quality requirements.
 - Latest handoff work adds a dedicated usage-limit CLI that refreshes launch artifacts, readiness, and a `## Usage Limit Handoff` section in `TASKS.md`.
 - Latest cleanup work adds a dry-run-first stale blend prune command so agents can clear old nonmatching blends before creating the real launch blend.
+- Latest import hardening rejects too-short reference transcripts across CLI import, browser/API import, and launch-manifest dry-runs before Qwen verification.
 
 ## Usage Limit Handoff
 
-- Last refreshed: `2026-05-23T16:40:08.446271+00:00`
+- Last refreshed: `2026-05-23T16:45:23.884958+00:00`
 - Reason: Codex usage/session/context limit handoff.
 - Next agent should start from `## Next Tasks`, `## Launch Readiness Remaining Tasks`, and `## Launch Artifact Inventory`.
 - Preserve commit identity: `JunWeiLi233 <mcpejunwei@gmail.com>`.
@@ -31,11 +32,11 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T16:40:08.437271+00:00`
+- Checked at: `2026-05-23T16:45:23.875957+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Re-record or replace unusable voice samples, then import at least two clean consented WAV voices with matching transcripts.
-  Evidence: 0 launch-usable imported voices; 1 imported voices; unusable: voice_93dc1ef39402 has audio quality warnings.
+  Evidence: 1 launch-usable imported voices; 2 imported voices; unusable: voice_93dc1ef39402 has audio quality warnings.
 - [ ] saved_blend: Create and save a multi-reference blend from imported voices.
   Evidence: No saved blend references at least two currently imported voices.
 - [ ] generated_audio: Generate a Qwen mixed voice clip with imported source details.
@@ -54,10 +55,10 @@ Blocking reasons:
 
 ## Launch Artifact Inventory
 
-- Voices: `1` total; `0` usable; `1` unusable
-- Blends: `269` total; `0` launch-eligible; `269` stale/nonmatching
+- Voices: `2` total; `1` usable; `1` unusable
+- Blends: `270` total; `0` launch-eligible; `270` stale/nonmatching
 - Generations: `0` total; `0` Qwen; `0` launch-eligible; `0` stale/nonmatching
-- Usable voice IDs: `none`
+- Usable voice IDs: `voice_93f62f27a5b4`
 - Launch-eligible blend IDs: `none`
 - Launch-eligible generation IDs: `none`
 - Provider preflight status: `missing`
@@ -172,6 +173,7 @@ Next artifact commands:
 - Added `app.cli.handoff` so Codex can refresh `TASKS.md` with launch artifact inventory, readiness blockers, and a usage-limit handoff stamp before a session/context limit.
 - Added `app.cli.prune_launch_artifacts` so stale/nonmatching saved blends can be previewed with a dry-run report before optionally deleting them with `--apply`.
 - Added stale-blend cleanup as a launch artifact next command whenever inventory detects nonmatching blends.
+- Added shared reference transcript validation requiring at least 5 words for Qwen voice cloning imports and launch manifests.
 
 ## Verification Already Run
 
@@ -187,6 +189,11 @@ Next artifact commands:
 - `cd backend; .\.venv\Scripts\python -m app.cli.prune_launch_artifacts --report data\prune-launch-artifacts-report.json` dry-ran stale blend cleanup and reported 268 stale blends would be deleted, with no deletions.
 - `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 285 tests.
 - `cd backend; .\.venv\Scripts\python -m app.cli.handoff --tasks ..\TASKS.md --no-summary` refreshed usage-limit handoff, launch readiness, and artifact inventory with the prune command.
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_import_voice_cli.py -q -k "too_short"` first failed because one-word reference transcripts were importable, then passed after adding shared transcript validation.
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_routes.py -q -k "too_short"` first failed because the browser/API import accepted one-word transcripts, then passed after adding shared transcript validation.
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_run_launch_sequence_cli.py -q -k "short_reference"` first failed because launch manifest dry-run accepted one-word transcripts, then passed after adding shared transcript validation.
+- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 288 tests.
+- `cd backend; .\.venv\Scripts\python -m app.cli.handoff --tasks ..\TASKS.md --no-summary` refreshed usage-limit handoff, launch readiness, and artifact inventory after transcript validation.
 - `cd frontend; npm test -- --run` passed: 7 tests.
 - `cd frontend; npx tsc --noEmit` passed.
 - `cd frontend; npm run build` passed.

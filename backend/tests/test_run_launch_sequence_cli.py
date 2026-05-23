@@ -377,6 +377,58 @@ def test_run_launch_sequence_dry_run_rejects_non_string_launch_text_fields(
         }
 
 
+def test_run_launch_sequence_dry_run_rejects_short_reference_text_before_audio_checks(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    voice_a_audio = tmp_path / "alice.wav"
+    voice_b_audio = tmp_path / "bob.wav"
+    write_reference_wav(voice_a_audio)
+    write_reference_wav(voice_b_audio)
+
+    def fail_if_called(argv):
+        raise AssertionError("short reference text should validate before launch subcommands")
+
+    monkeypatch.setattr("app.cli.run_launch_sequence.import_voice_main", fail_if_called)
+    monkeypatch.setattr("app.cli.run_launch_sequence.verify_qwen_runtime_main", fail_if_called)
+    monkeypatch.setattr("app.cli.run_launch_sequence.generate_voice_main", fail_if_called)
+    manifest = {
+        "voices": [
+            {
+                "speaker_display_name": "Alice",
+                "confirmed_by": "Junwei",
+                "reference_text": "hello",
+                "audio": str(voice_a_audio),
+            },
+            {
+                "speaker_display_name": "Bob",
+                "confirmed_by": "Junwei",
+                "reference_text": "Bob reads a clean launch reference.",
+                "audio": str(voice_b_audio),
+            },
+        ],
+        "agent_provider": {
+            "provider": "openai_compatible",
+            "model": "local-qwen-agent",
+            "base_url": "http://127.0.0.1:1234/v1",
+        },
+        "qwen": {"text": "Verify this disclosed synthetic voice."},
+        "generation": {"prompt": "Greet the user as a disclosed synthetic assistant."},
+    }
+    manifest_path = tmp_path / "short-reference-manifest.json"
+    report_path = tmp_path / "short-reference-report.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    exit_code = main(["--manifest", str(manifest_path), "--dry-run", "--report", str(report_path)])
+
+    assert exit_code == 2
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report == {
+        "status": "failed",
+        "error": "voices[1].reference_text must include at least 5 words for Qwen voice cloning.",
+    }
+
+
 def test_run_launch_sequence_dry_run_rejects_non_string_optional_command_fields(
     tmp_path: Path, monkeypatch
 ):

@@ -7,6 +7,7 @@ from typing import Sequence
 
 from app.core.audio import AudioQualityError, analyze_audio_sample
 from app.core.consent import ConsentError, create_consent_record
+from app.core.reference_text import reference_text_error
 from app.core.storage import new_voice_profile_id, safe_storage_file_name, save_voice_profile
 from app.models.schemas import ConsentRequest, VoiceProfile
 
@@ -86,8 +87,9 @@ def _input_error(speaker_display_name: str, confirmed_by: str, reference_text: s
         return "A speaker display name is required for voice import."
     if not confirmed_by:
         return "A consent confirmer is required for voice import."
-    if not reference_text:
-        return "A reference transcript is required for voice import."
+    transcript_error = reference_text_error(reference_text)
+    if transcript_error:
+        return transcript_error
     if not audio_path.exists():
         return f"Reference audio does not exist: {audio_path}"
     return None
