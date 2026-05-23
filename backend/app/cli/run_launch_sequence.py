@@ -121,12 +121,12 @@ def _validate_manifest(manifest: dict[str, Any]) -> None:
             raise ValueError(f"voices[{index}].audio must contain audible signal: {audio_path}")
     if len(normalized_speakers) < 2:
         raise ValueError("Launch sequence manifest requires at least two distinct speaker display names.")
-    blend = manifest.get("blend") or {}
+    blend = _optional_object(manifest.get("blend"), "blend")
     if "name" in blend and not str(blend["name"]).strip():
         raise ValueError("blend.name must not be blank when provided.")
     if str(blend.get("strategy", LAUNCH_BLEND_STRATEGY)) != LAUNCH_BLEND_STRATEGY:
         raise ValueError("blend.strategy must be multi_reference_prompt for Qwen launch generation.")
-    provider = manifest.get("agent_provider") or {}
+    provider = _optional_object(manifest.get("agent_provider"), "agent_provider")
     _require(provider, "provider", "agent_provider")
     _require(provider, "model", "agent_provider")
     _require(provider, "base_url", "agent_provider")
@@ -137,9 +137,9 @@ def _validate_manifest(manifest: dict[str, Any]) -> None:
         )
     if "prompt" in provider and not str(provider["prompt"]).strip():
         raise ValueError("agent_provider.prompt must not be blank when provided.")
-    generation = manifest.get("generation") or {}
+    generation = _optional_object(manifest.get("generation"), "generation")
     _require(generation, "prompt", "generation")
-    qwen = manifest.get("qwen") or {}
+    qwen = _optional_object(manifest.get("qwen"), "qwen")
     if "text" in qwen and not str(qwen["text"]).strip():
         raise ValueError("qwen.text must not be blank when provided.")
     _validate_optional_qwen_runtime_options(qwen)
@@ -148,6 +148,14 @@ def _validate_manifest(manifest: dict[str, Any]) -> None:
 def _require(payload: dict[str, Any], key: str, label: str) -> None:
     if not str(payload.get(key, "")).strip():
         raise ValueError(f"{label}.{key} is required.")
+
+
+def _optional_object(payload: Any, label: str) -> dict[str, Any]:
+    if payload is None:
+        return {}
+    if not isinstance(payload, dict):
+        raise ValueError(f"{label} must be an object.")
+    return payload
 
 
 def _validate_voice_weight(voice: dict[str, Any], index: int) -> None:
