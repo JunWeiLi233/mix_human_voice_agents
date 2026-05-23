@@ -183,10 +183,32 @@ def test_openai_compatible_provider_rejects_blank_reply():
         )
 
 
+def test_openai_compatible_provider_rejects_response_without_message_text():
+    client = FakeHttpClient({"choices": [{"message": {}}]})
+
+    with pytest.raises(AgentProviderError, match="OpenAI-compatible response did not include text content"):
+        generate_agent_reply(
+            prompt="Say hello.",
+            config=config("openai_compatible"),
+            http_client=client,
+        )
+
+
 def test_ollama_provider_rejects_blank_reply():
     client = FakeHttpClient({"message": {"content": "   "}})
 
     with pytest.raises(AgentProviderError, match="non-empty text"):
+        generate_agent_reply(
+            prompt="Say hello.",
+            config=config("ollama"),
+            http_client=client,
+        )
+
+
+def test_ollama_provider_rejects_response_without_message_text():
+    client = FakeHttpClient({"message": {}})
+
+    with pytest.raises(AgentProviderError, match="Ollama response did not include text content"):
         generate_agent_reply(
             prompt="Say hello.",
             config=config("ollama"),

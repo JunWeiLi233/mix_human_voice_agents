@@ -104,7 +104,7 @@ def generate_agent_reply(
         )
         response.raise_for_status()
         data = response.json()
-        reply = data["choices"][0]["message"]["content"]
+        reply = _extract_openai_compatible_reply(data)
     elif config.provider == "anthropic":
         if not config.api_key.strip():
             raise AgentProviderError("API key is required for Anthropic providers.")
@@ -154,7 +154,7 @@ def generate_agent_reply(
         )
         response.raise_for_status()
         data = response.json()
-        reply = data["message"]["content"]
+        reply = _extract_ollama_reply(data)
     else:
         raise AgentProviderError(f"Unsupported agent provider: {config.provider}")
 
@@ -171,6 +171,23 @@ def generate_agent_reply_record(prompt: str, config: AgentConfig) -> AgentReply:
 def _validate_agent_reply_text(reply: str) -> None:
     if not reply.strip():
         raise AgentProviderError("Agent provider response must include non-empty text.")
+
+
+def _extract_openai_compatible_reply(data: dict[str, Any]) -> str:
+    choices = data.get("choices", [])
+    if not choices:
+        raise AgentProviderError("OpenAI-compatible response did not include choices.")
+    reply = choices[0].get("message", {}).get("content", "")
+    if not reply:
+        raise AgentProviderError("OpenAI-compatible response did not include text content.")
+    return reply
+
+
+def _extract_ollama_reply(data: dict[str, Any]) -> str:
+    reply = data.get("message", {}).get("content", "")
+    if not reply:
+        raise AgentProviderError("Ollama response did not include text content.")
+    return reply
 
 
 def _google_model_path(model: str) -> str:
