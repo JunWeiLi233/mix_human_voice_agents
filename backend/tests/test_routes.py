@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 from pathlib import Path
+from datetime import datetime
 import httpx
 import json
 import math
@@ -262,6 +263,8 @@ def test_qwen_verification_route_runs_with_selected_imported_profiles(tmp_path: 
     assert saved_report["status"] == "passed"
     assert saved_report["output_audio_path"] == payload["output_audio_path"]
     assert saved_report["source_profile_details"] == payload["source_profile_details"]
+    saved_payload = json.loads((tmp_path / "data" / "qwen-runtime-verification-report.json").read_text(encoding="utf-8"))
+    assert datetime.fromisoformat(saved_payload["checked_at"])
 
 
 def test_qwen_verification_route_records_resolved_adapter_runtime_config_when_request_omits_it(

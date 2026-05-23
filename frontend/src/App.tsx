@@ -121,6 +121,7 @@ export default function App() {
           status: "missing",
           tts_backend: "qwen3_tts",
           report_path: "data/qwen-runtime-verification-report.json",
+          checked_at: new Date().toISOString(),
           voice_profile_ids: [],
           error: "Qwen runtime verification report is unavailable.",
         });

@@ -746,7 +746,13 @@ function voiceProfile(id: string, displayName: string, warnings: string[] = []) 
   };
 }
 
-function requestJson(fetchMock: ReturnType<typeof vi.spyOn>, path: string) {
+type FetchMock = {
+  mock: {
+    calls: Array<[RequestInfo | URL, RequestInit?]>;
+  };
+};
+
+function requestJson(fetchMock: FetchMock, path: string) {
   const call = fetchMock.mock.calls.find(([input, init]) => input.toString() === path && init?.method === "POST");
   if (!call) {
     throw new Error(`Missing ${path} request`);

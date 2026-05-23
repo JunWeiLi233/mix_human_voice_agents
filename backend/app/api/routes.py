@@ -230,8 +230,9 @@ def _write_qwen_verification_report(payload: dict[str, object]) -> QwenVerificat
     report_path = QWEN_VERIFICATION_REPORT_PATH
     report_path.parent.mkdir(parents=True, exist_ok=True)
     payload["report_path"] = str(report_path)
-    report_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    return QwenVerificationReport.model_validate(payload)
+    report = QwenVerificationReport.model_validate(payload)
+    report_path.write_text(json.dumps(report.model_dump(mode="json"), indent=2), encoding="utf-8")
+    return report
 
 
 def _qwen_generated_audio_error(path: Path, label: str) -> str | None:

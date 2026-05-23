@@ -120,6 +120,7 @@ class QwenVerificationReport(BaseModel):
     status: VerificationStatus
     tts_backend: TtsBackend = "qwen3_tts"
     report_path: str
+    checked_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     voice_profile_ids: list[str] = []
     model_id: str | None = None
     device_map: str | None = None

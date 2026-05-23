@@ -88,6 +88,7 @@ export type QwenVerificationReport = {
   status: "missing" | "passed" | "failed";
   tts_backend: "qwen3_tts";
   report_path: string;
+  checked_at: string;
   voice_profile_ids: string[];
   model_id?: string | null;
   device_map?: string | null;

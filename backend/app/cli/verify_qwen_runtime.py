@@ -11,7 +11,7 @@ from app.core.generation import build_source_profile_details
 from app.core.qwen_profiles import validate_qwen_voice_profiles
 from app.core.qwen_runtime import resolved_qwen_runtime_config
 from app.core.storage import GENERATION_ROOT, get_voice_profiles_by_ids
-from app.models.schemas import BlendProfileInput
+from app.models.schemas import BlendProfileInput, QwenVerificationReport
 from app.tts.qwen import QwenTtsAdapter, QwenTtsNotConfigured
 
 
@@ -196,7 +196,8 @@ def _qwen_runtime_config_from_args(args: argparse.Namespace) -> dict[str, str | 
 def _write_report(report_path: Path, payload: dict[str, object]) -> None:
     report_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {**payload, "report_path": str(report_path)}
-    report_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    report = QwenVerificationReport.model_validate(payload)
+    report_path.write_text(json.dumps(report.model_dump(mode="json"), indent=2), encoding="utf-8")
 
 
 if __name__ == "__main__":
