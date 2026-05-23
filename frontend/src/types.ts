@@ -29,6 +29,8 @@ export type GenerationResult = {
   id: string;
   audio_path: string;
   metadata_path: string;
+  blend_id?: string | null;
+  blend_name?: string | null;
   prompt?: string;
   agent_reply?: string;
   synthetic_label: string;

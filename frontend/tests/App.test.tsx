@@ -191,6 +191,8 @@ describe("App", () => {
         return jsonResponse([
           {
             id: "generation_existing",
+            blend_id: "blend_saved",
+            blend_name: "Saved Alice + Bob",
             audio_path: "data/generations/generation_existing.wav",
             metadata_path: "data/generations/generation_existing.json",
             prompt: "Summarize launch readiness.",
@@ -463,6 +465,7 @@ describe("App", () => {
     await screen.findByRole("button", { name: "Saved Alice + Bob" });
     expect(screen.getByRole("button", { name: "Generate AI Voice" })).toBeEnabled();
     await screen.findByText("synthetic mixed voice using Saved Alice 60% + Saved Bob 40%");
+    expect(screen.getByText("Blend: Saved Alice + Bob")).toBeInTheDocument();
     expect(screen.getByText("Prompt: Summarize launch readiness.")).toBeInTheDocument();
     expect(screen.getByText("Reply: The mixed voice agent still needs Qwen verification.")).toBeInTheDocument();
     expect(

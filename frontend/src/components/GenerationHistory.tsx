@@ -17,6 +17,7 @@ export function GenerationHistory({ generations }: Props) {
               <div>
                 {item.synthetic_label} using {formatGenerationSources(item)}
               </div>
+              {item.blend_name ? <p>Blend: {item.blend_name}</p> : null}
               {item.agent_trace ? (
                 <p>
                   Agent: {item.agent_trace.provider} / {item.agent_trace.model}

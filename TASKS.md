@@ -83,6 +83,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Hardened blend listing so malformed blend metadata is ignored instead of crashing launch readiness.
 - Hardened voice deletion cleanup so malformed blend or generation metadata is ignored while valid references are still removed.
 - Persisted non-secret frontend agent provider settings so user-selected API/local LLM endpoint, model, provider, and system prompt survive reloads without storing API keys.
+- Added generated-clip blend traceability so audio metadata and history show the saved blend id/name that produced each mixed voice clip.
 
 ## Verification Already Run
 
@@ -93,6 +94,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Chrome headless mobile screenshot was captured and mobile clipping was fixed.
 - `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 261 tests.
 - `cd backend; .\.venv\Scripts\python -m pytest tests\test_storage.py -q` passed: 10 tests.
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_generation.py -q` passed: 14 tests.
 
 ## Next Tasks
 
@@ -116,7 +118,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T14:08:34.361692+00:00`
+- Checked at: `2026-05-23T14:11:58.286418+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Import two consented WAV voice samples with matching transcripts.

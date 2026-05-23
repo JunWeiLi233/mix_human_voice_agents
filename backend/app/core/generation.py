@@ -49,6 +49,8 @@ def generate_agent_clip(
     result = GenerationResult(
         audio_path=str(audio_path),
         metadata_path=str(metadata_path),
+        blend_id=blend.id,
+        blend_name=blend.name,
         prompt=prompt,
         agent_reply=agent_reply,
         synthetic_label=blend.synthetic_label,

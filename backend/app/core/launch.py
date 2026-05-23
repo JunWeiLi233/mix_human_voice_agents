@@ -791,6 +791,8 @@ def _generation_metadata_status(generation: GenerationResult) -> dict[str, objec
         metadata.id != generation.id
         or not _same_audio_path(metadata.audio_path, generation.audio_path)
         or not _same_audio_path(metadata.metadata_path, generation.metadata_path)
+        or metadata.blend_id != generation.blend_id
+        or metadata.blend_name != generation.blend_name
         or metadata.source_profile_ids != generation.source_profile_ids
         or metadata.source_profiles != generation.source_profiles
         or metadata.source_profile_details != generation.source_profile_details

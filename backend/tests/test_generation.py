@@ -206,6 +206,8 @@ def test_generation_writes_wav_and_metadata(tmp_path: Path):
     assert result.source_profiles[0].weight == pytest.approx(2 / 3)
     assert result.source_profiles[1].voice_profile_id == "voice_b"
     assert result.source_profiles[1].weight == pytest.approx(1 / 3)
+    assert result.blend_id == blend.id
+    assert result.blend_name == "Pair"
     assert result.agent_trace.provider == "openai"
     assert result.agent_trace.model == "gpt-4.1-mini"
     assert result.prompt == "Greet the user as a synthetic assistant."
@@ -215,6 +217,8 @@ def test_generation_writes_wav_and_metadata(tmp_path: Path):
     assert metadata["prompt"] == "Greet the user as a synthetic assistant."
     assert metadata["agent_reply"] == "Hello, I am your synthetic mixed voice assistant."
     assert metadata["source_profile_ids"] == ["voice_a", "voice_b"]
+    assert metadata["blend_id"] == blend.id
+    assert metadata["blend_name"] == "Pair"
     assert metadata["agent_trace"] == {"provider": "openai", "model": "gpt-4.1-mini"}
     assert metadata["watermark"] == {
         "type": "metadata",
