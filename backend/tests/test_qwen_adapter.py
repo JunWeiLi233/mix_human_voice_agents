@@ -193,3 +193,13 @@ def test_qwen_adapter_loads_model_from_environment_config(monkeypatch, tmp_path:
             "attn_implementation": "flash_attention_2",
         },
     }
+
+
+def test_qwen_runtime_status_uses_environment_model_id(monkeypatch):
+    monkeypatch.setenv("QWEN_TTS_MODEL_ID", "Qwen/Qwen3-TTS-12Hz-1.7B-Base")
+    monkeypatch.setattr("app.tts.qwen.importlib.util.find_spec", lambda name: object())
+
+    status = QwenTtsAdapter.runtime_status()
+
+    assert status.available is True
+    assert status.model_id == "Qwen/Qwen3-TTS-12Hz-1.7B-Base"

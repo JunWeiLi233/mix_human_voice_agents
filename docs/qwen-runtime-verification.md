@@ -26,6 +26,8 @@ $env:QWEN_TTS_DTYPE = "bfloat16"
 $env:QWEN_TTS_ATTN_IMPLEMENTATION = "flash_attention_2"
 ```
 
+The Qwen runtime status endpoint and launch-readiness audit use `QWEN_TTS_MODEL_ID` when no explicit model id is supplied, matching the model that `QwenTtsAdapter.from_pretrained()` loads.
+
 For a smaller Base model, use `Qwen/Qwen3-TTS-12Hz-0.6B-Base`. For CPU-only diagnostics, set `QWEN_TTS_DEVICE_MAP=cpu` and omit dtype/FlashAttention settings if the local install does not support them.
 
 ## Verify With Consented Samples

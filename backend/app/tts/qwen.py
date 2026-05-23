@@ -74,18 +74,19 @@ class QwenTtsAdapter:
         )
 
     @staticmethod
-    def runtime_status(model_id: str = DEFAULT_QWEN_TTS_MODEL_ID) -> TtsRuntimeStatus:
+    def runtime_status(model_id: str | None = None) -> TtsRuntimeStatus:
+        resolved_model_id = model_id or os.getenv("QWEN_TTS_MODEL_ID") or DEFAULT_QWEN_TTS_MODEL_ID
         if importlib.util.find_spec("qwen_tts") is None:
             return TtsRuntimeStatus(
                 backend="qwen3_tts",
                 available=False,
-                model_id=model_id,
+                model_id=resolved_model_id,
                 message='qwen-tts is not installed. Run: python -m pip install -e ".[qwen]"',
             )
         return TtsRuntimeStatus(
             backend="qwen3_tts",
             available=True,
-            model_id=model_id,
+            model_id=resolved_model_id,
             message="qwen-tts package is importable. Verify with consented samples before launch.",
         )
 
