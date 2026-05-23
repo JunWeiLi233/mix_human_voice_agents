@@ -83,7 +83,7 @@ export function AgentProviderSettings({ value, onChange, testReply, testing, onT
       </label>
       {value.provider !== "ollama" ? (
         <label>
-          API key
+          API key{value.provider === "openai_compatible" ? " (optional)" : ""}
           <input type="password" value={value.api_key} onChange={(event) => update({ api_key: event.target.value })} />
         </label>
       ) : null}

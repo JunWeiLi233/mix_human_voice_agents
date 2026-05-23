@@ -91,15 +91,15 @@ def generate_agent_reply(
     base_url = config.base_url.rstrip("/")
 
     if config.provider in {"openai", "xai", "openai_compatible"}:
-        if not config.api_key.strip():
-            raise AgentProviderError("API key is required for OpenAI-compatible providers.")
+        if config.provider in {"openai", "xai"} and not config.api_key.strip():
+            raise AgentProviderError("API key is required for OpenAI and xAI providers.")
+        headers = {"Content-Type": "application/json"}
+        if config.api_key.strip():
+            headers["Authorization"] = f"Bearer {config.api_key}"
         response = _post_provider_request(
             client,
             f"{base_url}/chat/completions",
-            headers={
-                "Authorization": f"Bearer {config.api_key}",
-                "Content-Type": "application/json",
-            },
+            headers=headers,
             json=build_agent_payload(config, prompt),
             timeout=60,
         )

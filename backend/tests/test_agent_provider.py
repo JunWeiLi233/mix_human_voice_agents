@@ -89,6 +89,26 @@ def test_openai_compatible_provider_uses_user_api_settings():
     assert client.requests[0]["headers"]["Authorization"] == "Bearer sk-test"
 
 
+def test_openai_compatible_provider_allows_authless_local_endpoint():
+    client = FakeHttpClient({"choices": [{"message": {"content": "Hello from local gateway."}}]})
+    local_config = config("openai_compatible").model_copy(
+        update={
+            "base_url": "http://127.0.0.1:1234/v1",
+            "api_key": "",
+        }
+    )
+
+    reply = generate_agent_reply(
+        prompt="Say hello.",
+        config=local_config,
+        http_client=client,
+    )
+
+    assert reply == "Hello from local gateway."
+    assert client.requests[0]["url"] == "http://127.0.0.1:1234/v1/chat/completions"
+    assert "Authorization" not in client.requests[0]["headers"]
+
+
 def test_openai_provider_uses_chatgpt_api_settings():
     client = FakeHttpClient({"choices": [{"message": {"content": "Hello from ChatGPT."}}]})
 
