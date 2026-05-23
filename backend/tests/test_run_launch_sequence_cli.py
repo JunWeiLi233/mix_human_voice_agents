@@ -392,6 +392,61 @@ def test_run_launch_sequence_dry_run_rejects_non_string_optional_command_fields(
         }
 
 
+def test_run_launch_sequence_dry_run_rejects_unsafe_consent_claims_before_import(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    manifest_path = tmp_path / "launch-manifest.json"
+    voice_a_audio = tmp_path / "alice.wav"
+    voice_b_audio = tmp_path / "bob.wav"
+    write_reference_wav(voice_a_audio)
+    write_reference_wav(voice_b_audio)
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "voices": [
+                    {
+                        "speaker_display_name": "Alice",
+                        "confirmed_by": "Junwei",
+                        "notes": "I do not have permission from this speaker.",
+                        "reference_text": "Alice reads a launch reference.",
+                        "audio": str(voice_a_audio),
+                    },
+                    {
+                        "speaker_display_name": "Bob",
+                        "confirmed_by": "Junwei",
+                        "notes": "Written permission captured.",
+                        "reference_text": "Bob reads a launch reference.",
+                        "audio": str(voice_b_audio),
+                    },
+                ],
+                "agent_provider": {
+                    "provider": "openai_compatible",
+                    "model": "local-qwen-agent",
+                    "base_url": "http://127.0.0.1:1234/v1",
+                },
+                "generation": {"prompt": "Greet the user as a disclosed synthetic assistant."},
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        "app.cli.run_launch_sequence.import_voice_main",
+        lambda argv: (_ for _ in ()).throw(AssertionError("consent claims should validate before imports")),
+    )
+
+    exit_code = main(
+        ["--manifest", str(manifest_path), "--dry-run", "--report", "sequence-report.json"]
+    )
+
+    assert exit_code == 2
+    report = json.loads(Path("sequence-report.json").read_text(encoding="utf-8"))
+    assert report == {
+        "status": "failed",
+        "error": "voices[1].consent failed safety check: Voice import requires self or written permission from the speaker.",
+    }
+
+
 def test_run_launch_sequence_dry_run_rejects_non_object_manifest_sections(
     tmp_path: Path, monkeypatch
 ):

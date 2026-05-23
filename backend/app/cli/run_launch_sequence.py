@@ -12,7 +12,8 @@ from app.cli.launch_readiness import main as launch_readiness_main
 from app.cli.verify_agent_provider import main as verify_agent_provider_main
 from app.cli.verify_qwen_runtime import main as verify_qwen_runtime_main
 from app.core.audio import AudioQualityError, analyze_audio_sample, is_parseable_wav, wav_has_audible_signal
-from app.models.schemas import AgentProviderKind
+from app.core.consent import ConsentError, create_consent_record
+from app.models.schemas import AgentProviderKind, ConsentRequest
 
 
 DEFAULT_OUTPUT_DIR = Path("data") / "launch-sequence"
@@ -114,6 +115,7 @@ def _validate_manifest(manifest: dict[str, Any]) -> None:
         _require_string(voice, "reference_text", f"voices[{index}]")
         _require_string(voice, "audio", f"voices[{index}]")
         _validate_optional_string(voice, "notes", f"voices[{index}]", allow_blank=True)
+        _validate_consent_claim(voice, index)
         _validate_voice_weight(voice, index)
         normalized_speakers.add(str(voice["speaker_display_name"]).strip().casefold())
         audio_path = Path(str(voice["audio"]))
@@ -180,6 +182,22 @@ def _validate_optional_string(
         raise ValueError(f"{label}.{key} must be a string.")
     if not allow_blank and not payload[key].strip():
         raise ValueError(f"{label}.{key} must not be blank when provided.")
+
+
+def _validate_consent_claim(voice: dict[str, Any], index: int) -> None:
+    try:
+        create_consent_record(
+            f"launch_manifest_voice_{index}",
+            ConsentRequest(
+                speaker_display_name=str(voice["speaker_display_name"]).strip(),
+                consent_type="self_or_written_permission",
+                allowed_uses=["private_agent_voice", "local_audio_export"],
+                confirmed_by=str(voice["confirmed_by"]).strip(),
+                notes=str(voice.get("notes", "")).strip(),
+            ),
+        )
+    except ConsentError as exc:
+        raise ValueError(f"voices[{index}].consent failed safety check: {exc}") from exc
 
 
 def _optional_object(payload: Any, label: str) -> dict[str, Any]:
