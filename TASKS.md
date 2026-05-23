@@ -99,6 +99,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Added per-voice launch usability reasons to `app.cli.launch_artifacts --summary` so agents can see whether consent, transcript, or audio quality blocks an imported voice.
 - Hardened launch readiness so the imported-voices check reports launch-usable voice count and unusable voice reasons before Qwen verification.
 - Updated launch readiness next actions so unusable imported voices tell agents to re-record or replace bad samples before importing two clean consented WAV voices.
+- Added Qwen generation eligibility diagnostics to `app.cli.launch_artifacts --summary` so handoff agents can see launch-ready vs stale/nonmatching generated clips and the reason each stale clip cannot satisfy launch readiness.
 
 ## Verification Already Run
 
@@ -210,6 +211,14 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - `git diff --check` passed with line-ending normalization warnings only.
 - `cd backend; .\.venv\Scripts\python -m app.cli.launch_artifacts --report data\launch-artifacts-report.json --summary` passed and reported 1 voice, 0 usable voices, 1 unusable voice blocked by audio quality warnings, 250 stale/nonmatching blends, and 0 generations.
 - `cd backend; .\.venv\Scripts\python -m app.cli.launch_readiness --report data\launch-readiness-report.json --tasks ..\TASKS.md --summary` refreshed readiness tasks and now prints `Next: Re-record or replace unusable voice samples, then import at least two clean consented WAV voices with matching transcripts.`
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_launch_artifacts_cli.py -q -k "stale_qwen_generations"` first failed with missing `qwen_generation_count`, then passed after adding generation eligibility diagnostics.
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_launch_artifacts_cli.py -q` passed: 4 tests.
+- `cd backend; .\.venv\Scripts\python -m app.cli.launch_artifacts --report data\launch-artifacts-report.json --summary` passed and reported 1 voice, 0 usable voices, 1 unusable voice blocked by audio quality warnings, 250 stale/nonmatching blends, 0 Qwen launch-eligible generations, and 0 stale/nonmatching generations.
+- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 274 tests.
+- `cd backend; .\.venv\Scripts\python -m app.cli.launch_readiness --report data\launch-readiness-report.json --tasks ..\TASKS.md --summary` refreshed readiness tasks and still exits 1 until real launch artifacts are present.
+- `cd frontend; npm test -- --run` passed: 7 tests.
+- `cd frontend; npx tsc --noEmit` passed.
+- `cd frontend; npm run build` passed.
 
 ## Next Tasks
 
@@ -233,7 +242,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T15:17:18.318665+00:00`
+- Checked at: `2026-05-23T15:22:36.218777+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Re-record or replace unusable voice samples, then import at least two clean consented WAV voices with matching transcripts.

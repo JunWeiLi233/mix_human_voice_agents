@@ -52,6 +52,17 @@ def collect_launch_artifacts() -> dict[str, object]:
     stale_blend_ids = [
         blend.id for blend, status in zip(blends, blend_statuses, strict=True) if not status["launch_eligible"]
     ]
+    generation_statuses = [_generation_status(generation, blends) for generation in generations]
+    launch_eligible_generation_ids = [
+        generation.id
+        for generation, status in zip(generations, generation_statuses, strict=True)
+        if status["launch_eligible"]
+    ]
+    stale_generation_ids = [
+        generation.id
+        for generation, status in zip(generations, generation_statuses, strict=True)
+        if not status["launch_eligible"]
+    ]
 
     return {
         "voice_count": len(voices),
@@ -61,12 +72,20 @@ def collect_launch_artifacts() -> dict[str, object]:
         "launch_eligible_blend_count": len(launch_eligible_blend_ids),
         "stale_blend_count": len(stale_blend_ids),
         "generation_count": len(generations),
+        "qwen_generation_count": sum(1 for generation in generations if generation.tts_backend == "qwen3_tts"),
+        "launch_eligible_generation_count": len(launch_eligible_generation_ids),
+        "stale_generation_count": len(stale_generation_ids),
         "voices": [_voice_payload(voice, status) for voice, status in zip(voices, voice_statuses, strict=True)],
         "usable_voice_ids": usable_voice_ids,
         "launch_eligible_blend_ids": launch_eligible_blend_ids,
         "stale_blend_ids": stale_blend_ids,
+        "launch_eligible_generation_ids": launch_eligible_generation_ids,
+        "stale_generation_ids": stale_generation_ids,
         "blends": [_blend_payload(blend, status) for blend, status in zip(blends, blend_statuses, strict=True)],
-        "generations": [_generation_payload(generation) for generation in generations],
+        "generations": [
+            _generation_payload(generation, status)
+            for generation, status in zip(generations, generation_statuses, strict=True)
+        ],
         "agent_provider": agent_provider.model_dump(mode="json"),
         "agent_provider_commands": _agent_provider_commands(),
         "qwen_verification": qwen_verification.model_dump(mode="json"),
@@ -74,7 +93,7 @@ def collect_launch_artifacts() -> dict[str, object]:
         "next_commands": _next_commands(
             usable_voice_ids=usable_voice_ids,
             blends=blends,
-            generations=generations,
+            generation_statuses=generation_statuses,
             agent_provider_status=agent_provider.status,
             qwen_verification_status=qwen_verification.status,
             qwen_runtime_available=qwen_runtime.available,
@@ -106,7 +125,7 @@ def _blend_payload(blend: VoiceBlend, status: dict[str, object]) -> dict[str, ob
     }
 
 
-def _generation_payload(generation: GenerationResult) -> dict[str, object]:
+def _generation_payload(generation: GenerationResult, status: dict[str, object]) -> dict[str, object]:
     return {
         "id": generation.id,
         "tts_backend": generation.tts_backend,
@@ -115,6 +134,7 @@ def _generation_payload(generation: GenerationResult) -> dict[str, object]:
         "audio_path": generation.audio_path,
         "metadata_path": generation.metadata_path,
         "source_profile_ids": generation.source_profile_ids,
+        **status,
     }
 
 
@@ -122,7 +142,7 @@ def _next_commands(
     *,
     usable_voice_ids: list[str],
     blends: list[VoiceBlend],
-    generations: list[GenerationResult],
+    generation_statuses: list[dict[str, object]],
     agent_provider_status: str,
     qwen_verification_status: str,
     qwen_runtime_available: bool,
@@ -146,7 +166,7 @@ def _next_commands(
     if qwen_runtime_available and qwen_verification_status != "passed":
         profile_args = " ".join(f"--voice-profile-id {voice_id}" for voice_id in selected_voice_ids)
         commands.append(f"python -m app.cli.verify_qwen_runtime {profile_args}")
-    if not any(generation.tts_backend == "qwen3_tts" for generation in generations):
+    if not any(status["launch_eligible"] for status in generation_statuses):
         commands.append(
             "python -m app.cli.generate_voice "
             "--blend-id <saved-blend-id> --prompt <prompt> "
@@ -209,6 +229,57 @@ def _blend_status(blend: VoiceBlend, usable_voice_ids: list[str]) -> dict[str, o
     }
 
 
+def _generation_status(generation: GenerationResult, blends: list[VoiceBlend]) -> dict[str, object]:
+    reasons: list[str] = []
+    if generation.tts_backend != "qwen3_tts":
+        return {
+            "launch_eligible": False,
+            "stale_reasons": ["Generation was not created with Qwen3-TTS."],
+        }
+    if generation.blend_strategy != "multi_reference_prompt":
+        reasons.append("Qwen generation must use the multi_reference_prompt blend strategy.")
+    if len(generation.source_profile_details) < 2:
+        reasons.append("Qwen generation must include at least two imported source profile details.")
+    elif sorted(detail.voice_profile_id for detail in generation.source_profile_details) != sorted(
+        generation.source_profile_ids
+    ):
+        reasons.append("Qwen generation source details must match generated source profile ids.")
+    if not all(detail.reference_text_present for detail in generation.source_profile_details):
+        reasons.append("Qwen generation source details must include reference transcripts.")
+    if not all(REQUIRED_VOICE_USE in detail.allowed_uses for detail in generation.source_profile_details):
+        reasons.append("Qwen generation source details must allow private agent voice synthesis.")
+    distinct_speakers = {
+        detail.display_name.strip().casefold()
+        for detail in generation.source_profile_details
+        if detail.display_name.strip()
+    }
+    if len(generation.source_profile_details) >= 2 and len(distinct_speakers) < 2:
+        reasons.append("Qwen generation must include at least two distinct source speakers.")
+    if generation.agent_trace is None:
+        reasons.append("Qwen generation must include an agent provider trace.")
+    if not generation.prompt.strip() or not generation.agent_reply.strip():
+        reasons.append("Qwen generation must include the agent prompt and spoken reply transcript.")
+    if not _generation_references_current_blend(generation, blends):
+        reasons.append("Qwen generation must reference a current saved blend.")
+    return {
+        "launch_eligible": not reasons,
+        "stale_reasons": reasons,
+    }
+
+
+def _generation_references_current_blend(generation: GenerationResult, blends: list[VoiceBlend]) -> bool:
+    if not generation.blend_id:
+        return False
+    matching_blend = next((blend for blend in blends if blend.id == generation.blend_id), None)
+    if matching_blend is None:
+        return False
+    return (
+        matching_blend.name == generation.blend_name
+        and matching_blend.strategy == generation.blend_strategy
+        and matching_blend.profiles == generation.source_profiles
+    )
+
+
 def _voice_is_usable(voice: VoiceProfile) -> bool:
     return bool(_voice_status(voice)["launch_usable"])
 
@@ -241,12 +312,23 @@ def _print_summary(report: dict[str, object]) -> None:
         "Launch-eligible blends: "
         f"{report['launch_eligible_blend_count']}; stale/nonmatching blends: {report['stale_blend_count']}"
     )
+    print(
+        "Qwen launch-eligible generations: "
+        f"{report['launch_eligible_generation_count']}; "
+        f"stale/nonmatching generations: {report['stale_generation_count']}"
+    )
     for voice in report["voices"]:
         if voice["launch_usable"]:
             print(f"{voice['id']}: {voice['display_name']}")
         else:
             reasons = "; ".join(voice["unusable_reasons"])
             print(f"{voice['id']}: {voice['display_name']} (unusable: {reasons})")
+    for generation in report["generations"]:
+        if generation["launch_eligible"]:
+            print(f"{generation['id']}: {generation['tts_backend']}")
+        else:
+            reasons = "; ".join(generation["stale_reasons"])
+            print(f"{generation['id']}: {generation['tts_backend']} (stale: {reasons})")
     print("Provider command options:")
     provider_commands = report["agent_provider_commands"]
     for label, key in (
