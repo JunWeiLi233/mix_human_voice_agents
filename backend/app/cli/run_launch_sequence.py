@@ -105,6 +105,7 @@ def _validate_manifest(manifest: dict[str, Any]) -> None:
         _require(voice, "confirmed_by", f"voices[{index}]")
         _require(voice, "reference_text", f"voices[{index}]")
         _require(voice, "audio", f"voices[{index}]")
+        _validate_voice_weight(voice, index)
         normalized_speakers.add(str(voice["speaker_display_name"]).strip().casefold())
         audio_path = Path(str(voice["audio"]))
         if not audio_path.exists():
@@ -133,6 +134,17 @@ def _validate_manifest(manifest: dict[str, Any]) -> None:
 def _require(payload: dict[str, Any], key: str, label: str) -> None:
     if not str(payload.get(key, "")).strip():
         raise ValueError(f"{label}.{key} is required.")
+
+
+def _validate_voice_weight(voice: dict[str, Any], index: int) -> None:
+    if "weight" not in voice:
+        return
+    try:
+        weight = float(voice["weight"])
+    except (TypeError, ValueError):
+        raise ValueError(f"voices[{index}].weight must be a positive number.") from None
+    if weight <= 0:
+        raise ValueError(f"voices[{index}].weight must be a positive number.")
 
 
 def _run_voice_imports(voices: list[dict[str, Any]], output_dir: Path) -> list[str]:
