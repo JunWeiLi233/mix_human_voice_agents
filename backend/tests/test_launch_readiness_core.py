@@ -326,6 +326,47 @@ def test_core_launch_readiness_blocks_silent_qwen_verification_wav(tmp_path, mon
     }
 
 
+def test_core_launch_readiness_blocks_qwen_verification_when_sources_are_not_distinct_speakers(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    output_path = tmp_path / "data" / "generations" / "qwen_verify.wav"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_bytes(b"placeholder-audio")
+    report = QwenVerificationReport(
+        status="passed",
+        report_path="data/qwen-runtime-verification-report.json",
+        voice_profile_ids=["voice_a", "voice_b"],
+        tts_backend="qwen3_tts",
+        blend_strategy="multi_reference_prompt",
+        source_profile_details=[
+            SourceProfileDetail(
+                voice_profile_id="voice_a",
+                display_name="Alice",
+                weight=0.5,
+                consent_confirmed_by="local_user",
+                allowed_uses=["private_agent_voice", "local_audio_export"],
+                reference_text_present=True,
+            ),
+            SourceProfileDetail(
+                voice_profile_id="voice_b",
+                display_name=" Alice ",
+                weight=0.5,
+                consent_confirmed_by="local_user",
+                allowed_uses=["private_agent_voice", "local_audio_export"],
+                reference_text_present=True,
+            ),
+        ],
+        output_audio_path=str(Path("data") / "generations" / "qwen_verify.wav"),
+        text="This is a disclosed synthetic mixed voice runtime verification.",
+    )
+
+    status = _qwen_verification_status(report, output_exists=True)
+
+    assert status == {
+        "passed": False,
+        "detail": "Qwen verification requires source profiles from at least two distinct speakers.",
+    }
+
+
 def test_core_launch_readiness_blocks_qwen_generation_without_synthetic_disclosure_metadata(tmp_path):
     audio_path = tmp_path / "mixed.wav"
     audio_path.write_bytes(b"fake-qwen-wav")
@@ -2144,6 +2185,66 @@ def test_core_launch_readiness_blocks_when_qwen_generation_has_duplicate_source_
     assert generated_audio_check.detail == (
         "Qwen mixed voice source details do not match each generated source id exactly once."
     )
+
+
+def test_core_launch_readiness_blocks_qwen_generation_when_sources_are_not_distinct_speakers():
+    source_details = [
+        SourceProfileDetail(
+            voice_profile_id="voice_a",
+            display_name="Alice",
+            weight=0.5,
+            consent_confirmed_by="local_user",
+            allowed_uses=["private_agent_voice", "local_audio_export"],
+            reference_text_present=True,
+        ),
+        SourceProfileDetail(
+            voice_profile_id="voice_b",
+            display_name=" alice ",
+            weight=0.5,
+            consent_confirmed_by="local_user",
+            allowed_uses=["private_agent_voice", "local_audio_export"],
+            reference_text_present=True,
+        ),
+    ]
+    generation = GenerationResult(
+        id="generation_same_speaker",
+        audio_path=str(Path("data") / "generations" / "mixed.wav"),
+        metadata_path=str(Path("data") / "generations" / "mixed.json"),
+        prompt="Say hello as a synthetic assistant.",
+        agent_reply="Hello from a synthetic mixed voice.",
+        synthetic_label="synthetic mixed voice",
+        source_profile_ids=["voice_a", "voice_b"],
+        source_profile_details=source_details,
+        blend_strategy="multi_reference_prompt",
+        tts_backend="qwen3_tts",
+        agent_trace=AgentTrace(provider="openai", model="gpt-4.1-mini"),
+    )
+
+    status = _qwen_mixed_generation_status(
+        [generation],
+        AgentProviderVerificationReport(
+            status="passed",
+            report_path="data/agent-provider-verification-report.json",
+            provider="openai",
+            model="gpt-4.1-mini",
+            reply="Provider ready.",
+        ),
+        QwenVerificationReport(
+            status="passed",
+            report_path="data/qwen-runtime-verification-report.json",
+            voice_profile_ids=["voice_a", "voice_b"],
+            source_profile_details=source_details,
+            tts_backend="qwen3_tts",
+            blend_strategy="multi_reference_prompt",
+            output_audio_path=str(Path("data") / "generations" / "qwen_verify.wav"),
+            text="This is a disclosed synthetic mixed voice runtime verification.",
+        ),
+    )
+
+    assert status == {
+        "passed": False,
+        "detail": "Qwen mixed voice generation requires source profiles from at least two distinct speakers.",
+    }
 
 
 def test_core_launch_readiness_blocks_when_qwen_generation_uses_unverified_voice_set(tmp_path, monkeypatch):

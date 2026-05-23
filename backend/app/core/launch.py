@@ -232,6 +232,11 @@ def _qwen_verification_status(report: QwenVerificationReport, output_exists: boo
             "passed": False,
             "detail": "Qwen verification report includes a source profile not allowed for private agent voice use.",
         }
+    if not _details_have_distinct_speakers(report.source_profile_details):
+        return {
+            "passed": False,
+            "detail": "Qwen verification requires source profiles from at least two distinct speakers.",
+        }
     if not _path_is_non_empty(report.output_audio_path or ""):
         return {
             "passed": False,
@@ -437,6 +442,11 @@ def _qwen_mixed_generation_status(
                 "passed": False,
                 "detail": "Qwen mixed voice clips include a source profile not allowed for private agent voice use.",
             }
+        if not _details_have_distinct_speakers(generation.source_profile_details):
+            return {
+                "passed": False,
+                "detail": "Qwen mixed voice generation requires source profiles from at least two distinct speakers.",
+            }
         if generation.agent_trace is None:
             return {
                 "passed": False,
@@ -608,6 +618,15 @@ def _path_is_under(path: Path, root: Path) -> bool:
 
 def _details_allow_private_agent_voice(details: list[object]) -> bool:
     return all(REQUIRED_VOICE_USE in detail.allowed_uses for detail in details)
+
+
+def _details_have_distinct_speakers(details: list[object]) -> bool:
+    normalized_names = {
+        getattr(detail, "display_name", "").strip().casefold()
+        for detail in details
+        if getattr(detail, "display_name", "").strip()
+    }
+    return len(normalized_names) >= 2
 
 
 def _generation_has_synthetic_disclosure(generation: GenerationResult) -> bool:
