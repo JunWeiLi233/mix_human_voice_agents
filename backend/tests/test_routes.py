@@ -2503,6 +2503,47 @@ def test_voice_audio_endpoint_returns_imported_source_sample(tmp_path: Path, mon
     assert response.content.startswith(b"RIFF")
 
 
+def test_voice_metadata_endpoint_returns_imported_profile_consent_and_quality(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    sample_path = tmp_path / "sample.wav"
+    write_reference_wav(sample_path)
+
+    with sample_path.open("rb") as sample:
+        import_response = client.post(
+            "/api/voices",
+            data={
+                "speaker_display_name": "Alice",
+                "consent_type": "self_or_written_permission",
+                "allowed_uses": "private_agent_voice,local_audio_export",
+                "confirmed_by": "local_user",
+                "notes": "approved for local prototype",
+                "reference_text": "Alice reads a clean reference sentence for Qwen cloning.",
+            },
+            files={"file": ("sample.wav", sample, "audio/wav")},
+        )
+
+    voice_id = import_response.json()["id"]
+    response = client.get(f"/api/voices/{voice_id}/metadata")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/json"
+    assert f"{voice_id}.json" in response.headers["content-disposition"]
+    payload = response.json()
+    assert payload["id"] == voice_id
+    assert payload["reference_text"] == "Alice reads a clean reference sentence for Qwen cloning."
+    assert payload["consent"]["confirmed_by"] == "local_user"
+    assert payload["consent"]["allowed_uses"] == ["private_agent_voice", "local_audio_export"]
+    assert payload["quality"]["duration_seconds"] == 5
+
+
+def test_voice_metadata_endpoint_returns_not_found_for_missing_profile(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    response = client.get("/api/voices/voice_missing/metadata")
+
+    assert response.status_code == 404
+
+
 def test_voice_audio_endpoint_returns_not_found_for_missing_profile(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
 

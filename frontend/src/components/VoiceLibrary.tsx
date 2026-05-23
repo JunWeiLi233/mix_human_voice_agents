@@ -27,6 +27,13 @@ export function VoiceLibrary({ voices, onDeleteVoice }: Props) {
                   controls
                   src={`/api/voices/${voice.id}/audio`}
                 />
+                <a
+                  aria-label={`Download metadata for ${voice.display_name} voice`}
+                  download={`${voice.id}.json`}
+                  href={`/api/voices/${voice.id}/metadata`}
+                >
+                  Metadata
+                </a>
                 {voice.quality.warnings.length > 0 ? (
                   <ul className="voice-warnings">
                     {voice.quality.warnings.map((warning) => (

@@ -765,6 +765,10 @@ describe("App", () => {
     await screen.findByRole("button", { name: "Alice + Bob" });
     expect(await screen.findByText("Reference audio appears clipped; record a cleaner sample.")).toBeInTheDocument();
     expect(screen.getByLabelText("Preview Bob voice sample")).toHaveAttribute("src", "/api/voices/voice_bob/audio");
+    expect(screen.getByRole("link", { name: "Download metadata for Bob voice" })).toHaveAttribute(
+      "href",
+      "/api/voices/voice_bob/metadata",
+    );
     await screen.findByText("synthetic mixed voice using voice_alice + voice_bob");
     await screen.findByText("synthetic mixed voice using voice_bob + voice_cara");
     expect(screen.getByRole("button", { name: "Generate AI Voice" })).toBeEnabled();

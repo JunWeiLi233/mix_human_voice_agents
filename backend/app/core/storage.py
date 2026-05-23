@@ -86,6 +86,17 @@ def get_voice_audio_path(profile_id: str) -> Path:
     return audio_path
 
 
+def get_voice_metadata_path(profile_id: str) -> Path:
+    ensure_storage()
+    voice_dir = (VOICE_ROOT / profile_id).resolve()
+    profile_path = (VOICE_ROOT / profile_id / "profile.json").resolve()
+    if voice_dir not in (profile_path, *profile_path.parents):
+        raise FileNotFoundError(f"Voice metadata is outside voice storage: {profile_id}")
+    if not profile_path.exists():
+        raise FileNotFoundError(f"Voice profile not found: {profile_id}")
+    return profile_path
+
+
 def delete_voice_profile(profile_id: str) -> VoiceProfileDeleteResult:
     ensure_storage()
     voice_dir = VOICE_ROOT / profile_id
