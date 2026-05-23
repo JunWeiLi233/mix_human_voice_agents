@@ -114,6 +114,17 @@ def test_anthropic_provider_uses_claude_messages_api_settings():
     assert client.requests[0]["json"]["max_tokens"] == 1024
 
 
+def test_anthropic_provider_rejects_malformed_content_blocks():
+    client = FakeHttpClient({"content": ["not-a-content-block"]})
+
+    with pytest.raises(AgentProviderError, match="Anthropic response did not include text content"):
+        generate_agent_reply(
+            prompt="Say hello.",
+            config=config("anthropic"),
+            http_client=client,
+        )
+
+
 def test_google_provider_uses_gemini_generate_content_api_settings():
     client = FakeHttpClient(
         {
@@ -156,6 +167,27 @@ def test_google_provider_uses_gemini_generate_content_api_settings():
             }
         ],
     }
+
+
+def test_google_provider_rejects_malformed_content_parts():
+    client = FakeHttpClient(
+        {
+            "candidates": [
+                {
+                    "content": {
+                        "parts": ["not-a-content-part"],
+                    },
+                },
+            ],
+        }
+    )
+
+    with pytest.raises(AgentProviderError, match="Google Gemini response did not include text content"):
+        generate_agent_reply(
+            prompt="Say hello.",
+            config=config("google"),
+            http_client=client,
+        )
 
 
 def test_ollama_provider_uses_local_endpoint_without_api_key():

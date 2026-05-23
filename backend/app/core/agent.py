@@ -120,16 +120,7 @@ def generate_agent_reply(
         )
         response.raise_for_status()
         data = response.json()
-        reply = next(
-            (
-                block.get("text", "")
-                for block in data.get("content", [])
-                if block.get("type") == "text"
-            ),
-            "",
-        )
-        if not reply:
-            raise AgentProviderError("Anthropic response did not include text content.")
+        reply = _extract_anthropic_reply(data)
     elif config.provider == "google":
         if not config.api_key.strip():
             raise AgentProviderError("API key is required for Google Gemini providers.")
@@ -190,6 +181,13 @@ def _extract_ollama_reply(data: dict[str, Any]) -> str:
     return reply
 
 
+def _extract_anthropic_reply(data: dict[str, Any]) -> str:
+    for block in data.get("content", []):
+        if isinstance(block, dict) and block.get("type") == "text" and block.get("text"):
+            return block["text"]
+    raise AgentProviderError("Anthropic response did not include text content.")
+
+
 def _google_model_path(model: str) -> str:
     cleaned = model.strip()
     if cleaned.startswith("models/"):
@@ -202,7 +200,7 @@ def _extract_google_reply(data: dict[str, Any]) -> str:
     if not candidates:
         raise AgentProviderError("Google Gemini response did not include candidates.")
     parts = candidates[0].get("content", {}).get("parts", [])
-    reply = "".join(part.get("text", "") for part in parts)
+    reply = "".join(part.get("text", "") for part in parts if isinstance(part, dict))
     if not reply:
         raise AgentProviderError("Google Gemini response did not include text content.")
     return reply
