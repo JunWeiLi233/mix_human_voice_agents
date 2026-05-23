@@ -12,6 +12,7 @@ from app.core.launch import (
     get_qwen_verification_report,
     qwen_verification_status,
 )
+from app.core.qwen_profiles import validate_qwen_voice_profiles
 from app.core.qwen_runtime import resolved_qwen_runtime_config
 from app.core.safety import SafetyError
 from app.core.storage import GENERATION_ROOT, get_voice_profiles_by_ids, list_blends
@@ -59,6 +60,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             }
         )
         voice_profiles = get_voice_profiles_by_ids([profile.voice_profile_id for profile in blend.profiles])
+        validate_qwen_voice_profiles(voice_profiles)
         agent_reply = generate_agent_reply_record(prompt=args.prompt, config=config)
         agent_trace = AgentTrace(
             provider=agent_reply.provider,

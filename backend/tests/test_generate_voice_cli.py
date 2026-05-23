@@ -249,7 +249,63 @@ def test_generate_voice_cli_rejects_mismatched_qwen_runtime_options_before_exter
     }
 
 
-def save_profile(profile_id: str, display_name: str) -> VoiceProfile:
+def test_generate_voice_cli_rejects_unusable_saved_blend_before_external_calls(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    save_profile("voice_a", "Alice")
+    save_profile("voice_b", "Bob", warnings=["Reference audio appears clipped; record a cleaner sample."])
+    blend = save_blend("voice_a", "voice_b")
+    write_passed_agent_report()
+    write_passed_qwen_report(["voice_a", "voice_b"])
+    metadata_path = tmp_path / "failed-generation.json"
+    agent_calls: list[str] = []
+
+    def fake_agent_reply(prompt, config):
+        agent_calls.append(prompt)
+        return AgentReply(
+            reply="This should not be generated.",
+            provider=config.provider,
+            model=config.model,
+            base_url=config.base_url.rstrip("/"),
+        )
+
+    class FailIfQwenLoads:
+        @classmethod
+        def from_pretrained(cls, **kwargs):
+            raise ValueError("Qwen should not load for an unusable saved blend.")
+
+    monkeypatch.setattr("app.cli.generate_voice.generate_agent_reply_record", fake_agent_reply)
+    monkeypatch.setattr("app.cli.generate_voice.QwenTtsAdapter", FailIfQwenLoads)
+
+    exit_code = main(
+        [
+            "--blend-id",
+            blend.id,
+            "--prompt",
+            "Greet the user as a disclosed synthetic assistant.",
+            "--provider",
+            "openai_compatible",
+            "--model",
+            "local-qwen-agent",
+            "--base-url",
+            "http://127.0.0.1:1234/v1",
+            "--metadata",
+            str(metadata_path),
+        ]
+    )
+
+    assert exit_code == 1
+    assert agent_calls == []
+    report = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert report == {
+        "status": "failed",
+        "error": "Voice profile voice_b must not have audio quality warnings for Qwen synthesis.",
+    }
+    assert list((tmp_path / "data" / "generations").glob("*_qwen_generated.*")) == []
+
+
+def save_profile(profile_id: str, display_name: str, warnings: list[str] | None = None) -> VoiceProfile:
     voice_dir = Path("data") / "voices" / profile_id
     voice_dir.mkdir(parents=True, exist_ok=True)
     audio_path = write_reference_wav(voice_dir / "source.wav")
@@ -275,7 +331,7 @@ def save_profile(profile_id: str, display_name: str) -> VoiceProfile:
             duration_seconds=5.0,
             sample_rate_hz=16000,
             channel_count=1,
-            warnings=[],
+            warnings=warnings or [],
         ),
     )
     (voice_dir / "profile.json").write_text(profile.model_dump_json(), encoding="utf-8")

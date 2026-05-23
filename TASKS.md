@@ -34,7 +34,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T18:50:28.994708+00:00`
+- Checked at: `2026-05-23T18:54:11.324208+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Re-record or replace unusable voice samples, then import at least two clean consented WAV voices with matching transcripts.
@@ -93,6 +93,7 @@ Next artifact commands:
 
 ## Completed In Current Working Tree
 
+- Hardened `app.cli.generate_voice` so unusable saved-blend voice profiles fail before agent provider or Qwen adapter calls.
 - Hardened launch artifact inventory so Qwen generations must reference a launch-eligible saved blend, not just any matching saved blend.
 - Hardened launch artifact inventory so Qwen generations require a passed Qwen verification report before they can be launch-eligible.
 - Hardened launch artifact inventory so Qwen generations require a passed agent provider preflight before they can be launch-eligible.
