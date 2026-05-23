@@ -145,3 +145,69 @@ def test_run_launch_sequence_rejects_manifest_with_fewer_than_two_voices(
         "status": "failed",
         "error": "Launch sequence manifest requires at least two voices.",
     }
+
+
+def test_run_launch_sequence_fails_when_final_readiness_is_blocked(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    manifest_path = tmp_path / "launch-manifest.json"
+    voice_a_audio = tmp_path / "alice.wav"
+    voice_b_audio = tmp_path / "bob.wav"
+    voice_a_audio.write_bytes(b"fake-audio-a")
+    voice_b_audio.write_bytes(b"fake-audio-b")
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "voices": [
+                    {
+                        "speaker_display_name": "Alice",
+                        "confirmed_by": "Junwei",
+                        "reference_text": "Alice reads a launch reference.",
+                        "audio": str(voice_a_audio),
+                    },
+                    {
+                        "speaker_display_name": "Bob",
+                        "confirmed_by": "Junwei",
+                        "reference_text": "Bob reads a launch reference.",
+                        "audio": str(voice_b_audio),
+                    },
+                ],
+                "agent_provider": {
+                    "provider": "openai_compatible",
+                    "model": "local-qwen-agent",
+                    "base_url": "http://127.0.0.1:1234/v1",
+                },
+                "generation": {"prompt": "Greet the user as a disclosed synthetic assistant."},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    def fake_import_voice(argv):
+        metadata_path = Path(argv[argv.index("--metadata") + 1])
+        metadata_path.parent.mkdir(parents=True, exist_ok=True)
+        speaker = argv[argv.index("--speaker-display-name") + 1]
+        profile_id = "voice_a" if speaker == "Alice" else "voice_b"
+        metadata_path.write_text(json.dumps({"id": profile_id}), encoding="utf-8")
+        return 0
+
+    def fake_create_blend(argv):
+        metadata_path = Path(argv[argv.index("--metadata") + 1])
+        metadata_path.parent.mkdir(parents=True, exist_ok=True)
+        metadata_path.write_text(json.dumps({"id": "blend_launch"}), encoding="utf-8")
+        return 0
+
+    monkeypatch.setattr("app.cli.run_launch_sequence.import_voice_main", fake_import_voice)
+    monkeypatch.setattr("app.cli.run_launch_sequence.create_blend_main", fake_create_blend)
+    monkeypatch.setattr("app.cli.run_launch_sequence.verify_agent_provider_main", lambda argv: 0)
+    monkeypatch.setattr("app.cli.run_launch_sequence.verify_qwen_runtime_main", lambda argv: 0)
+    monkeypatch.setattr("app.cli.run_launch_sequence.generate_voice_main", lambda argv: 0)
+    monkeypatch.setattr("app.cli.run_launch_sequence.launch_readiness_main", lambda argv: 1)
+
+    exit_code = main(["--manifest", str(manifest_path), "--report", "sequence-report.json"])
+
+    assert exit_code == 1
+    report = json.loads(Path("sequence-report.json").read_text(encoding="utf-8"))
+    assert report == {
+        "status": "failed",
+        "error": "Launch readiness remained blocked after the sequence.",
+    }

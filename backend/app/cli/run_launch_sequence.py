@@ -36,7 +36,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         _run_agent_provider_verification(manifest["agent_provider"])
         _run_qwen_verification(manifest, imported_voice_ids)
         _run_generation(manifest, blend_id, output_dir)
-        launch_readiness_main(
+        readiness_exit_code = launch_readiness_main(
             [
                 "--report",
                 str(Path("data") / "launch-readiness-report.json"),
@@ -47,6 +47,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     except (KeyError, OSError, ValueError, json.JSONDecodeError) as exc:
         _write_report(report_path, {"status": "failed", "error": str(exc)})
         return 2
+
+    if readiness_exit_code != 0:
+        _write_report(
+            report_path,
+            {
+                "status": "failed",
+                "error": "Launch readiness remained blocked after the sequence.",
+            },
+        )
+        return 1
 
     _write_report(
         report_path,

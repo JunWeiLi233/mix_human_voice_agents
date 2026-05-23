@@ -105,6 +105,8 @@ cd backend
 .\.venv\Scripts\python -m app.cli.run_launch_sequence --manifest launch-manifest.json --tasks ..\TASKS.md
 ```
 
+The sequence exits successfully only if the final launch-readiness audit is ready.
+
 Manifest shape:
 
 ```json
