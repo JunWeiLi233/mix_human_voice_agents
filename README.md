@@ -79,7 +79,7 @@ cd backend
 .\.venv\Scripts\python -m app.cli.verify_agent_provider --provider openai_compatible --model local-qwen-agent --base-url http://127.0.0.1:1234/v1 --report data/agent-provider-verification-report.json
 ```
 
-Terminal voice import:
+Terminal voice import rejects unusable quality warnings such as clipped reference audio before saving a profile:
 
 ```powershell
 cd backend

@@ -47,6 +47,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     try:
         quality = analyze_audio_sample(audio_path)
+        if quality.warnings:
+            raise AudioQualityError("; ".join(quality.warnings))
         source_bytes = audio_path.read_bytes()
         voice_id = new_voice_profile_id()
         consent = create_consent_record(

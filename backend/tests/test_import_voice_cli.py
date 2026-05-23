@@ -94,11 +94,51 @@ def test_import_voice_cli_rejects_public_figure_label(tmp_path: Path):
     assert "public figure" in payload["error"]
 
 
+def test_import_voice_cli_rejects_clipped_reference_audio_before_saving(tmp_path: Path):
+    sample_path = tmp_path / "clipped.wav"
+    write_clipped_wav(sample_path)
+    metadata_path = tmp_path / "voice.json"
+
+    exit_code = main(
+        [
+            "--speaker-display-name",
+            "Alice",
+            "--confirmed-by",
+            "Junwei",
+            "--notes",
+            "Written permission captured for private local mixed voice testing.",
+            "--reference-text",
+            "Alice reads a clean reference sentence for Qwen cloning.",
+            "--audio",
+            str(sample_path),
+            "--metadata",
+            str(metadata_path),
+        ]
+    )
+
+    assert exit_code == 1
+    payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert payload == {
+        "status": "failed",
+        "error": "Reference audio appears clipped; record a cleaner sample.",
+    }
+    assert not (tmp_path / "data" / "voices").exists()
+
+
 def write_reference_wav(path: Path, duration_seconds: int = 5, sample_rate: int = 16000) -> None:
     frames = b"".join(
         struct.pack("<h", int(8000 * math.sin(2 * math.pi * 440 * index / sample_rate)))
         for index in range(sample_rate * duration_seconds)
     )
+    with wave.open(str(path), "wb") as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(sample_rate)
+        wav_file.writeframes(frames)
+
+
+def write_clipped_wav(path: Path, duration_seconds: int = 5, sample_rate: int = 16000) -> None:
+    frames = b"".join(struct.pack("<h", 32767) for _ in range(sample_rate * duration_seconds))
     with wave.open(str(path), "wb") as wav_file:
         wav_file.setnchannels(1)
         wav_file.setsampwidth(2)
