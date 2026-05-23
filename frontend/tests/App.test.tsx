@@ -90,6 +90,10 @@ describe("App", () => {
       "href",
       "/api/launch/readiness/report",
     );
+    expect(screen.getByRole("link", { name: "Download launch manifest template" })).toHaveAttribute(
+      "href",
+      "/api/launch/manifest-template",
+    );
     expect(screen.getByText("Next launch actions")).toBeInTheDocument();
     expect(screen.getByText("Backend action: import two consented source voices.")).toBeInTheDocument();
     expect(screen.getByText("Backend action: run Qwen verification with two profiles.")).toBeInTheDocument();

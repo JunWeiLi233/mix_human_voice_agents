@@ -19,6 +19,7 @@ from app.core.launch import (
     get_agent_provider_verification_report,
     get_qwen_verification_report,
 )
+from app.core.launch_manifest import launch_manifest_template
 from app.core.qwen_profiles import validate_qwen_voice_profiles
 from app.core.qwen_runtime import resolved_qwen_runtime_config
 from app.core.safety import SafetyError, check_generation_request
@@ -153,6 +154,14 @@ def launch_readiness_report_route() -> FileResponse:
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(json.dumps(report.model_dump(mode="json"), indent=2), encoding="utf-8")
     return FileResponse(report_path, media_type="application/json", filename="launch-readiness-report.json")
+
+
+@router.get("/launch/manifest-template")
+def launch_manifest_template_route() -> FileResponse:
+    template_path = Path("data") / "launch-sequence" / "launch-manifest.template.json"
+    template_path.parent.mkdir(parents=True, exist_ok=True)
+    template_path.write_text(json.dumps(launch_manifest_template(), indent=2), encoding="utf-8")
+    return FileResponse(template_path, media_type="application/json", filename="launch-manifest.template.json")
 
 
 @router.post("/tts/qwen/verification", response_model=QwenVerificationReport)

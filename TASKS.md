@@ -88,6 +88,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Hardened the `/api/generate` Qwen path so it rejects unsaved or stale blend payloads before loading voice profiles or Qwen.
 - Added `app.cli.run_launch_sequence --write-template` so another agent can generate a launch manifest skeleton before filling in real consented voice files and provider details.
 - Updated Launch Readiness next actions so the imported-voices blocker points directly to the `run_launch_sequence --write-template` manifest flow.
+- Added `/api/launch/manifest-template` and a Launch page download link so browser users can get the same launch manifest template as terminal agents.
 
 ## Verification Already Run
 
@@ -102,6 +103,14 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - `cd backend; .\.venv\Scripts\python -m pytest tests\test_launch_readiness_core.py -q -k "without_matching_saved_blend or generation_metadata or generated_audio"` passed: 3 tests.
 - `cd backend; .\.venv\Scripts\python -m pytest tests\test_routes.py -q` passed: 70 tests.
 - `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 263 tests.
+- `cd frontend; npm test -- --run` passed: 7 tests.
+- `cd frontend; npx tsc --noEmit` passed.
+- `cd frontend; npm run build` passed.
+- `git diff --check` passed with line-ending normalization warnings only.
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_routes.py tests\test_run_launch_sequence_cli.py -q -k "manifest_template"` passed: 2 tests.
+- `cd backend; .\.venv\Scripts\python -m app.cli.run_launch_sequence --write-template data\launch-sequence\launch-manifest.template.json --report data\launch-sequence\template-report.json` passed.
+- `cd frontend; npm test -- --run -t "renders the mixed voice studio"` passed: 1 test.
+- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 266 tests.
 - `cd frontend; npm test -- --run` passed: 7 tests.
 - `cd frontend; npx tsc --noEmit` passed.
 - `cd frontend; npm run build` passed.
@@ -141,7 +150,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T14:31:23.568972+00:00`
+- Checked at: `2026-05-23T14:36:12.075619+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Generate a launch manifest with `python -m app.cli.run_launch_sequence --write-template launch-manifest.template.json`, then fill in two consented WAV voice samples with matching transcripts.

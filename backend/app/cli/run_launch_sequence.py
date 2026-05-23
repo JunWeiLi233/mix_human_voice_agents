@@ -13,13 +13,13 @@ from app.cli.verify_agent_provider import main as verify_agent_provider_main
 from app.cli.verify_qwen_runtime import main as verify_qwen_runtime_main
 from app.core.audio import AudioQualityError, analyze_audio_sample, is_parseable_wav, wav_has_audible_signal
 from app.core.consent import ConsentError, create_consent_record
+from app.core.launch_manifest import LAUNCH_BLEND_STRATEGY, launch_manifest_template
 from app.core.safety import SafetyError, check_generation_request
 from app.models.schemas import AgentProviderKind, ConsentRequest
 
 
 DEFAULT_OUTPUT_DIR = Path("data") / "launch-sequence"
 SUPPORTED_AGENT_PROVIDERS = list(AgentProviderKind.__args__)
-LAUNCH_BLEND_STRATEGY = "multi_reference_prompt"
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -121,51 +121,7 @@ def _load_manifest(manifest_path: Path) -> dict[str, Any]:
 
 def _write_launch_manifest_template(template_path: Path) -> None:
     template_path.parent.mkdir(parents=True, exist_ok=True)
-    template_path.write_text(json.dumps(_launch_manifest_template(), indent=2), encoding="utf-8")
-
-
-def _launch_manifest_template() -> dict[str, Any]:
-    return {
-        "voices": [
-            {
-                "speaker_display_name": "Alice",
-                "confirmed_by": "Junwei",
-                "notes": "Self or written permission captured for private local mixed voice testing.",
-                "reference_text": "Alice reads a clean five to thirty second reference for Qwen cloning.",
-                "audio": "C:\\path\\to\\alice.wav",
-                "weight": 1,
-            },
-            {
-                "speaker_display_name": "Bob",
-                "confirmed_by": "Junwei",
-                "notes": "Self or written permission captured for private local mixed voice testing.",
-                "reference_text": "Bob reads a clean five to thirty second reference for Qwen cloning.",
-                "audio": "C:\\path\\to\\bob.wav",
-                "weight": 1,
-            },
-        ],
-        "blend": {
-            "name": "Launch mixed voice",
-            "strategy": LAUNCH_BLEND_STRATEGY,
-        },
-        "agent_provider": {
-            "provider": "openai_compatible",
-            "model": "local-qwen-agent",
-            "base_url": "http://127.0.0.1:1234/v1",
-            "api_key": "",
-            "system_prompt": "You are a disclosed synthetic mixed-voice assistant.",
-            "prompt": "Reply with one short disclosed synthetic assistant sentence.",
-        },
-        "qwen": {
-            "text": "This is a disclosed synthetic mixed voice runtime verification.",
-            "model_id": "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
-            "device_map": "auto",
-            "dtype": "auto",
-        },
-        "generation": {
-            "prompt": "Greet the user as a disclosed synthetic assistant.",
-        },
-    }
+    template_path.write_text(json.dumps(launch_manifest_template(), indent=2), encoding="utf-8")
 
 
 def _validate_manifest(manifest: dict[str, Any]) -> None:

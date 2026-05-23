@@ -42,9 +42,14 @@ export function LaunchReadiness({ readiness }: Props) {
               <dd>{readiness.checked_at}</dd>
             </dl>
           ) : null}
-          <a download="launch-readiness-report.json" href="/api/launch/readiness/report">
-            Download launch readiness audit
-          </a>
+          <div className="launch-downloads">
+            <a download="launch-readiness-report.json" href="/api/launch/readiness/report">
+              Download launch readiness audit
+            </a>
+            <a download="launch-manifest.template.json" href="/api/launch/manifest-template">
+              Download launch manifest template
+            </a>
+          </div>
           {launchActions.length > 0 ? (
             <div className="launch-actions" aria-labelledby="launch-actions-heading">
               <h3 id="launch-actions-heading">Next launch actions</h3>

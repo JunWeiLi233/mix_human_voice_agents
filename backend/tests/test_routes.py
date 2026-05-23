@@ -652,6 +652,21 @@ def test_launch_readiness_report_download_writes_current_audit(tmp_path: Path, m
     assert "Import at least two consented voice profiles." in payload["blocking_reasons"]
 
 
+def test_launch_manifest_template_download_returns_starter_manifest(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    response = client.get("/api/launch/manifest-template")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/json"
+    assert "launch-manifest.template.json" in response.headers["content-disposition"]
+    payload = response.json()
+    assert [voice["speaker_display_name"] for voice in payload["voices"]] == ["Alice", "Bob"]
+    assert payload["blend"] == {"name": "Launch mixed voice", "strategy": "multi_reference_prompt"}
+    assert payload["agent_provider"]["provider"] == "openai_compatible"
+    assert payload["qwen"]["model_id"] == "Qwen/Qwen3-TTS-12Hz-0.6B-Base"
+
+
 def test_launch_readiness_reports_ready_after_full_qwen_verification(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     research_review_path = tmp_path / "docs" / "research-review.md"
