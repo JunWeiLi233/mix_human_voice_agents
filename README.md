@@ -91,6 +91,13 @@ cd backend
 .\.venv\Scripts\python -m app.cli.create_blend --name "Launch blend" --profile voice_a=1 --profile voice_b=1 --strategy multi_reference_prompt --metadata data\blends\last-created-blend.json
 ```
 
+Terminal Qwen mixed-voice generation after provider and Qwen verification:
+
+```powershell
+cd backend
+.\.venv\Scripts\python -m app.cli.generate_voice --blend-id blend_launch --prompt "Greet the user as a disclosed synthetic assistant." --provider openai_compatible --model local-qwen-agent --base-url http://127.0.0.1:1234/v1 --metadata data\generations\last-generated-mixed-voice.json
+```
+
 Refresh the handoff tasks from the same launch-readiness evidence:
 
 ```powershell

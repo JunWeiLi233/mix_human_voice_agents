@@ -1,0 +1,241 @@
+import json
+import math
+from pathlib import Path
+import struct
+import wave
+
+from app.cli.generate_voice import main
+from app.models.schemas import (
+    AgentProviderVerificationReport,
+    AgentReply,
+    AudioQuality,
+    BlendProfile,
+    ConsentRecord,
+    QwenVerificationReport,
+    SourceProfileDetail,
+    VoiceBlend,
+    VoiceProfile,
+)
+
+
+def test_generate_voice_cli_creates_qwen_mixed_clip_from_saved_blend(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    save_profile("voice_a", "Alice")
+    save_profile("voice_b", "Bob")
+    blend = save_blend("voice_a", "voice_b")
+    write_passed_agent_report()
+    write_passed_qwen_report(["voice_a", "voice_b"])
+    metadata_path = tmp_path / "generated-report.json"
+
+    monkeypatch.setattr(
+        "app.cli.generate_voice.generate_agent_reply_record",
+        lambda prompt, config: AgentReply(
+            reply="Hello from a launch-ready mixed voice.",
+            provider=config.provider,
+            model=config.model,
+            base_url=config.base_url.rstrip("/"),
+        ),
+    )
+
+    class FakeQwenAdapter:
+        runtime_config = {
+            "model_id": "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+            "device_map": "auto",
+            "dtype": None,
+            "attn_implementation": None,
+        }
+
+        @classmethod
+        def from_pretrained(cls, output_root=None, **kwargs):
+            cls.output_root = Path(output_root)
+            cls.output_root.mkdir(parents=True, exist_ok=True)
+            return cls()
+
+        def synthesize(self, text, blend, voice_profiles=None):
+            output = self.__class__.output_root / f"{blend.id}_qwen_generated.wav"
+            write_reference_wav(output)
+            return output
+
+    monkeypatch.setattr("app.cli.generate_voice.QwenTtsAdapter", FakeQwenAdapter)
+
+    exit_code = main(
+        [
+            "--blend-id",
+            blend.id,
+            "--prompt",
+            "Greet the user as a disclosed synthetic assistant.",
+            "--provider",
+            "openai_compatible",
+            "--model",
+            "local-qwen-agent",
+            "--base-url",
+            "http://127.0.0.1:1234/v1",
+            "--metadata",
+            str(metadata_path),
+        ]
+    )
+
+    assert exit_code == 0
+    report = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert report["tts_backend"] == "qwen3_tts"
+    assert report["blend_strategy"] == "multi_reference_prompt"
+    assert report["source_profile_ids"] == ["voice_a", "voice_b"]
+    assert report["prompt"] == "Greet the user as a disclosed synthetic assistant."
+    assert report["agent_reply"] == "Hello from a launch-ready mixed voice."
+    assert report["agent_trace"] == {
+        "provider": "openai_compatible",
+        "model": "local-qwen-agent",
+        "base_url": "http://127.0.0.1:1234/v1",
+    }
+    assert Path(report["audio_path"]).exists()
+    assert Path(report["metadata_path"]).exists()
+    assert report["metadata_path"] != str(metadata_path)
+    saved_metadata = json.loads(Path(report["metadata_path"]).read_text(encoding="utf-8"))
+    assert saved_metadata["source_profile_details"][0]["display_name"] == "Alice"
+    assert saved_metadata["source_profile_details"][1]["display_name"] == "Bob"
+
+
+def test_generate_voice_cli_requires_passed_agent_provider_preflight(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    save_profile("voice_a", "Alice")
+    save_profile("voice_b", "Bob")
+    blend = save_blend("voice_a", "voice_b")
+    write_passed_qwen_report(["voice_a", "voice_b"])
+    metadata_path = tmp_path / "failed-generation.json"
+
+    exit_code = main(
+        [
+            "--blend-id",
+            blend.id,
+            "--prompt",
+            "Greet the user as a disclosed synthetic assistant.",
+            "--provider",
+            "openai_compatible",
+            "--model",
+            "local-qwen-agent",
+            "--base-url",
+            "http://127.0.0.1:1234/v1",
+            "--metadata",
+            str(metadata_path),
+        ]
+    )
+
+    assert exit_code == 1
+    report = json.loads(metadata_path.read_text(encoding="utf-8"))
+    assert report == {
+        "status": "failed",
+        "error": "Agent provider preflight must pass before Qwen generation.",
+    }
+    assert list((tmp_path / "data" / "generations").glob("*.json")) == []
+
+
+def save_profile(profile_id: str, display_name: str) -> VoiceProfile:
+    voice_dir = Path("data") / "voices" / profile_id
+    voice_dir.mkdir(parents=True, exist_ok=True)
+    audio_path = write_reference_wav(voice_dir / "source.wav")
+    profile = VoiceProfile(
+        id=profile_id,
+        display_name=display_name,
+        reference_text=f"{display_name} reads a clean reference sentence for Qwen cloning.",
+        consent=ConsentRecord(
+            voice_profile_id=profile_id,
+            speaker_display_name=display_name,
+            consent_type="self_or_written_permission",
+            allowed_uses=["private_agent_voice", "local_audio_export"],
+            confirmed_by="Junwei",
+            notes="Written permission captured.",
+            synthetic_voice_allowed=True,
+        ),
+        source_audio_path=str(audio_path),
+        cleaned_audio_path=str(audio_path),
+        quality=AudioQuality(
+            file_name="source.wav",
+            size_bytes=audio_path.stat().st_size,
+            format="wav",
+            duration_seconds=5.0,
+            sample_rate_hz=16000,
+            channel_count=1,
+            warnings=[],
+        ),
+    )
+    (voice_dir / "profile.json").write_text(profile.model_dump_json(), encoding="utf-8")
+    return profile
+
+
+def save_blend(*profile_ids: str) -> VoiceBlend:
+    blend_root = Path("data") / "blends"
+    blend_root.mkdir(parents=True, exist_ok=True)
+    blend = VoiceBlend(
+        id="blend_launch",
+        name="Launch blend",
+        profiles=[BlendProfile(voice_profile_id=profile_id, weight=1 / len(profile_ids)) for profile_id in profile_ids],
+        strategy="multi_reference_prompt",
+    )
+    (blend_root / f"{blend.id}.json").write_text(blend.model_dump_json(), encoding="utf-8")
+    return blend
+
+
+def write_passed_agent_report() -> None:
+    report_path = Path("data") / "agent-provider-verification-report.json"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report = AgentProviderVerificationReport(
+        status="passed",
+        provider="openai_compatible",
+        model="local-qwen-agent",
+        base_url="http://127.0.0.1:1234/v1",
+        reply="Provider ready.",
+        report_path=str(report_path),
+    )
+    report_path.write_text(report.model_dump_json(), encoding="utf-8")
+
+
+def write_passed_qwen_report(profile_ids: list[str]) -> None:
+    output_path = Path("data") / "generations" / "qwen_verify.wav"
+    write_reference_wav(output_path)
+    report_path = Path("data") / "qwen-runtime-verification-report.json"
+    report = QwenVerificationReport(
+        status="passed",
+        report_path=str(report_path),
+        voice_profile_ids=profile_ids,
+        model_id="Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+        device_map="auto",
+        tts_backend="qwen3_tts",
+        blend_strategy="multi_reference_prompt",
+        source_profile_details=[
+            SourceProfileDetail(
+                voice_profile_id="voice_a",
+                display_name="Alice",
+                weight=0.5,
+                consent_confirmed_by="Junwei",
+                allowed_uses=["private_agent_voice", "local_audio_export"],
+                reference_text_present=True,
+            ),
+            SourceProfileDetail(
+                voice_profile_id="voice_b",
+                display_name="Bob",
+                weight=0.5,
+                consent_confirmed_by="Junwei",
+                allowed_uses=["private_agent_voice", "local_audio_export"],
+                reference_text_present=True,
+            ),
+        ],
+        output_audio_path=str(output_path),
+        text="This is a Qwen verification.",
+    )
+    report_path.write_text(report.model_dump_json(), encoding="utf-8")
+
+
+def write_reference_wav(path: Path) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    sample_rate = 16000
+    duration_seconds = 5
+    with wave.open(str(path), "wb") as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(sample_rate)
+        frames = b"".join(
+            struct.pack("<h", int(12000 * math.sin(2 * math.pi * 440 * index / sample_rate)))
+            for index in range(sample_rate * duration_seconds)
+        )
+        wav_file.writeframes(frames)
+    return path

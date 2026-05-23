@@ -34,6 +34,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Added `app.cli.verify_agent_provider` so terminal agents can create the persisted provider preflight report required by launch readiness.
 - Added `app.cli.import_voice` so terminal agents can import consented WAV voice profiles with matching transcripts into the same local storage as the UI.
 - Added `app.cli.create_blend` so terminal agents can save a multi-reference blend from imported voice profile ids.
+- Added `app.cli.generate_voice` so terminal agents can create a Qwen mixed-voice generation from a saved blend after provider and Qwen verification pass.
 
 ## Verification Already Run
 
@@ -42,7 +43,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - `cd frontend; npm run build` passed.
 - Chrome headless desktop screenshot was captured from `http://127.0.0.1:5174/`.
 - Chrome headless mobile screenshot was captured and mobile clipping was fixed.
-- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 205 tests.
+- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 207 tests.
 
 ## Next Tasks
 
@@ -66,7 +67,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T06:04:21.985803+00:00`
+- Checked at: `2026-05-23T06:09:59.345323+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Import two consented WAV voice samples with matching transcripts.
