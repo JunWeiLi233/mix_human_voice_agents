@@ -138,6 +138,7 @@ def _validate_manifest(manifest: dict[str, Any]) -> None:
     qwen = manifest.get("qwen") or {}
     if "text" in qwen and not str(qwen["text"]).strip():
         raise ValueError("qwen.text must not be blank when provided.")
+    _validate_optional_qwen_runtime_options(qwen)
 
 
 def _require(payload: dict[str, Any], key: str, label: str) -> None:
@@ -154,6 +155,12 @@ def _validate_voice_weight(voice: dict[str, Any], index: int) -> None:
         raise ValueError(f"voices[{index}].weight must be a positive number.") from None
     if weight <= 0:
         raise ValueError(f"voices[{index}].weight must be a positive number.")
+
+
+def _validate_optional_qwen_runtime_options(qwen: dict[str, Any]) -> None:
+    for key in ("model_id", "device_map", "dtype", "attn_implementation"):
+        if key in qwen and not str(qwen[key]).strip():
+            raise ValueError(f"qwen.{key} must not be blank when provided.")
 
 
 def _run_voice_imports(voices: list[dict[str, Any]], output_dir: Path) -> list[str]:
