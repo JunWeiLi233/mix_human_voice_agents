@@ -394,6 +394,57 @@ def test_qwen_verification_route_writes_failed_report_when_qwen_output_is_invali
     assert saved_report["error"] == "Qwen verification output audio must be a parseable WAV file."
 
 
+def test_qwen_verification_route_writes_failed_report_when_output_is_outside_generation_storage(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    sample_path = tmp_path / "sample.wav"
+    write_reference_wav(sample_path)
+    voices = []
+
+    for name in ("Alice", "Bob"):
+        with sample_path.open("rb") as sample:
+            response = client.post(
+                "/api/voices",
+                data={
+                    "speaker_display_name": name,
+                    "consent_type": "self_or_written_permission",
+                    "allowed_uses": "private_agent_voice,local_audio_export",
+                    "confirmed_by": "local_user",
+                    "notes": "approved for qwen verification",
+                    "reference_text": f"{name} reads a clean reference sentence for Qwen cloning.",
+                },
+                files={"file": ("sample.wav", sample, "audio/wav")},
+            )
+        voices.append(response.json())
+
+    class OutsideStorageQwenAdapter:
+        @classmethod
+        def from_pretrained(cls, output_root=None, **kwargs):
+            return cls()
+
+        def synthesize(self, text, blend, voice_profiles=None):
+            output = tmp_path / "outside_qwen_verify.wav"
+            write_reference_wav(output, duration_seconds=1)
+            return output
+
+    monkeypatch.setattr("app.api.routes.QwenTtsAdapter", OutsideStorageQwenAdapter)
+
+    response = client.post(
+        "/api/tts/qwen/verification",
+        json={
+            "voice_profile_ids": [voices[0]["id"], voices[1]["id"]],
+            "text": "This is a studio Qwen verification.",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "failed"
+    assert payload["error"] == "Qwen verification output audio must be stored under data/generations."
+    assert payload["output_audio_path"] == str(tmp_path / "outside_qwen_verify.wav")
+
+
 def test_qwen_verification_route_writes_failed_report_when_qwen_output_is_silent_wav(
     tmp_path: Path, monkeypatch
 ):

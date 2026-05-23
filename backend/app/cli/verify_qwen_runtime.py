@@ -191,6 +191,10 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def _qwen_generated_audio_error(path: Path, label: str) -> str | None:
+    generation_root = GENERATION_ROOT.resolve(strict=False)
+    resolved_path = path.resolve(strict=False)
+    if generation_root not in (resolved_path, *resolved_path.parents):
+        return f"{label} must be stored under data/generations."
     if not path.exists():
         return f"{label} must exist."
     if path.stat().st_size <= 0:
