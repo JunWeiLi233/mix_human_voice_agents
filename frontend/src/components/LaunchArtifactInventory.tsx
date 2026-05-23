@@ -5,6 +5,8 @@ type Props = {
 };
 
 export function LaunchArtifactInventory({ artifacts }: Props) {
+  const staleBlendReasonCounts = artifacts ? Object.entries(artifacts.stale_blend_reason_counts) : [];
+
   return (
     <section className="panel launch-artifacts" aria-labelledby="launch-artifacts-heading">
       <h2 id="launch-artifacts-heading">Launch Artifact Inventory</h2>
@@ -73,6 +75,18 @@ export function LaunchArtifactInventory({ artifacts }: Props) {
                 {artifacts.usable_distinct_voice_ids.map((voiceId) => (
                   <li key={voiceId}>
                     <code>{voiceId}</code>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {staleBlendReasonCounts.length > 0 ? (
+            <div className="artifact-list">
+              <h3>Stale blend reason summary</h3>
+              <ul>
+                {staleBlendReasonCounts.map(([reason, count]) => (
+                  <li key={reason}>
+                    <code>{count}</code> {reason}
                   </li>
                 ))}
               </ul>

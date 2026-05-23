@@ -219,6 +219,9 @@ describe("App", () => {
           blend_count: 4,
           launch_eligible_blend_count: 0,
           stale_blend_count: 4,
+          stale_blend_reason_counts: {
+            "Blend references voices that are missing or not launch-usable: voice_missing.": 1,
+          },
           generation_count: 0,
           qwen_generation_count: 0,
           launch_eligible_generation_count: 0,
@@ -289,6 +292,14 @@ describe("App", () => {
     expect(screen.getByText("Distinct-speaker voice IDs")).toBeInTheDocument();
     expect(screen.getAllByText("voice_alice").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("4 total / 0 eligible / 4 stale")).toBeInTheDocument();
+    expect(screen.getByText("Stale blend reason summary")).toBeInTheDocument();
+    expect(
+      screen.getByText((_content, element) =>
+        element?.tagName.toLowerCase() === "li" &&
+        element.textContent ===
+          "1 Blend references voices that are missing or not launch-usable: voice_missing.",
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByText("Stale blends")).toBeInTheDocument();
     expect(
       screen.getByText((_content, element) =>

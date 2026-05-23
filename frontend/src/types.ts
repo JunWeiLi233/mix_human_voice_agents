@@ -188,6 +188,7 @@ export type LaunchArtifactsReport = {
   blend_count: number;
   launch_eligible_blend_count: number;
   stale_blend_count: number;
+  stale_blend_reason_counts: Record<string, number>;
   generation_count: number;
   qwen_generation_count: number;
   launch_eligible_generation_count: number;

@@ -25,7 +25,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 
 ## Usage Limit Handoff
 
-- Last refreshed: `2026-05-23T17:04:39.375423+00:00`
+- Last refreshed: `2026-05-23T17:08:12.101516+00:00`
 - Reason: Codex usage/session/context limit handoff.
 - Next agent should start from `## Next Tasks`, `## Launch Readiness Remaining Tasks`, and `## Launch Artifact Inventory`.
 - Preserve commit identity: `JunWeiLi233 <mcpejunwei@gmail.com>`.
@@ -33,7 +33,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T17:04:39.366424+00:00`
+- Checked at: `2026-05-23T17:08:12.090516+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Re-record or replace unusable voice samples, then import at least two clean consented WAV voices with matching transcripts.
@@ -186,6 +186,7 @@ Next artifact commands:
 - Hardened stale-blend prune reports so dry-runs include each stale blend's name, source voice ids, and stale reasons before any delete is applied.
 - Updated the frontend Launch Artifact Inventory panel to render stale blend names and stale reasons from the backend launch artifact report.
 - Added stale blend reason counts to the launch artifact report and `TASKS.md` handoff so agents can see why stale blends should be pruned.
+- Updated the frontend Launch Artifact Inventory panel to show aggregate stale blend reason counts before detailed stale blend rows.
 
 ## Verification Already Run
 
