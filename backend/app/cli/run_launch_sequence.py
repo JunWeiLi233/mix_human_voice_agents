@@ -11,7 +11,7 @@ from app.cli.import_voice import main as import_voice_main
 from app.cli.launch_readiness import main as launch_readiness_main
 from app.cli.verify_agent_provider import main as verify_agent_provider_main
 from app.cli.verify_qwen_runtime import main as verify_qwen_runtime_main
-from app.core.audio import is_parseable_wav, wav_has_audible_signal
+from app.core.audio import AudioQualityError, analyze_audio_sample, is_parseable_wav, wav_has_audible_signal
 from app.models.schemas import AgentProviderKind
 
 
@@ -125,6 +125,10 @@ def _validate_manifest(manifest: dict[str, Any]) -> None:
             raise ValueError(f"voices[{index}].audio must be a parseable WAV file: {audio_path}")
         if not wav_has_audible_signal(audio_path):
             raise ValueError(f"voices[{index}].audio must contain audible signal: {audio_path}")
+        try:
+            analyze_audio_sample(audio_path)
+        except AudioQualityError as exc:
+            raise ValueError(f"voices[{index}].audio failed quality check: {exc}") from exc
     if len(normalized_speakers) < 2:
         raise ValueError("Launch sequence manifest requires at least two distinct speaker display names.")
     blend = _optional_object(manifest.get("blend"), "blend")

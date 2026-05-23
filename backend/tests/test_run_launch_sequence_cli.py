@@ -1173,6 +1173,57 @@ def test_run_launch_sequence_rejects_invalid_wav_before_import(tmp_path: Path, m
     }
 
 
+def test_run_launch_sequence_rejects_short_reference_audio_before_import(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    manifest_path = tmp_path / "launch-manifest.json"
+    short_audio = tmp_path / "alice.wav"
+    bob_audio = tmp_path / "bob.wav"
+    write_reference_wav(short_audio, duration_seconds=1)
+    write_reference_wav(bob_audio)
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "voices": [
+                    {
+                        "speaker_display_name": "Alice",
+                        "confirmed_by": "Junwei",
+                        "reference_text": "Alice reads a launch reference.",
+                        "audio": str(short_audio),
+                    },
+                    {
+                        "speaker_display_name": "Bob",
+                        "confirmed_by": "Junwei",
+                        "reference_text": "Bob reads a launch reference.",
+                        "audio": str(bob_audio),
+                    },
+                ],
+                "agent_provider": {
+                    "provider": "openai_compatible",
+                    "model": "local-qwen-agent",
+                    "base_url": "http://127.0.0.1:1234/v1",
+                },
+                "generation": {"prompt": "Greet the user as a disclosed synthetic assistant."},
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        "app.cli.run_launch_sequence.import_voice_main",
+        lambda argv: (_ for _ in ()).throw(AssertionError("short audio should validate before imports")),
+    )
+
+    exit_code = main(["--manifest", str(manifest_path), "--report", "sequence-report.json"])
+
+    assert exit_code == 2
+    report = json.loads(Path("sequence-report.json").read_text(encoding="utf-8"))
+    assert report == {
+        "status": "failed",
+        "error": "voices[1].audio failed quality check: Reference audio must be at least 5 seconds.",
+    }
+
+
 def test_run_launch_sequence_fails_when_final_readiness_is_blocked(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     manifest_path = tmp_path / "launch-manifest.json"
@@ -1239,10 +1290,9 @@ def test_run_launch_sequence_fails_when_final_readiness_is_blocked(tmp_path: Pat
     }
 
 
-def write_reference_wav(path: Path) -> Path:
+def write_reference_wav(path: Path, duration_seconds: int = 5) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     sample_rate = 16000
-    duration_seconds = 5
     with wave.open(str(path), "wb") as wav_file:
         wav_file.setnchannels(1)
         wav_file.setsampwidth(2)
