@@ -9,6 +9,7 @@ from app.core.audio import is_parseable_wav, wav_has_audible_signal
 from app.core.blends import create_blend
 from app.core.generation import build_source_profile_details
 from app.core.qwen_profiles import validate_qwen_voice_profiles
+from app.core.qwen_runtime import resolved_qwen_runtime_config
 from app.core.storage import GENERATION_ROOT, get_voice_profiles_by_ids
 from app.models.schemas import BlendProfileInput
 from app.tts.qwen import QwenTtsAdapter, QwenTtsNotConfigured
@@ -115,6 +116,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             attn_implementation=args.attn_implementation,
             output_root=Path(GENERATION_ROOT),
         )
+        runtime_config = resolved_qwen_runtime_config(
+            adapter,
+            _qwen_runtime_config_from_args(args),
+        )
         output_path = adapter.synthesize(args.text, blend, voice_profiles=voice_profiles)
         output_error = _qwen_generated_audio_error(Path(output_path), "Qwen verification output audio")
         if output_error:
@@ -124,10 +129,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     "status": "failed",
                     "error": output_error,
                     "voice_profile_ids": profile_ids,
-                    "model_id": args.model_id,
-                    "device_map": args.device_map,
-                    "dtype": args.dtype,
-                    "attn_implementation": args.attn_implementation,
+                    **runtime_config,
                     "tts_backend": "qwen3_tts",
                     "output_audio_path": str(output_path),
                     "text": args.text,
@@ -155,10 +157,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         {
             "status": "passed",
             "voice_profile_ids": profile_ids,
-            "model_id": args.model_id,
-            "device_map": args.device_map,
-            "dtype": args.dtype,
-            "attn_implementation": args.attn_implementation,
+            **runtime_config,
             "source_profile_details": [
                 detail.model_dump(mode="json")
                 for detail in build_source_profile_details(blend.profiles, voice_profiles)
@@ -183,6 +182,15 @@ def _qwen_generated_audio_error(path: Path, label: str) -> str | None:
     if not wav_has_audible_signal(path):
         return f"{label} must contain audible signal."
     return None
+
+
+def _qwen_runtime_config_from_args(args: argparse.Namespace) -> dict[str, str | None]:
+    return {
+        "model_id": args.model_id,
+        "device_map": args.device_map,
+        "dtype": args.dtype,
+        "attn_implementation": args.attn_implementation,
+    }
 
 
 def _write_report(report_path: Path, payload: dict[str, object]) -> None:

@@ -19,6 +19,7 @@ from app.core.launch import (
     get_qwen_verification_report,
 )
 from app.core.qwen_profiles import validate_qwen_voice_profiles
+from app.core.qwen_runtime import resolved_qwen_runtime_config
 from app.core.safety import SafetyError
 from app.core.storage import (
     GENERATION_ROOT,
@@ -173,6 +174,10 @@ def run_qwen_verification_route(request: RunQwenVerificationRequest) -> QwenVeri
             attn_implementation=request.attn_implementation,
             output_root=Path(GENERATION_ROOT),
         )
+        runtime_config = resolved_qwen_runtime_config(
+            adapter,
+            _qwen_runtime_config_from_verification_request(request),
+        )
         output_path = adapter.synthesize(request.text, blend, voice_profiles=voice_profiles)
         output_error = _qwen_generated_audio_error(Path(output_path), "Qwen verification output audio")
         if output_error:
@@ -181,10 +186,7 @@ def run_qwen_verification_route(request: RunQwenVerificationRequest) -> QwenVeri
                     "status": "failed",
                     "error": output_error,
                     "voice_profile_ids": profile_ids,
-                    "model_id": request.model_id,
-                    "device_map": request.device_map,
-                    "dtype": request.dtype,
-                    "attn_implementation": request.attn_implementation,
+                    **runtime_config,
                     "tts_backend": "qwen3_tts",
                     "text": request.text,
                     "output_audio_path": str(output_path),
@@ -209,10 +211,7 @@ def run_qwen_verification_route(request: RunQwenVerificationRequest) -> QwenVeri
         {
             "status": "passed",
             "voice_profile_ids": profile_ids,
-            "model_id": request.model_id,
-            "device_map": request.device_map,
-            "dtype": request.dtype,
-            "attn_implementation": request.attn_implementation,
+            **runtime_config,
             "source_profile_details": [
                 detail.model_dump(mode="json")
                 for detail in build_source_profile_details(blend.profiles, voice_profiles)
@@ -386,6 +385,17 @@ def _load_voice_profiles_for_generation(profile_ids: list[str], strict: bool) ->
 def _qwen_runtime_config_from_request(request: GenerateRequest) -> dict[str, str | None] | None:
     if request.tts_backend != "qwen3_tts":
         return None
+    return {
+        "model_id": request.model_id,
+        "device_map": request.device_map,
+        "dtype": request.dtype,
+        "attn_implementation": request.attn_implementation,
+    }
+
+
+def _qwen_runtime_config_from_verification_request(
+    request: RunQwenVerificationRequest,
+) -> dict[str, str | None]:
     return {
         "model_id": request.model_id,
         "device_map": request.device_map,

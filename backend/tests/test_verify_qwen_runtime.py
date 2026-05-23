@@ -108,6 +108,69 @@ def test_verify_qwen_runtime_generates_report_with_selected_profiles(tmp_path: P
     ]
 
 
+def test_verify_qwen_runtime_records_resolved_adapter_runtime_config_when_args_omit_it(
+    tmp_path: Path, monkeypatch
+):
+    def fake_get_profiles(profile_ids):
+        voice_a_audio = tmp_path / "voice_a.wav"
+        voice_b_audio = tmp_path / "voice_b.wav"
+        write_reference_wav(voice_a_audio)
+        write_reference_wav(voice_b_audio)
+        return {
+            "voice_a": profile(
+                "voice_a",
+                "Alice",
+                "Alice reads the reference text.",
+                cleaned_audio_path=str(voice_a_audio),
+            ),
+            "voice_b": profile(
+                "voice_b",
+                "Bob",
+                "Bob reads the reference text.",
+                cleaned_audio_path=str(voice_b_audio),
+            ),
+        }
+
+    class RuntimeConfigQwenAdapter:
+        runtime_config = {
+            "model_id": "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+            "device_map": "auto",
+            "dtype": None,
+            "attn_implementation": None,
+        }
+
+        @classmethod
+        def from_pretrained(cls, output_root=None, **kwargs):
+            return cls()
+
+        def synthesize(self, text, blend, voice_profiles=None):
+            output = tmp_path / "qwen_verify.wav"
+            write_reference_wav(output)
+            return output
+
+    monkeypatch.setattr("app.cli.verify_qwen_runtime.get_voice_profiles_by_ids", fake_get_profiles)
+    monkeypatch.setattr("app.cli.verify_qwen_runtime.QwenTtsAdapter", RuntimeConfigQwenAdapter)
+    report_path = tmp_path / "report.json"
+
+    exit_code = main(
+        [
+            "--voice-profile-id",
+            "voice_a",
+            "--voice-profile-id",
+            "voice_b",
+            "--report",
+            str(report_path),
+        ]
+    )
+
+    assert exit_code == 0
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["model_id"] == "Qwen/Qwen3-TTS-12Hz-0.6B-Base"
+    assert report["device_map"] == "auto"
+    assert report["dtype"] is None
+    assert report["attn_implementation"] is None
+
+
 def test_verify_qwen_runtime_writes_failed_report_when_output_is_invalid_wav(
     tmp_path: Path, monkeypatch
 ):
