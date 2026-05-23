@@ -71,6 +71,10 @@ describe("App", () => {
     expect(await screen.findByText("Launch Readiness")).toBeInTheDocument();
     expect(screen.getByText("Blocked before launch")).toBeInTheDocument();
     expect(screen.getByText("2026-05-23T00:20:00+00:00")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Download launch readiness audit" })).toHaveAttribute(
+      "href",
+      "/api/launch/readiness/report",
+    );
     expect(screen.getByText("Run Qwen runtime verification successfully before launch.")).toBeInTheDocument();
     expect(screen.getByText("Blend Mixer")).toBeInTheDocument();
     expect(screen.getByText("Agent Provider")).toBeInTheDocument();

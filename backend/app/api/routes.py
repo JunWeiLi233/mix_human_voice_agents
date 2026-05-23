@@ -145,6 +145,15 @@ def launch_readiness_route() -> LaunchReadinessReport:
     return evaluate_launch_readiness()
 
 
+@router.get("/launch/readiness/report")
+def launch_readiness_report_route() -> FileResponse:
+    report = evaluate_launch_readiness()
+    report_path = Path("data") / "launch-readiness-report.json"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(json.dumps(report.model_dump(mode="json"), indent=2), encoding="utf-8")
+    return FileResponse(report_path, media_type="application/json", filename="launch-readiness-report.json")
+
+
 @router.post("/tts/qwen/verification", response_model=QwenVerificationReport)
 def run_qwen_verification_route(request: RunQwenVerificationRequest) -> QwenVerificationReport:
     profile_ids = request.voice_profile_ids

@@ -19,6 +19,9 @@ export function LaunchReadiness({ readiness }: Props) {
               <dd>{readiness.checked_at}</dd>
             </dl>
           ) : null}
+          <a download="launch-readiness-report.json" href="/api/launch/readiness/report">
+            Download launch readiness audit
+          </a>
           {readiness.blocking_reasons.length > 0 ? (
             <ul className="readiness-reasons">
               {readiness.blocking_reasons.map((reason) => (

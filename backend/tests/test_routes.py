@@ -558,6 +558,22 @@ def test_launch_readiness_reports_blockers_when_requirements_are_missing(tmp_pat
     }
 
 
+def test_launch_readiness_report_download_writes_current_audit(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    response = client.get("/api/launch/readiness/report")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/json"
+    assert "launch-readiness-report.json" in response.headers["content-disposition"]
+    payload = response.json()
+    saved_payload = json.loads((tmp_path / "data" / "launch-readiness-report.json").read_text(encoding="utf-8"))
+    assert payload == saved_payload
+    assert datetime.fromisoformat(payload["checked_at"])
+    assert payload["status"] == "blocked"
+    assert "Import at least two consented voice profiles." in payload["blocking_reasons"]
+
+
 def test_launch_readiness_reports_ready_after_full_qwen_verification(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     research_review_path = tmp_path / "docs" / "research-review.md"
