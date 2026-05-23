@@ -75,7 +75,8 @@ def collect_launch_artifacts() -> dict[str, object]:
         blend.id for blend, status in zip(blends, blend_statuses, strict=True) if not status["launch_eligible"]
     ]
     generation_statuses = [
-        _generation_status(generation, blends, agent_provider, qwen_verification) for generation in generations
+        _generation_status(generation, blends, launch_eligible_blend_ids, agent_provider, qwen_verification)
+        for generation in generations
     ]
     launch_eligible_generation_ids = [
         generation.id
@@ -333,6 +334,7 @@ def _select_distinct_speaker_voice_ids(voices: list[VoiceProfile], usable_voice_
 def _generation_status(
     generation: GenerationResult,
     blends: list[VoiceBlend],
+    launch_eligible_blend_ids: list[str],
     agent_provider: AgentProviderVerificationReport,
     qwen_verification: QwenVerificationReport,
 ) -> dict[str, object]:
@@ -381,8 +383,9 @@ def _generation_status(
         reasons.append("Qwen generation prompt and reply must pass voice safety checks.")
     if not _generation_has_synthetic_disclosure(generation):
         reasons.append("Qwen generation must include synthetic disclosure metadata.")
-    if not _generation_references_current_blend(generation, blends):
-        reasons.append("Qwen generation must reference a current saved blend.")
+    blend_reference_status = _generation_blend_reference_status(generation, blends, launch_eligible_blend_ids)
+    if blend_reference_status:
+        reasons.append(blend_reference_status)
     audio_path = Path(generation.audio_path)
     if not _path_is_under(audio_path, GENERATION_ROOT):
         reasons.append("Qwen generation audio must be stored under data/generations.")
@@ -527,17 +530,25 @@ def _path_is_under(path: Path, root: Path) -> bool:
     return resolved_path == resolved_root or resolved_root in resolved_path.parents
 
 
-def _generation_references_current_blend(generation: GenerationResult, blends: list[VoiceBlend]) -> bool:
+def _generation_blend_reference_status(
+    generation: GenerationResult,
+    blends: list[VoiceBlend],
+    launch_eligible_blend_ids: list[str],
+) -> str | None:
     if not generation.blend_id:
-        return False
+        return "Qwen generation must reference a current saved blend."
     matching_blend = next((blend for blend in blends if blend.id == generation.blend_id), None)
     if matching_blend is None:
-        return False
-    return (
-        matching_blend.name == generation.blend_name
-        and matching_blend.strategy == generation.blend_strategy
-        and matching_blend.profiles == generation.source_profiles
-    )
+        return "Qwen generation must reference a current saved blend."
+    if (
+        matching_blend.name != generation.blend_name
+        or matching_blend.strategy != generation.blend_strategy
+        or matching_blend.profiles != generation.source_profiles
+    ):
+        return "Qwen generation must reference a current saved blend."
+    if generation.blend_id not in set(launch_eligible_blend_ids):
+        return "Qwen generation must reference a launch-eligible saved blend."
+    return None
 
 
 def _voice_is_usable(voice: VoiceProfile) -> bool:
