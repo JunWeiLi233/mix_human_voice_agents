@@ -14,7 +14,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 
 - Branch: `main`
 - Remote: `https://github.com/JunWeiLi233/mix_human_voice_agents.git`
-- Frontend UI page work is in progress in this working tree.
+- Frontend UI page work has been committed and pushed.
 - Local Vite dev server for review: `http://127.0.0.1:5174/`
 - Backend launch readiness is still blocked because the repo does not yet have real imported voices, a saved real blend, installed/loadable Qwen runtime verification, or real Qwen mixed-voice output.
 
@@ -26,6 +26,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Added `Launch` page for readiness, agent provider, and Qwen runtime checks.
 - Redesigned the frontend shell with a responsive hero, status summary, page tabs, refined neutral palette, and mobile wrapping fixes.
 - Added a frontend test that first failed, then passed, for switching between Studio, Evidence, and Launch pages.
+- Added a stricter launch-readiness research gate: `docs/research-review.md` must include `Last checked: YYYY-MM-DD` and that date must be within 45 days before launch.
 
 ## Verification Already Run
 
@@ -34,7 +35,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - `cd frontend; npm run build` passed.
 - Chrome headless desktop screenshot was captured from `http://127.0.0.1:5174/`.
 - Chrome headless mobile screenshot was captured and mobile clipping was fixed.
-- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 192 tests.
+- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 194 tests.
 
 ## Next Tasks
 

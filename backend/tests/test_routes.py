@@ -584,7 +584,8 @@ def test_launch_readiness_reports_ready_after_full_qwen_verification(tmp_path: P
         "- OpenAI Voice Agents\n"
         "- LiveKit Agents\n"
         "- Pipecat\n"
-        "- Qwen3-TTS\n",
+        "- Qwen3-TTS\n\n"
+        f"Last checked: {datetime.now().date().isoformat()}.\n",
         encoding="utf-8",
     )
     sample_path = tmp_path / "sample.wav"

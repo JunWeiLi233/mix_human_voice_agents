@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+import re
 
 from pydantic import ValidationError
 
@@ -23,6 +24,7 @@ from app.tts.qwen import QwenTtsAdapter
 QWEN_VERIFICATION_REPORT_PATH = Path("data") / "qwen-runtime-verification-report.json"
 AGENT_PROVIDER_VERIFICATION_REPORT_PATH = Path("data") / "agent-provider-verification-report.json"
 RESEARCH_REVIEW_PATH = Path("docs") / "research-review.md"
+RESEARCH_REVIEW_MAX_AGE_DAYS = 45
 REQUIRED_VOICE_USE = "private_agent_voice"
 REQUIRED_SYNTHETIC_LABEL = "synthetic mixed voice"
 
@@ -440,11 +442,38 @@ def _research_review_status() -> dict[str, object]:
             "passed": False,
             "detail": f"{RESEARCH_REVIEW_PATH} is missing required section markers: {', '.join(missing_markers)}.",
         }
+    last_checked = _research_review_last_checked(content)
+    if last_checked is None:
+        return {
+            "passed": False,
+            "detail": f"{RESEARCH_REVIEW_PATH} is missing a Last checked date.",
+        }
+    today = datetime.now(timezone.utc).date()
+    if last_checked > today:
+        return {
+            "passed": False,
+            "detail": f"{RESEARCH_REVIEW_PATH} Last checked date is in the future.",
+        }
+    if (today - last_checked).days > RESEARCH_REVIEW_MAX_AGE_DAYS:
+        return {
+            "passed": False,
+            "detail": f"{RESEARCH_REVIEW_PATH} must be revalidated within {RESEARCH_REVIEW_MAX_AGE_DAYS} days before launch.",
+        }
 
     return {
         "passed": True,
         "detail": f"Reviewed: {RESEARCH_REVIEW_PATH}",
     }
+
+
+def _research_review_last_checked(content: str):
+    match = re.search(r"Last checked:\s*(\d{4}-\d{2}-\d{2})", content)
+    if not match:
+        return None
+    try:
+        return datetime.strptime(match.group(1), "%Y-%m-%d").date()
+    except ValueError:
+        return None
 
 
 def _resolve_research_review_path() -> Path:

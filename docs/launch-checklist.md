@@ -6,7 +6,7 @@
 - Frontend tests pass with `cd frontend && npm test`.
 - Frontend production build passes with `cd frontend && npm run build`.
 - Local launch audit runs with `cd backend && .\.venv\Scripts\python -m app.cli.launch_readiness --report data/launch-readiness-report.json` and writes the current readiness evidence.
-- `docs/research-review.md` has been reviewed for current voice-agent and voice-cloning implementation patterns before launch.
+- `docs/research-review.md` has been reviewed for current voice-agent and voice-cloning implementation patterns before launch and includes a `Last checked: YYYY-MM-DD` date within 45 days.
 - Manual import of at least two valid 5-30 second consented WAV samples with matching reference transcripts succeeds.
 - Import is disabled until the user confirms self or written-permission consent in the UI.
 - Imported profile metadata records `confirmed_by` and consent notes from user input.

@@ -1,9 +1,15 @@
 ﻿from types import SimpleNamespace
+from datetime import datetime, timezone
 from pathlib import Path
 import json
 import wave
 
-from app.core.launch import _qwen_mixed_generation_status, _qwen_verification_status, evaluate_launch_readiness
+from app.core.launch import (
+    _qwen_mixed_generation_status,
+    _qwen_verification_status,
+    _research_review_status,
+    evaluate_launch_readiness,
+)
 from app.models.schemas import (
     AgentProviderVerificationReport,
     AgentTrace,
@@ -24,6 +30,49 @@ def test_core_launch_readiness_evaluator_reports_missing_requirements(tmp_path, 
     assert report.status == "blocked"
     assert "Import at least two consented voice profiles." in report.blocking_reasons
     assert "Run Qwen runtime verification successfully before launch." in report.blocking_reasons
+
+
+def test_core_launch_readiness_blocks_stale_research_review(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    research_review_path = tmp_path / "docs" / "research-review.md"
+    research_review_path.parent.mkdir(parents=True)
+    research_review_path.write_text(
+        "# Mixed Voice Agent Research Review\n\n"
+        "## Sources Reviewed\n\n"
+        "- Qwen3-TTS\n\n"
+        "Last checked: 2000-01-01.\n",
+        encoding="utf-8",
+    )
+
+    research_review = _research_review_status()
+    research_review_label = str(Path("docs") / "research-review.md")
+
+    assert research_review == {
+        "passed": False,
+        "detail": f"{research_review_label} must be revalidated within 45 days before launch.",
+    }
+
+
+def test_core_launch_readiness_accepts_recent_research_review(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    research_review_path = tmp_path / "docs" / "research-review.md"
+    research_review_path.parent.mkdir(parents=True)
+    today = datetime.now(timezone.utc).date().isoformat()
+    research_review_path.write_text(
+        "# Mixed Voice Agent Research Review\n\n"
+        "## Sources Reviewed\n\n"
+        "- Qwen3-TTS\n\n"
+        f"Last checked: {today}.\n",
+        encoding="utf-8",
+    )
+
+    research_review = _research_review_status()
+    research_review_label = str(Path("docs") / "research-review.md")
+
+    assert research_review == {
+        "passed": True,
+        "detail": f"Reviewed: {research_review_label}",
+    }
 
 
 def test_core_launch_readiness_blocks_passed_agent_provider_report_without_provider_details(
