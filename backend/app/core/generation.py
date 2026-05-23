@@ -5,6 +5,7 @@ from app.core.blends import validate_blend
 from app.core.audio import is_parseable_wav, wav_has_audible_signal
 from app.core.qwen_profiles import validate_qwen_voice_profiles
 from app.core.safety import SafetyError, check_generation_request
+from app.core.storage import GENERATION_ROOT
 from app.models.schemas import (
     AgentTrace,
     BlendProfile,
@@ -90,6 +91,10 @@ def _validate_qwen_generation_inputs(
 
 
 def _validate_qwen_output_audio(audio_path: Path) -> None:
+    generation_root = GENERATION_ROOT.resolve(strict=False)
+    resolved_audio_path = audio_path.resolve(strict=False)
+    if generation_root not in (resolved_audio_path, *resolved_audio_path.parents):
+        raise SafetyError("Qwen generation output audio must be stored under data/generations.")
     if not audio_path.exists():
         raise SafetyError("Qwen generation output audio is missing.")
     if audio_path.stat().st_size == 0:
