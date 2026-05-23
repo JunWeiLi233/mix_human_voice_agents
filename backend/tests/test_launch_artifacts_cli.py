@@ -441,6 +441,13 @@ def test_launch_artifacts_cli_updates_tasks_handoff_with_artifact_inventory(tmp_
     assert "- Provider preflight status: `missing`" in content
     assert "- Qwen verification status: `missing`" in content
     assert "- Qwen runtime: `available` (`Qwen/Qwen3-TTS-12Hz-0.6B-Base`)" in content
+    assert "Provider preflight command options:" in content
+    assert "- ChatGPT: `python -m app.cli.verify_agent_provider --provider openai" in content
+    assert "- Claude: `python -m app.cli.verify_agent_provider --provider anthropic" in content
+    assert "- Grok: `python -m app.cli.verify_agent_provider --provider xai" in content
+    assert "- Gemini: `python -m app.cli.verify_agent_provider --provider google" in content
+    assert "- API: `python -m app.cli.verify_agent_provider --provider openai_compatible" in content
+    assert "- Local: `python -m app.cli.verify_agent_provider --provider ollama" in content
     assert "Next artifact commands:" in content
     assert "- [ ] `python -m app.cli.create_blend --name \"Launch mixed voice\"" in content
     assert "- [ ] `python -m app.cli.verify_agent_provider --provider openai_compatible" in content

@@ -25,7 +25,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 
 ## Usage Limit Handoff
 
-- Last refreshed: `2026-05-23T17:11:46.908920+00:00`
+- Last refreshed: `2026-05-23T17:14:50.643970+00:00`
 - Reason: Codex usage/session/context limit handoff.
 - Next agent should start from `## Next Tasks`, `## Launch Readiness Remaining Tasks`, and `## Launch Artifact Inventory`.
 - Preserve commit identity: `JunWeiLi233 <mcpejunwei@gmail.com>`.
@@ -33,7 +33,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T17:11:46.898917+00:00`
+- Checked at: `2026-05-23T17:14:50.633971+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Re-record or replace unusable voice samples, then import at least two clean consented WAV voices with matching transcripts.
@@ -57,7 +57,7 @@ Blocking reasons:
 ## Launch Artifact Inventory
 
 - Voices: `2` total; `1` usable; `1` unusable; `1` distinct usable speakers
-- Blends: `275` total; `0` launch-eligible; `275` stale/nonmatching
+- Blends: `276` total; `0` launch-eligible; `276` stale/nonmatching
 - Generations: `0` total; `0` Qwen; `0` launch-eligible; `0` stale/nonmatching
 - Usable voice IDs: `voice_93f62f27a5b4`
 - Usable distinct-speaker voice IDs: `voice_93f62f27a5b4`
@@ -71,9 +71,17 @@ Unusable voices:
 - `voice_93dc1ef39402` Alice: Audio quality warnings must be resolved before launch.
 
 Stale blend reason summary:
-- `275` Blend must reference at least two distinct speaker display names.
-- `275` Blend must use the multi_reference_prompt strategy for Qwen launch.
-- `275` Blend references voices that are missing or not launch-usable: voice_a, voice_b.
+- `276` Blend must reference at least two distinct speaker display names.
+- `276` Blend must use the multi_reference_prompt strategy for Qwen launch.
+- `276` Blend references voices that are missing or not launch-usable: voice_a, voice_b.
+
+Provider preflight command options:
+- ChatGPT: `python -m app.cli.verify_agent_provider --provider openai --model gpt-4.1-mini --base-url https://api.openai.com/v1 --api-key <openai-api-key>`
+- Claude: `python -m app.cli.verify_agent_provider --provider anthropic --model claude-sonnet-4-5 --base-url https://api.anthropic.com --api-key <anthropic-api-key>`
+- Grok: `python -m app.cli.verify_agent_provider --provider xai --model grok-4 --base-url https://api.x.ai/v1 --api-key <xai-api-key>`
+- Gemini: `python -m app.cli.verify_agent_provider --provider google --model gemini-2.5-flash --base-url https://generativelanguage.googleapis.com/v1beta --api-key <google-api-key>`
+- API: `python -m app.cli.verify_agent_provider --provider openai_compatible --model <model> --base-url <base-url> --api-key <api-key>`
+- Local: `python -m app.cli.verify_agent_provider --provider ollama --model llama3.1 --base-url http://127.0.0.1:11434`
 
 Next artifact commands:
 - [ ] `python -m app.cli.prune_launch_artifacts --report data/prune-launch-artifacts-report.json`
@@ -188,6 +196,7 @@ Next artifact commands:
 - Added stale blend reason counts to the launch artifact report and `TASKS.md` handoff so agents can see why stale blends should be pruned.
 - Updated the frontend Launch Artifact Inventory panel to show aggregate stale blend reason counts before detailed stale blend rows.
 - Updated the frontend Launch Artifact Inventory panel to show ChatGPT, Claude, Grok, Gemini, API, and local provider preflight commands from the artifact report.
+- Updated the generated `TASKS.md` Launch Artifact Inventory handoff to include ChatGPT, Claude, Grok, Gemini, API, and local provider preflight command options.
 
 ## Verification Already Run
 

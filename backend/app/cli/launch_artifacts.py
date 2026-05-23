@@ -437,6 +437,18 @@ def _tasks_handoff_section(report: dict[str, object]) -> str:
         lines.extend(["", "Stale blend reason summary:"])
         for reason, count in stale_blend_reason_counts.items():
             lines.append(f"- `{count}` {reason}")
+    provider_commands = report.get("agent_provider_commands", {})
+    if provider_commands:
+        lines.extend(["", "Provider preflight command options:"])
+        for label, key in (
+            ("ChatGPT", "chatgpt"),
+            ("Claude", "claude"),
+            ("Grok", "grok"),
+            ("Gemini", "gemini"),
+            ("API", "openai_compatible_api"),
+            ("Local", "local_ollama"),
+        ):
+            lines.append(f"- {label}: `{provider_commands[key]}`")
     stale_generations = [generation for generation in report["generations"] if not generation["launch_eligible"]]
     if stale_generations:
         lines.extend(["", "Stale/nonmatching generations:"])
