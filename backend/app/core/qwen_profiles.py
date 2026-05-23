@@ -7,6 +7,14 @@ REQUIRED_VOICE_USE = "private_agent_voice"
 
 
 def validate_qwen_voice_profiles(voice_profiles: dict[str, VoiceProfile]) -> None:
+    normalized_speaker_names = {
+        profile.display_name.strip().casefold()
+        for profile in voice_profiles.values()
+        if profile.display_name.strip()
+    }
+    if len(normalized_speaker_names) < 2:
+        raise ValueError("Qwen synthesis requires at least two distinct speakers.")
+
     for profile in voice_profiles.values():
         consent = profile.consent
         if not consent.synthetic_voice_allowed or REQUIRED_VOICE_USE not in consent.allowed_uses:

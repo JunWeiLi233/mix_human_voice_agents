@@ -18,6 +18,20 @@ def test_qwen_profile_preflight_requires_existing_cleaned_audio(tmp_path: Path):
         validate_qwen_voice_profiles(profiles)
 
 
+def test_qwen_profile_preflight_requires_distinct_speaker_names(tmp_path: Path):
+    alice_a = tmp_path / "alice_a.wav"
+    alice_b = tmp_path / "alice_b.wav"
+    alice_a.write_bytes(b"fake-wav-a")
+    alice_b.write_bytes(b"fake-wav-b")
+    profiles = {
+        "voice_a": voice_profile("voice_a", "Alice", cleaned_audio_path=str(alice_a)),
+        "voice_b": voice_profile("voice_b", " alice ", cleaned_audio_path=str(alice_b)),
+    }
+
+    with pytest.raises(ValueError, match="at least two distinct speakers"):
+        validate_qwen_voice_profiles(profiles)
+
+
 def voice_profile(profile_id: str, display_name: str, cleaned_audio_path: str) -> VoiceProfile:
     return VoiceProfile.model_validate(
         {
