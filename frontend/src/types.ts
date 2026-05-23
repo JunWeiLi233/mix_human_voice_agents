@@ -169,6 +169,17 @@ export type LaunchArtifactGeneration = {
   stale_reasons: string[];
 };
 
+export type LaunchArtifactBlend = {
+  id: string;
+  name: string;
+  strategy: BlendStrategy;
+  voice_profile_ids: string[];
+  launch_eligible: boolean;
+  missing_voice_profile_ids: string[];
+  stale_reasons: string[];
+  profiles: BlendProfile[];
+};
+
 export type LaunchArtifactsReport = {
   voice_count: number;
   usable_voice_count: number;
@@ -189,6 +200,7 @@ export type LaunchArtifactsReport = {
   qwen_verification: { status: "missing" | "passed" | "failed" };
   qwen_runtime: { available: boolean; model_id?: string | null };
   voices: LaunchArtifactVoice[];
+  blends: LaunchArtifactBlend[];
   generations: LaunchArtifactGeneration[];
   next_commands: string[];
 };

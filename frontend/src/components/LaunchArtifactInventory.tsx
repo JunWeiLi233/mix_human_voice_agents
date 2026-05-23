@@ -78,6 +78,20 @@ export function LaunchArtifactInventory({ artifacts }: Props) {
               </ul>
             </div>
           ) : null}
+          {artifacts.blends.some((blend) => !blend.launch_eligible) ? (
+            <div className="artifact-list">
+              <h3>Stale blends</h3>
+              <ul>
+                {artifacts.blends
+                  .filter((blend) => !blend.launch_eligible)
+                  .map((blend) => (
+                    <li key={blend.id}>
+                      <code>{blend.id}</code> {blend.name}: {blend.stale_reasons.join("; ")}
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          ) : null}
           {artifacts.generations.some((generation) => !generation.launch_eligible) ? (
             <div className="artifact-list">
               <h3>Stale generations</h3>

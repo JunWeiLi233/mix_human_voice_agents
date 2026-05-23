@@ -238,7 +238,23 @@ describe("App", () => {
               unusable_reasons: ["Audio quality warnings must be resolved before launch."],
             },
           ],
-          blends: [],
+          blends: [
+            {
+              id: "blend_stale",
+              name: "Old launch blend",
+              strategy: "multi_reference_prompt",
+              launch_eligible: false,
+              missing_voice_profile_ids: ["voice_missing"],
+              stale_reasons: [
+                "Blend references voices that are missing or not launch-usable: voice_missing.",
+              ],
+              voice_profile_ids: ["voice_missing", "voice_alice"],
+              profiles: [
+                { voice_profile_id: "voice_missing", weight: 0.5 },
+                { voice_profile_id: "voice_alice", weight: 0.5 },
+              ],
+            },
+          ],
           generations: [],
           next_commands: [
             "python -m app.cli.run_launch_sequence --write-template data/launch-sequence/launch-manifest.template.json",
@@ -273,6 +289,14 @@ describe("App", () => {
     expect(screen.getByText("Distinct-speaker voice IDs")).toBeInTheDocument();
     expect(screen.getAllByText("voice_alice").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("4 total / 0 eligible / 4 stale")).toBeInTheDocument();
+    expect(screen.getByText("Stale blends")).toBeInTheDocument();
+    expect(
+      screen.getByText((_content, element) =>
+        element?.tagName.toLowerCase() === "li" &&
+        element.textContent ===
+          "blend_stale Old launch blend: Blend references voices that are missing or not launch-usable: voice_missing.",
+      ),
+    ).toBeInTheDocument();
     expect(
       screen.getByText((_content, element) =>
         element?.tagName.toLowerCase() === "li" &&
