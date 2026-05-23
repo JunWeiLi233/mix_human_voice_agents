@@ -37,6 +37,18 @@ def test_core_launch_readiness_evaluator_reports_missing_requirements(tmp_path, 
     assert any(action.check_id == "qwen_verification" for action in report.next_actions)
 
 
+def test_core_launch_readiness_imported_voice_action_points_to_manifest_template(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+
+    report = evaluate_launch_readiness()
+
+    imported_voice_action = next(action for action in report.next_actions if action.check_id == "imported_voices")
+    assert "run_launch_sequence --write-template" in imported_voice_action.action
+    assert "launch-manifest.template.json" in imported_voice_action.action
+
+
 def test_core_launch_readiness_blocks_stale_research_review(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     research_review_path = tmp_path / "docs" / "research-review.md"

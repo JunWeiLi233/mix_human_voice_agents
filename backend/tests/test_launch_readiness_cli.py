@@ -101,7 +101,10 @@ def test_launch_readiness_cli_updates_tasks_handoff_with_remaining_launch_work(
     assert exit_code == 1
     content = tasks_path.read_text(encoding="utf-8")
     assert "## Launch Readiness Remaining Tasks" in content
-    assert "- [ ] imported_voices: Import two consented WAV voice samples with matching transcripts." in content
+    assert (
+        "- [ ] imported_voices: Generate a launch manifest with "
+        "`python -m app.cli.run_launch_sequence --write-template launch-manifest.template.json`"
+    ) in content
     assert "Evidence: 0 imported voices" in content
     assert "- [ ] qwen_verification: Run Qwen verification with two imported voices and keep the passed report." in content
     assert "Evidence: No passed Qwen runtime verification report." in content

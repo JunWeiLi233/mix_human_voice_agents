@@ -32,7 +32,11 @@ REQUIRED_VOICE_USE = "private_agent_voice"
 REQUIRED_SYNTHETIC_LABEL = "synthetic mixed voice"
 LAUNCH_ACTIONS = {
     "research_review": "Refresh docs/research-review.md with a current Last checked date.",
-    "imported_voices": "Import two consented WAV voice samples with matching transcripts.",
+    "imported_voices": (
+        "Generate a launch manifest with `python -m app.cli.run_launch_sequence "
+        "--write-template launch-manifest.template.json`, then fill in two consented WAV "
+        "voice samples with matching transcripts."
+    ),
     "saved_blend": "Create and save a multi-reference blend from imported voices.",
     "generated_audio": "Generate a Qwen mixed voice clip with imported source details.",
     "agent_provider": "Run Test provider and keep the passed provider verification report.",

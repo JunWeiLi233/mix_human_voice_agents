@@ -87,6 +87,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Hardened launch readiness so Qwen generated clips must reference a current saved blend whose name, strategy, and source weights match the generated metadata.
 - Hardened the `/api/generate` Qwen path so it rejects unsaved or stale blend payloads before loading voice profiles or Qwen.
 - Added `app.cli.run_launch_sequence --write-template` so another agent can generate a launch manifest skeleton before filling in real consented voice files and provider details.
+- Updated Launch Readiness next actions so the imported-voices blocker points directly to the `run_launch_sequence --write-template` manifest flow.
 
 ## Verification Already Run
 
@@ -110,6 +111,13 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - `cd backend; .\.venv\Scripts\python -m pytest tests\test_run_launch_sequence_cli.py -q` passed: 29 tests.
 - `cd backend; .\.venv\Scripts\python -m app.cli.run_launch_sequence --write-template data\launch-sequence\launch-manifest.template.json --report data\launch-sequence\template-report.json` passed and wrote the manifest skeleton.
 - `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 264 tests.
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_launch_readiness_core.py -q -k "manifest_template"` passed: 1 test.
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_launch_readiness_cli.py tests\test_launch_readiness_core.py -q` passed: 78 tests.
+- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 265 tests.
+- `cd frontend; npm test -- --run` passed: 7 tests.
+- `cd frontend; npx tsc --noEmit` passed.
+- `cd frontend; npm run build` passed.
+- `git diff --check` passed with line-ending normalization warnings only.
 
 ## Next Tasks
 
@@ -133,10 +141,10 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T14:27:48.080258+00:00`
+- Checked at: `2026-05-23T14:31:23.568972+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
-- [ ] imported_voices: Import two consented WAV voice samples with matching transcripts.
+- [ ] imported_voices: Generate a launch manifest with `python -m app.cli.run_launch_sequence --write-template launch-manifest.template.json`, then fill in two consented WAV voice samples with matching transcripts.
   Evidence: 1 imported voices
 - [ ] saved_blend: Create and save a multi-reference blend from imported voices.
   Evidence: No saved blend references at least two currently imported voices.
