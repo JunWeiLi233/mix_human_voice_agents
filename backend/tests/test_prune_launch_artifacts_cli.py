@@ -26,6 +26,17 @@ def test_prune_launch_artifacts_dry_run_reports_stale_blends_without_deleting(tm
     assert payload == {
         "mode": "dry_run",
         "stale_blend_ids": ["blend_stale"],
+        "stale_blends": [
+            {
+                "id": "blend_stale",
+                "name": "blend_stale",
+                "voice_profile_ids": ["voice_missing", "voice_alice"],
+                "stale_reasons": [
+                    "Blend must reference at least two distinct speaker display names.",
+                    "Blend references voices that are missing or not launch-usable: voice_missing.",
+                ],
+            }
+        ],
         "deleted_blend_ids": [],
         "kept_blend_ids": ["blend_ready"],
     }

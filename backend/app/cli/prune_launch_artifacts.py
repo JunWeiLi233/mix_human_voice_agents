@@ -40,14 +40,25 @@ def collect_prune_plan(*, apply: bool) -> dict[str, object]:
     usable_voice_ids = [
         voice.id for voice in voices if _voice_status(voice)["launch_usable"]
     ]
+    blend_statuses = [_blend_status(blend, usable_voice_ids, voices) for blend in blends]
     stale_blend_ids = [
-        blend.id for blend in blends if not _blend_status(blend, usable_voice_ids, voices)["launch_eligible"]
+        blend.id for blend, status in zip(blends, blend_statuses, strict=True) if not status["launch_eligible"]
     ]
     kept_blend_ids = [blend.id for blend in blends if blend.id not in set(stale_blend_ids)]
     deleted_blend_ids = _delete_blends(stale_blend_ids) if apply else []
     return {
         "mode": "apply" if apply else "dry_run",
         "stale_blend_ids": stale_blend_ids,
+        "stale_blends": [
+            {
+                "id": blend.id,
+                "name": blend.name,
+                "voice_profile_ids": [profile.voice_profile_id for profile in blend.profiles],
+                "stale_reasons": status["stale_reasons"],
+            }
+            for blend, status in zip(blends, blend_statuses, strict=True)
+            if not status["launch_eligible"]
+        ],
         "deleted_blend_ids": deleted_blend_ids,
         "kept_blend_ids": kept_blend_ids,
     }

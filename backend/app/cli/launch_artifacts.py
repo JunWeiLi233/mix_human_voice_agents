@@ -246,9 +246,22 @@ def _blend_status(blend: VoiceBlend, usable_voice_ids: list[str], voices: list[V
         and len(distinct_speakers) >= 2
         and not missing_voice_profile_ids
     )
+    stale_reasons: list[str] = []
+    if blend.strategy != "multi_reference_prompt":
+        stale_reasons.append("Blend must use the multi_reference_prompt strategy for Qwen launch.")
+    if len(set(blend_ids)) < 2:
+        stale_reasons.append("Blend must reference at least two imported voice profiles.")
+    if len(distinct_speakers) < 2:
+        stale_reasons.append("Blend must reference at least two distinct speaker display names.")
+    if missing_voice_profile_ids:
+        stale_reasons.append(
+            "Blend references voices that are missing or not launch-usable: "
+            f"{', '.join(missing_voice_profile_ids)}."
+        )
     return {
         "launch_eligible": launch_eligible,
         "missing_voice_profile_ids": missing_voice_profile_ids,
+        "stale_reasons": [] if launch_eligible else stale_reasons,
     }
 
 
