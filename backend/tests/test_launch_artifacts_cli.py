@@ -222,6 +222,57 @@ def test_launch_artifacts_cli_explains_unusable_imported_voices(tmp_path: Path, 
     assert "voice_no_consent: No Consent (unusable: Voice consent does not allow private agent voice synthesis.)" in output
 
 
+def test_launch_artifacts_cli_requires_two_distinct_usable_speakers_for_launch_commands(
+    tmp_path: Path, monkeypatch, capsys
+):
+    voices = [
+        voice_profile("voice_alice_a", "Alice"),
+        voice_profile("voice_alice_b", "Alice"),
+    ]
+    monkeypatch.setattr("app.cli.launch_artifacts.list_voice_profiles", lambda: voices)
+    monkeypatch.setattr("app.cli.launch_artifacts.list_blends", lambda: [])
+    monkeypatch.setattr("app.cli.launch_artifacts.list_generation_results", lambda: [])
+    monkeypatch.setattr(
+        "app.cli.launch_artifacts.get_agent_provider_verification_report",
+        lambda: AgentProviderVerificationReport(status="missing", report_path="data/agent-provider-verification-report.json"),
+    )
+    monkeypatch.setattr(
+        "app.cli.launch_artifacts.get_qwen_verification_report",
+        lambda: QwenVerificationReport(status="missing", report_path="data/qwen-runtime-verification-report.json"),
+    )
+    monkeypatch.setattr(
+        "app.cli.launch_artifacts.QwenTtsAdapter.runtime_status",
+        lambda: TtsRuntimeStatus(
+            backend="qwen3_tts",
+            available=True,
+            model_id="Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+            message="qwen-tts package is importable.",
+        ),
+    )
+    report_path = tmp_path / "launch-artifacts.json"
+
+    exit_code = main(["--report", str(report_path), "--summary"])
+
+    assert exit_code == 0
+    payload = json.loads(report_path.read_text(encoding="utf-8"))
+    assert payload["usable_voice_count"] == 2
+    assert payload["distinct_usable_speaker_count"] == 1
+    assert (
+        'python -m app.cli.create_blend --name "Launch mixed voice"'
+        not in "\n".join(payload["next_commands"])
+    )
+    assert (
+        "python -m app.cli.verify_qwen_runtime --voice-profile-id voice_alice_a --voice-profile-id voice_alice_b"
+        not in payload["next_commands"]
+    )
+    assert (
+        "python -m app.cli.run_launch_sequence --write-template data/launch-sequence/launch-manifest.template.json"
+        in payload["next_commands"]
+    )
+    output = capsys.readouterr().out
+    assert "Distinct usable speakers: 1" in output
+
+
 def test_launch_artifacts_cli_explains_stale_qwen_generations(tmp_path: Path, monkeypatch, capsys):
     voices = [
         voice_profile("voice_alice", "Alice"),
@@ -396,6 +447,7 @@ def test_launch_artifacts_tasks_update_only_replaces_real_section_heading(tmp_pa
         "voice_count": 0,
         "usable_voice_count": 0,
         "unusable_voice_count": 0,
+        "distinct_usable_speaker_count": 0,
         "blend_count": 0,
         "launch_eligible_blend_count": 0,
         "stale_blend_count": 0,
@@ -405,6 +457,7 @@ def test_launch_artifacts_tasks_update_only_replaces_real_section_heading(tmp_pa
         "stale_generation_count": 0,
         "voices": [],
         "usable_voice_ids": [],
+        "usable_distinct_voice_ids": [],
         "launch_eligible_blend_ids": [],
         "launch_eligible_generation_ids": [],
         "generations": [],

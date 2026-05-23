@@ -21,10 +21,11 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Latest handoff work adds a dedicated usage-limit CLI that refreshes launch artifacts, readiness, and a `## Usage Limit Handoff` section in `TASKS.md`.
 - Latest cleanup work adds a dry-run-first stale blend prune command so agents can clear old nonmatching blends before creating the real launch blend.
 - Latest import hardening rejects too-short reference transcripts across CLI import, browser/API import, and launch-manifest dry-runs before Qwen verification.
+- Latest artifact inventory work now requires two distinct launch-usable speaker names before suggesting blend creation, Qwen verification, or Qwen generation commands.
 
 ## Usage Limit Handoff
 
-- Last refreshed: `2026-05-23T16:45:23.884958+00:00`
+- Last refreshed: `2026-05-23T16:49:52.464600+00:00`
 - Reason: Codex usage/session/context limit handoff.
 - Next agent should start from `## Next Tasks`, `## Launch Readiness Remaining Tasks`, and `## Launch Artifact Inventory`.
 - Preserve commit identity: `JunWeiLi233 <mcpejunwei@gmail.com>`.
@@ -32,7 +33,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T16:45:23.875957+00:00`
+- Checked at: `2026-05-23T16:49:52.455596+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Re-record or replace unusable voice samples, then import at least two clean consented WAV voices with matching transcripts.
@@ -55,10 +56,11 @@ Blocking reasons:
 
 ## Launch Artifact Inventory
 
-- Voices: `2` total; `1` usable; `1` unusable
-- Blends: `270` total; `0` launch-eligible; `270` stale/nonmatching
+- Voices: `2` total; `1` usable; `1` unusable; `1` distinct usable speakers
+- Blends: `271` total; `0` launch-eligible; `271` stale/nonmatching
 - Generations: `0` total; `0` Qwen; `0` launch-eligible; `0` stale/nonmatching
 - Usable voice IDs: `voice_93f62f27a5b4`
+- Usable distinct-speaker voice IDs: `voice_93f62f27a5b4`
 - Launch-eligible blend IDs: `none`
 - Launch-eligible generation IDs: `none`
 - Provider preflight status: `missing`
@@ -174,6 +176,7 @@ Next artifact commands:
 - Added `app.cli.prune_launch_artifacts` so stale/nonmatching saved blends can be previewed with a dry-run report before optionally deleting them with `--apply`.
 - Added stale-blend cleanup as a launch artifact next command whenever inventory detects nonmatching blends.
 - Added shared reference transcript validation requiring at least 5 words for Qwen voice cloning imports and launch manifests.
+- Hardened launch artifact inventory and stale-blend pruning so launch-eligible blends and next commands require at least two distinct usable speaker display names.
 
 ## Verification Already Run
 
@@ -194,6 +197,10 @@ Next artifact commands:
 - `cd backend; .\.venv\Scripts\python -m pytest tests\test_run_launch_sequence_cli.py -q -k "short_reference"` first failed because launch manifest dry-run accepted one-word transcripts, then passed after adding shared transcript validation.
 - `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 288 tests.
 - `cd backend; .\.venv\Scripts\python -m app.cli.handoff --tasks ..\TASKS.md --no-summary` refreshed usage-limit handoff, launch readiness, and artifact inventory after transcript validation.
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_launch_artifacts_cli.py -q -k "distinct_usable"` first failed because artifact inventory suggested launch commands for two profiles with the same speaker name, then passed after adding distinct-speaker selection.
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_launch_artifacts_cli.py tests\test_prune_launch_artifacts_cli.py -q` passed: 9 tests.
+- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 289 tests.
+- `cd backend; .\.venv\Scripts\python -m app.cli.handoff --tasks ..\TASKS.md --no-summary` refreshed usage-limit handoff, launch readiness, and artifact inventory with distinct usable speaker counts.
 - `cd frontend; npm test -- --run` passed: 7 tests.
 - `cd frontend; npx tsc --noEmit` passed.
 - `cd frontend; npm run build` passed.

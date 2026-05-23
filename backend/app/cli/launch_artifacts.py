@@ -52,7 +52,8 @@ def collect_launch_artifacts() -> dict[str, object]:
     usable_voice_ids = [
         voice.id for voice, status in zip(voices, voice_statuses, strict=True) if status["launch_usable"]
     ]
-    blend_statuses = [_blend_status(blend, usable_voice_ids) for blend in blends]
+    usable_distinct_voice_ids = _select_distinct_speaker_voice_ids(voices, usable_voice_ids)
+    blend_statuses = [_blend_status(blend, usable_voice_ids, voices) for blend in blends]
     launch_eligible_blend_ids = [
         blend.id for blend, status in zip(blends, blend_statuses, strict=True) if status["launch_eligible"]
     ]
@@ -75,6 +76,7 @@ def collect_launch_artifacts() -> dict[str, object]:
         "voice_count": len(voices),
         "usable_voice_count": len(usable_voice_ids),
         "unusable_voice_count": len(voices) - len(usable_voice_ids),
+        "distinct_usable_speaker_count": len(usable_distinct_voice_ids),
         "blend_count": len(blends),
         "launch_eligible_blend_count": len(launch_eligible_blend_ids),
         "stale_blend_count": len(stale_blend_ids),
@@ -84,6 +86,7 @@ def collect_launch_artifacts() -> dict[str, object]:
         "stale_generation_count": len(stale_generation_ids),
         "voices": [_voice_payload(voice, status) for voice, status in zip(voices, voice_statuses, strict=True)],
         "usable_voice_ids": usable_voice_ids,
+        "usable_distinct_voice_ids": usable_distinct_voice_ids,
         "launch_eligible_blend_ids": launch_eligible_blend_ids,
         "stale_blend_ids": stale_blend_ids,
         "launch_eligible_generation_ids": launch_eligible_generation_ids,
@@ -99,6 +102,7 @@ def collect_launch_artifacts() -> dict[str, object]:
         "qwen_runtime": qwen_runtime.model_dump(mode="json"),
         "next_commands": _next_commands(
             usable_voice_ids=usable_voice_ids,
+            usable_distinct_voice_ids=usable_distinct_voice_ids,
             blends=blends,
             stale_blend_ids=stale_blend_ids,
             generation_statuses=generation_statuses,
@@ -149,6 +153,7 @@ def _generation_payload(generation: GenerationResult, status: dict[str, object])
 def _next_commands(
     *,
     usable_voice_ids: list[str],
+    usable_distinct_voice_ids: list[str],
     blends: list[VoiceBlend],
     stale_blend_ids: list[str],
     generation_statuses: list[dict[str, object]],
@@ -159,13 +164,13 @@ def _next_commands(
     commands: list[str] = []
     if stale_blend_ids:
         commands.append("python -m app.cli.prune_launch_artifacts --report data/prune-launch-artifacts-report.json")
-    if len(usable_voice_ids) < 2:
+    if len(usable_voice_ids) < 2 or len(usable_distinct_voice_ids) < 2:
         commands.append(
             "python -m app.cli.run_launch_sequence --write-template data/launch-sequence/launch-manifest.template.json"
         )
         return commands
 
-    selected_voice_ids = usable_voice_ids[:2]
+    selected_voice_ids = usable_distinct_voice_ids[:2]
     if not _has_blend_for_voices(blends, selected_voice_ids):
         profiles = " ".join(f"--profile {voice_id}=1" for voice_id in selected_voice_ids)
         commands.append(
@@ -225,19 +230,41 @@ def _has_blend_for_voices(blends: list[VoiceBlend], voice_ids: list[str]) -> boo
     return False
 
 
-def _blend_status(blend: VoiceBlend, usable_voice_ids: list[str]) -> dict[str, object]:
+def _blend_status(blend: VoiceBlend, usable_voice_ids: list[str], voices: list[VoiceProfile]) -> dict[str, object]:
     usable_ids = set(usable_voice_ids)
+    voice_by_id = {voice.id: voice for voice in voices}
     blend_ids = [profile.voice_profile_id for profile in blend.profiles]
     missing_voice_profile_ids = sorted({voice_id for voice_id in blend_ids if voice_id not in usable_ids})
+    distinct_speakers = {
+        voice_by_id[voice_id].display_name.strip().casefold()
+        for voice_id in set(blend_ids)
+        if voice_id in voice_by_id and voice_by_id[voice_id].display_name.strip()
+    }
     launch_eligible = (
         blend.strategy == "multi_reference_prompt"
         and len(set(blend_ids)) >= 2
+        and len(distinct_speakers) >= 2
         and not missing_voice_profile_ids
     )
     return {
         "launch_eligible": launch_eligible,
         "missing_voice_profile_ids": missing_voice_profile_ids,
     }
+
+
+def _select_distinct_speaker_voice_ids(voices: list[VoiceProfile], usable_voice_ids: list[str]) -> list[str]:
+    usable_ids = set(usable_voice_ids)
+    selected: list[str] = []
+    seen_speakers: set[str] = set()
+    for voice in voices:
+        if voice.id not in usable_ids:
+            continue
+        speaker_key = voice.display_name.strip().casefold()
+        if not speaker_key or speaker_key in seen_speakers:
+            continue
+        selected.append(voice.id)
+        seen_speakers.add(speaker_key)
+    return selected
 
 
 def _generation_status(generation: GenerationResult, blends: list[VoiceBlend]) -> dict[str, object]:
@@ -358,7 +385,8 @@ def _tasks_handoff_section(report: dict[str, object]) -> str:
         "",
         "- Voices: "
         f"`{report['voice_count']}` total; `{report['usable_voice_count']}` usable; "
-        f"`{report['unusable_voice_count']}` unusable",
+        f"`{report['unusable_voice_count']}` unusable; "
+        f"`{report['distinct_usable_speaker_count']}` distinct usable speakers",
         "- Blends: "
         f"`{report['blend_count']}` total; `{report['launch_eligible_blend_count']}` launch-eligible; "
         f"`{report['stale_blend_count']}` stale/nonmatching",
@@ -367,6 +395,7 @@ def _tasks_handoff_section(report: dict[str, object]) -> str:
         f"`{report['launch_eligible_generation_count']}` launch-eligible; "
         f"`{report['stale_generation_count']}` stale/nonmatching",
         f"- Usable voice IDs: {_format_inline_ids(report['usable_voice_ids'])}",
+        f"- Usable distinct-speaker voice IDs: {_format_inline_ids(report['usable_distinct_voice_ids'])}",
         f"- Launch-eligible blend IDs: {_format_inline_ids(report['launch_eligible_blend_ids'])}",
         f"- Launch-eligible generation IDs: {_format_inline_ids(report['launch_eligible_generation_ids'])}",
         f"- Provider preflight status: `{report['agent_provider']['status']}`",
@@ -403,6 +432,7 @@ def _print_summary(report: dict[str, object]) -> None:
         f"{report['voice_count']} voices, {report['blend_count']} blends, {report['generation_count']} generations"
     )
     print(f"Usable voices: {report['usable_voice_count']}; unusable voices: {report['unusable_voice_count']}")
+    print(f"Distinct usable speakers: {report['distinct_usable_speaker_count']}")
     print(
         "Launch-eligible blends: "
         f"{report['launch_eligible_blend_count']}; stale/nonmatching blends: {report['stale_blend_count']}"
