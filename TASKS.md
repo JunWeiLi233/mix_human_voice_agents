@@ -31,6 +31,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Added `app.cli.launch_readiness --tasks ..\TASKS.md` so readiness failures can refresh this handoff file automatically before a usage/session limit.
 - Hardened provider URL handling so Claude accepts `https://api.anthropic.com` or `https://api.anthropic.com/v1`, and Local accepts `http://127.0.0.1:11434` or `http://127.0.0.1:11434/api`.
 - Added structured `next_actions` to launch-readiness reports and made the UI render those backend-provided actions.
+- Added `app.cli.verify_agent_provider` so terminal agents can create the persisted provider preflight report required by launch readiness.
 
 ## Verification Already Run
 

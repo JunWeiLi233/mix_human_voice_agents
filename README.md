@@ -70,6 +70,13 @@ cd backend
 
 The JSON report includes `next_actions`, a structured list of failed check ids, action text, and evidence for the UI and other agents.
 
+Agent provider preflight report:
+
+```powershell
+cd backend
+.\.venv\Scripts\python -m app.cli.verify_agent_provider --provider openai_compatible --model local-qwen-agent --base-url http://127.0.0.1:1234/v1 --report data/agent-provider-verification-report.json
+```
+
 Refresh the handoff tasks from the same launch-readiness evidence:
 
 ```powershell
