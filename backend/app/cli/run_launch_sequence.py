@@ -8,6 +8,7 @@ from typing import Any, Sequence
 from app.cli.create_blend import main as create_blend_main
 from app.cli.generate_voice import main as generate_voice_main
 from app.cli.import_voice import main as import_voice_main
+from app.cli.launch_artifacts import main as launch_artifacts_main
 from app.cli.launch_readiness import main as launch_readiness_main
 from app.cli.verify_agent_provider import main as verify_agent_provider_main
 from app.cli.verify_qwen_runtime import main as verify_qwen_runtime_main
@@ -72,6 +73,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             [
                 "--report",
                 str(Path("data") / "launch-readiness-report.json"),
+                "--tasks",
+                str(args.tasks),
+            ]
+        )
+        launch_artifacts_main(
+            [
+                "--report",
+                str(Path("data") / "launch-artifacts-report.json"),
                 "--tasks",
                 str(args.tasks),
             ]

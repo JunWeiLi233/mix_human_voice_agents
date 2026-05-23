@@ -102,6 +102,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Added Qwen generation eligibility diagnostics to `app.cli.launch_artifacts --summary` so handoff agents can see launch-ready vs stale/nonmatching generated clips and the reason each stale clip cannot satisfy launch readiness.
 - Added `app.cli.launch_artifacts --tasks ..\TASKS.md` so limit-session handoffs can refresh a concrete Launch Artifact Inventory section with usable voice ids, eligible blend/generation ids, provider/Qwen status, stale reasons, and next commands.
 - Added a launch checklist to the generated launch manifest template so agents filling it in see the required real clean WAV files, consent, transcript matching, provider selection, and dry-run validation steps.
+- Updated `app.cli.run_launch_sequence` so a real manifest run refreshes both launch readiness and launch artifact inventory in `TASKS.md`.
 
 ## Verification Already Run
 
@@ -229,6 +230,14 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - `cd frontend; npm test -- --run` passed: 7 tests.
 - `cd frontend; npx tsc --noEmit` passed.
 - `cd frontend; npm run build` passed.
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_run_launch_sequence_cli.py -q -k "invokes_launch_steps"` first failed because `launch_artifacts_main` was not wired into the sequence, then passed after adding the artifact handoff refresh call.
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_run_launch_sequence_cli.py -q` passed: 29 tests.
+- `cd backend; .\.venv\Scripts\python -m app.cli.launch_artifacts --report data\launch-artifacts-report.json --tasks ..\TASKS.md --summary` refreshed the Launch Artifact Inventory and reported 1 voice, 0 usable voices, 253 stale/nonmatching blends, 0 generations, and the launch manifest template command.
+- `cd backend; .\.venv\Scripts\python -m app.cli.launch_readiness --report data\launch-readiness-report.json --tasks ..\TASKS.md --summary` refreshed readiness tasks and still exits 1 until real launch artifacts are present.
+- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 275 tests.
+- `cd frontend; npm test -- --run` passed: 7 tests.
+- `cd frontend; npx tsc --noEmit` passed.
+- `cd frontend; npm run build` passed.
 - `cd backend; .\.venv\Scripts\python -m pytest tests\test_run_launch_sequence_cli.py -q -k "writes_manifest_template"` first failed because `launch_checklist` was missing, then passed after adding the checklist to `launch_manifest_template()`.
 - `cd backend; .\.venv\Scripts\python -m app.cli.run_launch_sequence --write-template data\launch-sequence\launch-manifest.template.json --report data\launch-sequence\template-report.json` passed and regenerated the launch manifest template from source.
 - `cd backend; .\.venv\Scripts\python -m pytest tests\test_run_launch_sequence_cli.py -q -k "template or dry_run"` passed: 19 tests.
@@ -261,7 +270,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T15:30:05.577432+00:00`
+- Checked at: `2026-05-23T15:34:31.386750+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Re-record or replace unusable voice samples, then import at least two clean consented WAV voices with matching transcripts.
@@ -285,7 +294,7 @@ Blocking reasons:
 ## Launch Artifact Inventory
 
 - Voices: `1` total; `0` usable; `1` unusable
-- Blends: `252` total; `0` launch-eligible; `252` stale/nonmatching
+- Blends: `253` total; `0` launch-eligible; `253` stale/nonmatching
 - Generations: `0` total; `0` Qwen; `0` launch-eligible; `0` stale/nonmatching
 - Usable voice IDs: `none`
 - Launch-eligible blend IDs: `none`

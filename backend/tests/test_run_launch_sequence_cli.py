@@ -1137,6 +1137,7 @@ def test_run_launch_sequence_invokes_launch_steps_from_manifest(tmp_path: Path, 
     monkeypatch.setattr("app.cli.run_launch_sequence.verify_qwen_runtime_main", fake_success("verify_qwen"))
     monkeypatch.setattr("app.cli.run_launch_sequence.generate_voice_main", fake_success("generate_voice"))
     monkeypatch.setattr("app.cli.run_launch_sequence.launch_readiness_main", fake_success("launch_readiness"))
+    monkeypatch.setattr("app.cli.run_launch_sequence.launch_artifacts_main", fake_success("launch_artifacts"))
 
     exit_code = main(["--manifest", str(manifest_path), "--tasks", "TASKS.md"])
 
@@ -1149,6 +1150,7 @@ def test_run_launch_sequence_invokes_launch_steps_from_manifest(tmp_path: Path, 
         "verify_qwen",
         "generate_voice",
         "launch_readiness",
+        "launch_artifacts",
     ]
     create_blend_args = calls[2][1]
     assert "--profile" in create_blend_args
@@ -1159,6 +1161,13 @@ def test_run_launch_sequence_invokes_launch_steps_from_manifest(tmp_path: Path, 
     assert generate_args[generate_args.index("--provider") + 1] == "openai_compatible"
     assert generate_args[generate_args.index("--model") + 1] == "local-qwen-agent"
     assert generate_args[generate_args.index("--base-url") + 1] == "http://127.0.0.1:1234/v1"
+    launch_artifacts_args = calls[7][1]
+    assert launch_artifacts_args == [
+        "--report",
+        str(Path("data") / "launch-artifacts-report.json"),
+        "--tasks",
+        "TASKS.md",
+    ]
 
 
 def test_run_launch_sequence_rejects_manifest_with_fewer_than_two_voices(
