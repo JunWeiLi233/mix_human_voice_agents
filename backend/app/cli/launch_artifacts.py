@@ -357,6 +357,8 @@ def _generation_status(generation: GenerationResult, blends: list[VoiceBlend]) -
         reasons.append("Qwen generation audio must be a parseable WAV file.")
     elif not wav_has_audible_signal(audio_path):
         reasons.append("Qwen generation audio must contain audible signal.")
+    if not Path(generation.metadata_path).exists():
+        reasons.append("Qwen generation metadata is missing.")
     return {
         "launch_eligible": not reasons,
         "stale_reasons": reasons,

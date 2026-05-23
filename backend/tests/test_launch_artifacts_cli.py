@@ -384,6 +384,8 @@ def test_launch_artifacts_cli_explains_stale_qwen_generations(tmp_path: Path, mo
     ]
     ready_audio = tmp_path / "data" / "generations" / "generation_ready.wav"
     write_reference_wav(ready_audio)
+    for generation in generations:
+        write_generation_metadata(generation)
     monkeypatch.setattr("app.cli.launch_artifacts.list_voice_profiles", lambda: voices)
     monkeypatch.setattr("app.cli.launch_artifacts.list_blends", lambda: [launch_blend])
     monkeypatch.setattr("app.cli.launch_artifacts.list_generation_results", lambda: generations)
@@ -452,6 +454,7 @@ def test_launch_artifacts_cli_explains_stale_qwen_generations(tmp_path: Path, mo
 def test_launch_artifacts_cli_rejects_qwen_generation_missing_audio_artifact(
     tmp_path: Path, monkeypatch
 ):
+    monkeypatch.chdir(tmp_path)
     voices = [
         voice_profile("voice_alice", "Alice"),
         voice_profile("voice_bob", "Bob"),
@@ -477,6 +480,7 @@ def test_launch_artifacts_cli_rejects_qwen_generation_missing_audio_artifact(
         ],
         agent_trace=AgentTrace(provider="openai", model="gpt-4.1-mini", base_url="https://api.openai.com/v1"),
     )
+    write_generation_metadata(generation)
     monkeypatch.setattr("app.cli.launch_artifacts.list_voice_profiles", lambda: voices)
     monkeypatch.setattr("app.cli.launch_artifacts.list_blends", lambda: [launch_blend])
     monkeypatch.setattr("app.cli.launch_artifacts.list_generation_results", lambda: [generation])
@@ -553,6 +557,7 @@ def test_launch_artifacts_cli_rejects_empty_qwen_generation_audio(
     audio_path = tmp_path / "data" / "generations" / "generation_empty_audio.wav"
     audio_path.parent.mkdir(parents=True)
     audio_path.write_bytes(b"")
+    write_generation_metadata(generation)
     monkeypatch.setattr("app.cli.launch_artifacts.list_voice_profiles", lambda: voices)
     monkeypatch.setattr("app.cli.launch_artifacts.list_blends", lambda: [launch_blend])
     monkeypatch.setattr("app.cli.launch_artifacts.list_generation_results", lambda: [generation])
@@ -629,6 +634,7 @@ def test_launch_artifacts_cli_rejects_non_wav_qwen_generation_audio(
     audio_path = tmp_path / "data" / "generations" / "generation_invalid_audio.wav"
     audio_path.parent.mkdir(parents=True)
     audio_path.write_bytes(b"not-a-wav")
+    write_generation_metadata(generation)
     monkeypatch.setattr("app.cli.launch_artifacts.list_voice_profiles", lambda: voices)
     monkeypatch.setattr("app.cli.launch_artifacts.list_blends", lambda: [launch_blend])
     monkeypatch.setattr("app.cli.launch_artifacts.list_generation_results", lambda: [generation])
@@ -705,6 +711,7 @@ def test_launch_artifacts_cli_rejects_silent_qwen_generation_audio(
         agent_trace=AgentTrace(provider="openai", model="gpt-4.1-mini", base_url="https://api.openai.com/v1"),
     )
     write_silent_wav(tmp_path / "data" / "generations" / "generation_silent_audio.wav")
+    write_generation_metadata(generation)
     monkeypatch.setattr("app.cli.launch_artifacts.list_voice_profiles", lambda: voices)
     monkeypatch.setattr("app.cli.launch_artifacts.list_blends", lambda: [launch_blend])
     monkeypatch.setattr("app.cli.launch_artifacts.list_generation_results", lambda: [generation])
@@ -747,6 +754,80 @@ def test_launch_artifacts_cli_rejects_silent_qwen_generation_audio(
     generation_payload = payload["generations"][0]
     assert generation_payload["launch_eligible"] is False
     assert generation_payload["stale_reasons"] == ["Qwen generation audio must contain audible signal."]
+
+
+def test_launch_artifacts_cli_rejects_qwen_generation_missing_metadata_artifact(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    voices = [
+        voice_profile("voice_alice", "Alice"),
+        voice_profile("voice_bob", "Bob"),
+    ]
+    launch_blend = VoiceBlend(
+        id="blend_launch_ready",
+        name="Alice + Bob",
+        strategy="multi_reference_prompt",
+        profiles=[
+            BlendProfile(voice_profile_id="voice_alice", weight=0.5),
+            BlendProfile(voice_profile_id="voice_bob", weight=0.5),
+        ],
+    )
+    generation = generation_result(
+        "generation_missing_metadata",
+        "qwen3_tts",
+        blend_id="blend_launch_ready",
+        blend_name="Alice + Bob",
+        source_profiles=launch_blend.profiles,
+        source_details=[
+            source_detail("voice_alice", "Alice"),
+            source_detail("voice_bob", "Bob"),
+        ],
+        agent_trace=AgentTrace(provider="openai", model="gpt-4.1-mini", base_url="https://api.openai.com/v1"),
+    )
+    write_reference_wav(tmp_path / "data" / "generations" / "generation_missing_metadata.wav")
+    monkeypatch.setattr("app.cli.launch_artifacts.list_voice_profiles", lambda: voices)
+    monkeypatch.setattr("app.cli.launch_artifacts.list_blends", lambda: [launch_blend])
+    monkeypatch.setattr("app.cli.launch_artifacts.list_generation_results", lambda: [generation])
+    monkeypatch.setattr(
+        "app.cli.launch_artifacts.get_agent_provider_verification_report",
+        lambda: AgentProviderVerificationReport(
+            status="passed",
+            report_path="data/agent-provider-verification-report.json",
+            provider="openai",
+            model="gpt-4.1-mini",
+            base_url="https://api.openai.com/v1",
+            reply="Provider connected.",
+        ),
+    )
+    monkeypatch.setattr(
+        "app.cli.launch_artifacts.get_qwen_verification_report",
+        lambda: QwenVerificationReport(
+            status="passed",
+            report_path="data/qwen-runtime-verification-report.json",
+            voice_profile_ids=["voice_alice", "voice_bob"],
+            output_audio_path=str(Path("data") / "generations" / "qwen_verify.wav"),
+        ),
+    )
+    monkeypatch.setattr(
+        "app.cli.launch_artifacts.QwenTtsAdapter.runtime_status",
+        lambda: TtsRuntimeStatus(
+            backend="qwen3_tts",
+            available=True,
+            model_id="Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+            message="qwen-tts package is importable.",
+        ),
+    )
+    report_path = tmp_path / "launch-artifacts.json"
+
+    exit_code = main(["--report", str(report_path)])
+
+    assert exit_code == 0
+    payload = json.loads(report_path.read_text(encoding="utf-8"))
+    assert payload["launch_eligible_generation_ids"] == []
+    generation_payload = payload["generations"][0]
+    assert generation_payload["launch_eligible"] is False
+    assert generation_payload["stale_reasons"] == ["Qwen generation metadata is missing."]
 
 
 def test_launch_artifacts_cli_updates_tasks_handoff_with_artifact_inventory(tmp_path: Path, monkeypatch):
@@ -1093,3 +1174,9 @@ def write_silent_wav(path: Path, duration_seconds: int = 1, sample_rate: int = 1
         wav_file.setsampwidth(2)
         wav_file.setframerate(sample_rate)
         wav_file.writeframes(b"\x00\x00" * frame_count)
+
+
+def write_generation_metadata(generation: GenerationResult) -> None:
+    metadata_path = Path(generation.metadata_path)
+    metadata_path.parent.mkdir(parents=True, exist_ok=True)
+    metadata_path.write_text(generation.model_dump_json(indent=2), encoding="utf-8")
