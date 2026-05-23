@@ -384,7 +384,9 @@ def _generation_status(
     elif not wav_has_audible_signal(audio_path):
         reasons.append("Qwen generation audio must contain audible signal.")
     metadata_path = Path(generation.metadata_path)
-    if not metadata_path.exists():
+    if not _path_is_under(metadata_path, GENERATION_ROOT):
+        reasons.append("Qwen generation metadata must be stored under data/generations.")
+    elif not metadata_path.exists():
         reasons.append("Qwen generation metadata is missing.")
     else:
         metadata_reason = _generation_metadata_stale_reason(generation, metadata_path)
