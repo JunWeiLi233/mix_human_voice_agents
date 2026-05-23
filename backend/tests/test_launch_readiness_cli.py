@@ -108,3 +108,44 @@ def test_launch_readiness_cli_updates_tasks_handoff_with_remaining_launch_work(
     assert "Evidence: 0 imported voices" in content
     assert "- [ ] qwen_verification: Run Qwen verification with two imported voices and keep the passed report." in content
     assert "Evidence: No passed Qwen runtime verification report." in content
+
+
+def test_launch_readiness_cli_prints_actionable_summary(tmp_path: Path, monkeypatch, capsys):
+    def fake_evaluate_launch_readiness():
+        return LaunchReadinessReport(
+            status="blocked",
+            checks=[
+                LaunchReadinessCheck(
+                    id="imported_voices",
+                    label="Imported voices",
+                    passed=False,
+                    detail="1 imported voices",
+                ),
+                LaunchReadinessCheck(
+                    id="agent_provider",
+                    label="Agent provider",
+                    passed=False,
+                    detail="Run the Agent Provider Test provider preflight before launch.",
+                ),
+            ],
+            blocking_reasons=[
+                "Import at least two consented voice profiles.",
+                "Test the selected agent provider successfully before launch.",
+            ],
+        )
+
+    monkeypatch.setattr("app.cli.launch_readiness.evaluate_launch_readiness", fake_evaluate_launch_readiness)
+
+    exit_code = main(["--report", str(tmp_path / "launch-readiness.json"), "--summary"])
+
+    assert exit_code == 1
+    output = capsys.readouterr().out
+    assert "Launch readiness: blocked" in output
+    assert "[ ] Imported voices: 1 imported voices" in output
+    assert (
+        "Next: Generate a launch manifest with `python -m app.cli.run_launch_sequence "
+        "--write-template launch-manifest.template.json`, then fill in two consented WAV "
+        "voice samples with matching transcripts."
+    ) in output
+    assert "[ ] Agent provider: Run the Agent Provider Test provider preflight before launch." in output
+    assert "Next: Run Test provider and keep the passed provider verification report." in output

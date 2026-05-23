@@ -24,6 +24,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--tasks",
         help="Optional TASKS.md path to update with remaining launch-readiness work.",
     )
+    parser.add_argument(
+        "--summary",
+        action="store_true",
+        help="Print a concise launch status and next-action summary.",
+    )
     args = parser.parse_args(argv)
 
     report = evaluate_launch_readiness()
@@ -32,6 +37,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     report_path.write_text(json.dumps(report.model_dump(mode="json"), indent=2), encoding="utf-8")
     if args.tasks:
         update_tasks_handoff(Path(args.tasks), report)
+    if args.summary:
+        print_launch_summary(report)
     return 0 if report.status == "ready" else 1
 
 
@@ -55,6 +62,23 @@ def update_tasks_handoff(tasks_path: Path, report: LaunchReadinessReport) -> Non
     else:
         updated = f"{existing[:heading_index].rstrip()}\n\n{section}\n{existing[next_heading_index + 1:].lstrip()}"
     tasks_path.write_text(updated, encoding="utf-8")
+
+
+def print_launch_summary(report: LaunchReadinessReport) -> None:
+    print(f"Launch readiness: {report.status}")
+    next_actions = {
+        action.check_id: action.action
+        for action in (report.next_actions or _fallback_next_actions(report))
+    }
+    for check in report.checks:
+        marker = "x" if check.passed else " "
+        print(f"[{marker}] {check.label}: {check.detail}")
+        if not check.passed and check.id in next_actions:
+            print(f"    Next: {next_actions[check.id]}")
+    if report.blocking_reasons:
+        print("Blocking reasons:")
+        for reason in report.blocking_reasons:
+            print(f"- {reason}")
 
 
 def _tasks_handoff_section(report: LaunchReadinessReport) -> str:
