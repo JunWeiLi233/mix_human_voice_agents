@@ -115,7 +115,7 @@ cd backend
 .\.venv\Scripts\python -m app.cli.run_launch_sequence --manifest launch-manifest.json --dry-run --report data\launch-sequence\sequence-report.json
 ```
 
-The sequence validates at least two distinct speaker display names, checks each listed audio file exists, is a parseable WAV, contains audible signal, requires any supplied voice `weight` to be positive, requires the launch blend strategy to be `multi_reference_prompt`, and confirms `agent_provider.provider` is one of `openai`, `anthropic`, `google`, `xai`, `openai_compatible`, or `ollama` before importing anything. A normal run exits successfully only if the final launch-readiness audit is ready.
+The sequence validates at least two distinct speaker display names, checks each listed audio file exists, is a parseable WAV, contains audible signal, requires any supplied voice `weight` to be positive, requires the launch blend strategy to be `multi_reference_prompt`, requires any supplied `qwen.text` to be non-blank, and confirms `agent_provider.provider` is one of `openai`, `anthropic`, `google`, `xai`, `openai_compatible`, or `ollama` before importing anything. A normal run exits successfully only if the final launch-readiness audit is ready.
 
 Manifest shape:
 

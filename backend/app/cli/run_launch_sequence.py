@@ -133,6 +133,9 @@ def _validate_manifest(manifest: dict[str, Any]) -> None:
         )
     generation = manifest.get("generation") or {}
     _require(generation, "prompt", "generation")
+    qwen = manifest.get("qwen") or {}
+    if "text" in qwen and not str(qwen["text"]).strip():
+        raise ValueError("qwen.text must not be blank when provided.")
 
 
 def _require(payload: dict[str, Any], key: str, label: str) -> None:
