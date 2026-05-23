@@ -5,6 +5,7 @@ import json
 import wave
 
 from app.core.launch import (
+    _imported_voices_status,
     _qwen_mixed_generation_status,
     _qwen_verification_status,
     _research_review_status,
@@ -4506,6 +4507,54 @@ def test_core_launch_readiness_blocks_when_current_imported_voice_audio_is_missi
     imported_voices_check = next(check for check in report.checks if check.id == "imported_voices")
     assert imported_voices_check.passed is False
     assert imported_voices_check.detail == "Imported verified voices must still have reference audio files."
+
+
+def test_core_launch_readiness_blocks_when_current_imported_voice_audio_is_outside_storage(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    outside_audio = tmp_path / "outside" / "voice_a.wav"
+    voice_b_audio = tmp_path / "data" / "voices" / "voice_b" / "source.wav"
+    outside_audio.parent.mkdir(parents=True)
+    voice_b_audio.parent.mkdir(parents=True)
+    outside_audio.write_bytes(b"fake-voice-a-wav")
+    voice_b_audio.write_bytes(b"fake-voice-b-wav")
+    voices = [
+        SimpleNamespace(
+            id="voice_a",
+            display_name="Alice",
+            reference_text="Alice reads a clean reference sentence.",
+            cleaned_audio_path=str(outside_audio),
+            quality=SimpleNamespace(warnings=[]),
+            consent=SimpleNamespace(
+                allowed_uses=["private_agent_voice", "local_audio_export"],
+                synthetic_voice_allowed=True,
+            ),
+        ),
+        SimpleNamespace(
+            id="voice_b",
+            display_name="Bob",
+            reference_text="Bob reads a clean reference sentence.",
+            cleaned_audio_path=str(voice_b_audio),
+            quality=SimpleNamespace(warnings=[]),
+            consent=SimpleNamespace(
+                allowed_uses=["private_agent_voice", "local_audio_export"],
+                synthetic_voice_allowed=True,
+            ),
+        ),
+    ]
+    verification = QwenVerificationReport(
+        status="passed",
+        report_path="data/qwen-runtime-verification-report.json",
+        voice_profile_ids=["voice_a", "voice_b"],
+    )
+
+    status = _imported_voices_status(voices, verification)
+
+    assert status == {
+        "passed": False,
+        "detail": "Imported verified voices must still have managed reference audio files.",
+    }
 
 
 def test_core_launch_readiness_blocks_when_current_imported_voice_has_quality_warnings(

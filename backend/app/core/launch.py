@@ -10,7 +10,7 @@ from pydantic import ValidationError
 from app.core.audio import is_parseable_wav, wav_has_audible_signal
 from app.core.generation import METADATA_WATERMARK_DISCLOSURE
 from app.core.safety import SafetyError, check_generation_request
-from app.core.storage import GENERATION_ROOT, list_blends, list_generation_results, list_voice_profiles
+from app.core.storage import GENERATION_ROOT, VOICE_ROOT, list_blends, list_generation_results, list_voice_profiles
 from app.models.schemas import (
     AgentProviderVerificationReport,
     GenerationResult,
@@ -474,6 +474,14 @@ def _imported_voices_status(voices: list[object], verification: QwenVerification
             "passed": False,
             "detail": "Imported verified voices must still have reference audio files.",
         }
+    if not all(
+        _voice_has_managed_reference_audio(imported_by_id[voice_id])
+        for voice_id in verification.voice_profile_ids
+    ):
+        return {
+            "passed": False,
+            "detail": "Imported verified voices must still have managed reference audio files.",
+        }
     if not all(_voice_has_clean_quality(imported_by_id[voice_id]) for voice_id in verification.voice_profile_ids):
         return {
             "passed": False,
@@ -848,6 +856,16 @@ def _voice_has_reference_text(voice: object) -> bool:
 def _voice_has_reference_audio(voice: object) -> bool:
     cleaned_audio_path = getattr(voice, "cleaned_audio_path", "")
     return bool(cleaned_audio_path) and Path(cleaned_audio_path).exists()
+
+
+def _voice_has_managed_reference_audio(voice: object) -> bool:
+    cleaned_audio_path = getattr(voice, "cleaned_audio_path", "")
+    voice_id = getattr(voice, "id", "")
+    if not cleaned_audio_path or not voice_id:
+        return False
+    audio_path = Path(cleaned_audio_path).resolve(strict=False)
+    voice_root = (VOICE_ROOT / str(voice_id)).resolve(strict=False)
+    return voice_root in (audio_path, *audio_path.parents)
 
 
 def _voice_has_clean_quality(voice: object) -> bool:
