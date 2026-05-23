@@ -10,7 +10,7 @@ from pydantic import ValidationError
 from app.core.audio import is_parseable_wav, wav_has_audible_signal
 from app.core.launch import get_agent_provider_verification_report, get_qwen_verification_report
 from app.core.storage import list_blends, list_generation_results, list_voice_profiles
-from app.models.schemas import GenerationResult, VoiceBlend, VoiceProfile
+from app.models.schemas import AgentProviderVerificationReport, GenerationResult, VoiceBlend, VoiceProfile
 from app.tts.qwen import QwenTtsAdapter
 
 
@@ -64,7 +64,7 @@ def collect_launch_artifacts() -> dict[str, object]:
     stale_blend_ids = [
         blend.id for blend, status in zip(blends, blend_statuses, strict=True) if not status["launch_eligible"]
     ]
-    generation_statuses = [_generation_status(generation, blends) for generation in generations]
+    generation_statuses = [_generation_status(generation, blends, agent_provider) for generation in generations]
     launch_eligible_generation_ids = [
         generation.id
         for generation, status in zip(generations, generation_statuses, strict=True)
@@ -318,7 +318,11 @@ def _select_distinct_speaker_voice_ids(voices: list[VoiceProfile], usable_voice_
     return selected
 
 
-def _generation_status(generation: GenerationResult, blends: list[VoiceBlend]) -> dict[str, object]:
+def _generation_status(
+    generation: GenerationResult,
+    blends: list[VoiceBlend],
+    agent_provider: AgentProviderVerificationReport,
+) -> dict[str, object]:
     reasons: list[str] = []
     if generation.tts_backend != "qwen3_tts":
         return {
@@ -346,6 +350,8 @@ def _generation_status(generation: GenerationResult, blends: list[VoiceBlend]) -
         reasons.append("Qwen generation must include at least two distinct source speakers.")
     if generation.agent_trace is None:
         reasons.append("Qwen generation must include an agent provider trace.")
+    elif not _generation_matches_agent_provider(generation, agent_provider):
+        reasons.append("Qwen generation provider trace must match the passed agent provider preflight.")
     if not generation.prompt.strip() or not generation.agent_reply.strip():
         reasons.append("Qwen generation must include the agent prompt and spoken reply transcript.")
     if not _generation_references_current_blend(generation, blends):
@@ -370,6 +376,24 @@ def _generation_status(generation: GenerationResult, blends: list[VoiceBlend]) -
         "launch_eligible": not reasons,
         "stale_reasons": reasons,
     }
+
+
+def _generation_matches_agent_provider(
+    generation: GenerationResult,
+    agent_provider: AgentProviderVerificationReport,
+) -> bool:
+    if agent_provider.status != "passed":
+        return True
+    if generation.agent_trace is None:
+        return False
+    if (
+        generation.agent_trace.provider != agent_provider.provider
+        or generation.agent_trace.model != agent_provider.model
+    ):
+        return False
+    if agent_provider.base_url:
+        return (generation.agent_trace.base_url or "").rstrip("/") == agent_provider.base_url.rstrip("/")
+    return True
 
 
 def _generation_metadata_stale_reason(generation: GenerationResult, metadata_path: Path) -> str | None:
