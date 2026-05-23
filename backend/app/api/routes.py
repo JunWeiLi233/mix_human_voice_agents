@@ -299,6 +299,8 @@ def generate_route(request: GenerateRequest) -> GenerationResult:
             attn_implementation=request.attn_implementation,
             output_root=Path(GENERATION_ROOT),
         )
+        qwen_runtime_config = resolved_qwen_runtime_config(adapter, qwen_runtime_config or {})
+        _validate_resolved_qwen_runtime_verification(qwen_runtime_config)
     else:
         adapter = LocalWavTtsAdapter(output_root=Path(GENERATION_ROOT))
     try:
@@ -368,6 +370,16 @@ def _validate_qwen_runtime_verification(request: GenerateRequest) -> None:
     verified_runtime_config = _qwen_runtime_config_from_report(report)
     requested_runtime_config = _compact_qwen_runtime_config(_qwen_runtime_config_from_request(request) or {})
     if verified_runtime_config and requested_runtime_config != verified_runtime_config:
+        raise HTTPException(
+            status_code=400,
+            detail="Qwen generation runtime config must match the passed Qwen verification.",
+        )
+
+
+def _validate_resolved_qwen_runtime_verification(runtime_config: dict[str, str | None]) -> None:
+    verified_runtime_config = _qwen_runtime_config_from_report(get_qwen_verification_report())
+    resolved_runtime_config = _compact_qwen_runtime_config(runtime_config)
+    if verified_runtime_config and resolved_runtime_config != verified_runtime_config:
         raise HTTPException(
             status_code=400,
             detail="Qwen generation runtime config must match the passed Qwen verification.",
