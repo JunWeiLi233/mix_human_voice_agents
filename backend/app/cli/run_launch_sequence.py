@@ -13,6 +13,7 @@ from app.cli.verify_agent_provider import main as verify_agent_provider_main
 from app.cli.verify_qwen_runtime import main as verify_qwen_runtime_main
 from app.core.audio import AudioQualityError, analyze_audio_sample, is_parseable_wav, wav_has_audible_signal
 from app.core.consent import ConsentError, create_consent_record
+from app.core.safety import SafetyError, check_generation_request
 from app.models.schemas import AgentProviderKind, ConsentRequest
 
 
@@ -152,8 +153,11 @@ def _validate_manifest(manifest: dict[str, Any]) -> None:
     _validate_optional_string(provider, "api_key", "agent_provider", allow_blank=True)
     _validate_optional_string(provider, "system_prompt", "agent_provider")
     _validate_optional_string(provider, "prompt", "agent_provider")
+    if "prompt" in provider:
+        _validate_generation_safety(str(provider["prompt"]), "agent_provider.prompt")
     generation = _optional_object(manifest.get("generation"), "generation")
     _require_string(generation, "prompt", "generation")
+    _validate_generation_safety(str(generation["prompt"]), "generation.prompt")
     qwen = _optional_object(manifest.get("qwen"), "qwen")
     _validate_optional_string(qwen, "text", "qwen")
     _validate_optional_qwen_runtime_options(qwen)
@@ -198,6 +202,13 @@ def _validate_consent_claim(voice: dict[str, Any], index: int) -> None:
         )
     except ConsentError as exc:
         raise ValueError(f"voices[{index}].consent failed safety check: {exc}") from exc
+
+
+def _validate_generation_safety(text: str, label: str) -> None:
+    try:
+        check_generation_request(text)
+    except SafetyError as exc:
+        raise ValueError(f"{label} failed safety check: {exc}") from exc
 
 
 def _optional_object(payload: Any, label: str) -> dict[str, Any]:
