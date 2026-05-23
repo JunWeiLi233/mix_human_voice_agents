@@ -9,6 +9,7 @@ from pydantic import ValidationError
 
 from app.core.audio import is_parseable_wav, wav_has_audible_signal
 from app.core.launch import get_agent_provider_verification_report, get_qwen_verification_report
+from app.core.safety import SafetyError, check_generation_request
 from app.core.storage import list_blends, list_generation_results, list_voice_profiles
 from app.models.schemas import (
     AgentProviderVerificationReport,
@@ -370,6 +371,8 @@ def _generation_status(
         reasons.append("Qwen generation provider trace must match the passed agent provider preflight.")
     if not generation.prompt.strip() or not generation.agent_reply.strip():
         reasons.append("Qwen generation must include the agent prompt and spoken reply transcript.")
+    elif not _generation_text_passes_safety(generation):
+        reasons.append("Qwen generation prompt and reply must pass voice safety checks.")
     if not _generation_references_current_blend(generation, blends):
         reasons.append("Qwen generation must reference a current saved blend.")
     audio_path = Path(generation.audio_path)
@@ -426,6 +429,15 @@ def _generation_audio_differs_from_qwen_verification(
     if qwen_verification.status != "passed" or not qwen_verification.output_audio_path:
         return True
     return not _same_artifact_path(generation.audio_path, qwen_verification.output_audio_path)
+
+
+def _generation_text_passes_safety(generation: GenerationResult) -> bool:
+    try:
+        check_generation_request(generation.prompt)
+        check_generation_request(generation.agent_reply)
+    except SafetyError:
+        return False
+    return True
 
 
 def _qwen_verification_runtime_config(qwen_verification: QwenVerificationReport) -> dict[str, str]:
