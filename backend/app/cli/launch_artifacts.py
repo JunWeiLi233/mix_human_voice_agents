@@ -13,6 +13,7 @@ from app.tts.qwen import QwenTtsAdapter
 
 REQUIRED_VOICE_USE = "private_agent_voice"
 TASKS_ARTIFACT_SECTION_HEADING = "## Launch Artifact Inventory"
+PRUNE_REPORT_PATH = Path("data") / "prune-launch-artifacts-report.json"
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -71,6 +72,7 @@ def collect_launch_artifacts() -> dict[str, object]:
         for generation, status in zip(generations, generation_statuses, strict=True)
         if not status["launch_eligible"]
     ]
+    reviewed_prune_apply_command = _reviewed_prune_apply_command(stale_blend_ids)
 
     return {
         "voice_count": len(voices),
@@ -89,6 +91,7 @@ def collect_launch_artifacts() -> dict[str, object]:
         "usable_distinct_voice_ids": usable_distinct_voice_ids,
         "launch_eligible_blend_ids": launch_eligible_blend_ids,
         "stale_blend_ids": stale_blend_ids,
+        "reviewed_prune_apply_command": reviewed_prune_apply_command,
         "stale_blend_reason_counts": _reason_counts(
             status["stale_reasons"] for status in blend_statuses if not status["launch_eligible"]
         ),
@@ -159,6 +162,21 @@ def _reason_counts(reason_groups: Sequence[object]) -> dict[str, int]:
         for reason in reasons:
             counts[str(reason)] = counts.get(str(reason), 0) + 1
     return dict(sorted(counts.items(), key=lambda item: (-item[1], item[0])))
+
+
+def _reviewed_prune_apply_command(stale_blend_ids: list[str]) -> str | None:
+    if not stale_blend_ids or not PRUNE_REPORT_PATH.exists():
+        return None
+    try:
+        payload = json.loads(PRUNE_REPORT_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if payload.get("mode") != "dry_run":
+        return None
+    if sorted(payload.get("stale_blend_ids", [])) != sorted(stale_blend_ids):
+        return None
+    command = payload.get("reviewed_apply_command")
+    return command if isinstance(command, str) and command.strip() else None
 
 
 def _next_commands(
@@ -437,6 +455,14 @@ def _tasks_handoff_section(report: dict[str, object]) -> str:
         lines.extend(["", "Stale blend reason summary:"])
         for reason, count in stale_blend_reason_counts.items():
             lines.append(f"- `{count}` {reason}")
+    if report.get("reviewed_prune_apply_command"):
+        lines.extend(
+            [
+                "",
+                "Reviewed prune apply command:",
+                f"- [ ] `{report['reviewed_prune_apply_command']}`",
+            ]
+        )
     provider_commands = report.get("agent_provider_commands", {})
     if provider_commands:
         lines.extend(["", "Provider preflight command options:"])

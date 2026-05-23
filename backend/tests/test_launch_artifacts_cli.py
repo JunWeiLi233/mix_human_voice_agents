@@ -519,6 +519,74 @@ def test_launch_artifacts_tasks_handoff_summarizes_stale_blend_reasons(tmp_path:
     assert "- `1` Blend references voices that are missing or not launch-usable: voice_missing." in content
 
 
+def test_launch_artifacts_handoff_includes_reviewed_prune_apply_command(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    voices = [voice_profile("voice_alice", "Alice")]
+    blends = [
+        VoiceBlend(
+            id="blend_missing",
+            name="Missing voice",
+            strategy="multi_reference_prompt",
+            profiles=[
+                BlendProfile(voice_profile_id="voice_alice", weight=0.5),
+                BlendProfile(voice_profile_id="voice_missing", weight=0.5),
+            ],
+        )
+    ]
+    prune_report_path = Path("data") / "prune-launch-artifacts-report.json"
+    prune_report_path.parent.mkdir(parents=True)
+    prune_report_path.write_text(
+        json.dumps(
+            {
+                "mode": "dry_run",
+                "stale_blend_ids": ["blend_missing"],
+                "reviewed_apply_command": (
+                    "python -m app.cli.prune_launch_artifacts --apply "
+                    "--report data/prune-launch-artifacts-report.json"
+                ),
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr("app.cli.launch_artifacts.list_voice_profiles", lambda: voices)
+    monkeypatch.setattr("app.cli.launch_artifacts.list_blends", lambda: blends)
+    monkeypatch.setattr("app.cli.launch_artifacts.list_generation_results", lambda: [])
+    monkeypatch.setattr(
+        "app.cli.launch_artifacts.get_agent_provider_verification_report",
+        lambda: AgentProviderVerificationReport(status="missing", report_path="data/agent-provider-verification-report.json"),
+    )
+    monkeypatch.setattr(
+        "app.cli.launch_artifacts.get_qwen_verification_report",
+        lambda: QwenVerificationReport(status="missing", report_path="data/qwen-runtime-verification-report.json"),
+    )
+    monkeypatch.setattr(
+        "app.cli.launch_artifacts.QwenTtsAdapter.runtime_status",
+        lambda: TtsRuntimeStatus(
+            backend="qwen3_tts",
+            available=True,
+            model_id="Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+            message="qwen-tts package is importable.",
+        ),
+    )
+    tasks_path = tmp_path / "TASKS.md"
+    report_path = tmp_path / "launch-artifacts.json"
+
+    exit_code = main(["--report", str(report_path), "--tasks", str(tasks_path)])
+
+    assert exit_code == 0
+    payload = json.loads(report_path.read_text(encoding="utf-8"))
+    assert payload["reviewed_prune_apply_command"] == (
+        "python -m app.cli.prune_launch_artifacts --apply --report data/prune-launch-artifacts-report.json"
+    )
+    content = tasks_path.read_text(encoding="utf-8")
+    assert "Reviewed prune apply command:" in content
+    assert (
+        "- [ ] `python -m app.cli.prune_launch_artifacts --apply --report "
+        "data/prune-launch-artifacts-report.json`"
+        in content
+    )
+
+
 def test_launch_artifacts_tasks_update_only_replaces_real_section_heading(tmp_path: Path, monkeypatch):
     report = {
         "voice_count": 0,

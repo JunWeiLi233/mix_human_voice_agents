@@ -25,7 +25,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 
 ## Usage Limit Handoff
 
-- Last refreshed: `2026-05-23T17:17:50.638199+00:00`
+- Last refreshed: `2026-05-23T17:22:14.783307+00:00`
 - Reason: Codex usage/session/context limit handoff.
 - Next agent should start from `## Next Tasks`, `## Launch Readiness Remaining Tasks`, and `## Launch Artifact Inventory`.
 - Preserve commit identity: `JunWeiLi233 <mcpejunwei@gmail.com>`.
@@ -33,7 +33,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T17:17:50.629198+00:00`
+- Checked at: `2026-05-23T17:22:14.774307+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Re-record or replace unusable voice samples, then import at least two clean consented WAV voices with matching transcripts.
@@ -57,7 +57,7 @@ Blocking reasons:
 ## Launch Artifact Inventory
 
 - Voices: `2` total; `1` usable; `1` unusable; `1` distinct usable speakers
-- Blends: `277` total; `0` launch-eligible; `277` stale/nonmatching
+- Blends: `278` total; `0` launch-eligible; `278` stale/nonmatching
 - Generations: `0` total; `0` Qwen; `0` launch-eligible; `0` stale/nonmatching
 - Usable voice IDs: `voice_93f62f27a5b4`
 - Usable distinct-speaker voice IDs: `voice_93f62f27a5b4`
@@ -71,9 +71,12 @@ Unusable voices:
 - `voice_93dc1ef39402` Alice: Audio quality warnings must be resolved before launch.
 
 Stale blend reason summary:
-- `277` Blend must reference at least two distinct speaker display names.
-- `277` Blend must use the multi_reference_prompt strategy for Qwen launch.
-- `277` Blend references voices that are missing or not launch-usable: voice_a, voice_b.
+- `278` Blend must reference at least two distinct speaker display names.
+- `278` Blend must use the multi_reference_prompt strategy for Qwen launch.
+- `278` Blend references voices that are missing or not launch-usable: voice_a, voice_b.
+
+Reviewed prune apply command:
+- [ ] `python -m app.cli.prune_launch_artifacts --apply --report data\prune-launch-artifacts-report.json`
 
 Provider preflight command options:
 - ChatGPT: `python -m app.cli.verify_agent_provider --provider openai --model gpt-4.1-mini --base-url https://api.openai.com/v1 --api-key <openai-api-key>`
@@ -187,6 +190,7 @@ Next artifact commands:
 - Added a browser recorder clipping guard so full-scale distorted microphone captures are warned and blocked before upload.
 - Added `app.cli.handoff` so Codex can refresh `TASKS.md` with launch artifact inventory, readiness blockers, and a usage-limit handoff stamp before a session/context limit.
 - Added `app.cli.prune_launch_artifacts` so stale/nonmatching saved blends can be previewed with a dry-run report before optionally deleting them with `--apply`.
+- Updated launch artifact handoff to surface a reviewed stale-blend prune apply command only when the dry-run report matches current stale blends.
 - Added stale-blend cleanup as a launch artifact next command whenever inventory detects nonmatching blends.
 - Added shared reference transcript validation requiring at least 5 words for Qwen voice cloning imports and launch manifests.
 - Hardened launch artifact inventory and stale-blend pruning so launch-eligible blends and next commands require at least two distinct usable speaker display names.
