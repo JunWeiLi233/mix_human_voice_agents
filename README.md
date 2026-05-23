@@ -84,6 +84,13 @@ cd backend
 .\.venv\Scripts\python -m app.cli.import_voice --speaker-display-name Alice --confirmed-by Junwei --notes "Written permission captured for private local mixed voice testing." --reference-text "Alice reads a clean reference sentence for Qwen cloning." --audio C:\path\to\alice.wav --metadata data\voices\last-imported-alice.json
 ```
 
+Terminal blend creation from imported voices:
+
+```powershell
+cd backend
+.\.venv\Scripts\python -m app.cli.create_blend --name "Launch blend" --profile voice_a=1 --profile voice_b=1 --strategy multi_reference_prompt --metadata data\blends\last-created-blend.json
+```
+
 Refresh the handoff tasks from the same launch-readiness evidence:
 
 ```powershell
