@@ -584,8 +584,8 @@ def _research_review_status() -> dict[str, object]:
         return {
             "passed": False,
             "detail": (
-                f"{RESEARCH_REVIEW_PATH} must include Source Links for OpenAI, LiveKit, "
-                "Pipecat, and Qwen3-TTS."
+                f"{RESEARCH_REVIEW_PATH} must include Source Links for OpenAI Voice Agents, "
+                "Anthropic Claude, Google Gemini, xAI Grok, Ollama/local, LiveKit, Pipecat, and Qwen3-TTS."
             ),
         }
 
@@ -610,6 +610,10 @@ def _research_review_has_required_source_links(content: str) -> bool:
         return False
     required_links = (
         "https://platform.openai.com/docs/guides/voice-agents",
+        "https://docs.anthropic.com/en/api/messages-examples",
+        "https://ai.google.dev/gemini-api/docs/openai",
+        "https://docs.x.ai/docs/guides/chat-completions",
+        "https://docs.ollama.com/api/openai-compatibility",
         "https://docs.livekit.io/agents/start/voice-ai/",
         "https://docs.pipecat.ai/overview/introduction",
         "https://github.com/QwenLM/Qwen3-TTS",

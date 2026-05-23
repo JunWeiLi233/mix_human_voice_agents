@@ -81,6 +81,10 @@ def test_core_launch_readiness_accepts_recent_research_review(tmp_path, monkeypa
         "- Qwen3-TTS\n\n"
         "## Source Links\n\n"
         "- OpenAI Voice Agents: https://platform.openai.com/docs/guides/voice-agents\n"
+        "- Anthropic Messages API examples: https://docs.anthropic.com/en/api/messages-examples\n"
+        "- Google Gemini OpenAI compatibility: https://ai.google.dev/gemini-api/docs/openai\n"
+        "- xAI Chat Completions: https://docs.x.ai/docs/guides/chat-completions\n"
+        "- Ollama OpenAI compatibility: https://docs.ollama.com/api/openai-compatibility\n"
         "- LiveKit Voice AI quickstart: https://docs.livekit.io/agents/start/voice-ai/\n"
         "- Pipecat introduction: https://docs.pipecat.ai/overview/introduction\n"
         "- Qwen3-TTS repository: https://github.com/QwenLM/Qwen3-TTS\n\n"
@@ -118,8 +122,40 @@ def test_core_launch_readiness_blocks_recent_research_review_without_source_link
     assert research_review == {
         "passed": False,
         "detail": (
-            f"{research_review_label} must include Source Links for OpenAI, LiveKit, "
-            "Pipecat, and Qwen3-TTS."
+            f"{research_review_label} must include Source Links for OpenAI Voice Agents, "
+            "Anthropic Claude, Google Gemini, xAI Grok, Ollama/local, LiveKit, Pipecat, and Qwen3-TTS."
+        ),
+    }
+
+
+def test_core_launch_readiness_blocks_recent_research_review_without_provider_source_links(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    research_review_path = tmp_path / "docs" / "research-review.md"
+    research_review_path.parent.mkdir(parents=True)
+    today = datetime.now(timezone.utc).date().isoformat()
+    research_review_path.write_text(
+        "# Mixed Voice Agent Research Review\n\n"
+        "## Sources Reviewed\n\n"
+        "- Qwen3-TTS\n\n"
+        "## Source Links\n\n"
+        "- OpenAI Voice Agents: https://platform.openai.com/docs/guides/voice-agents\n"
+        "- LiveKit Voice AI quickstart: https://docs.livekit.io/agents/start/voice-ai/\n"
+        "- Pipecat introduction: https://docs.pipecat.ai/overview/introduction\n"
+        "- Qwen3-TTS repository: https://github.com/QwenLM/Qwen3-TTS\n\n"
+        f"Last checked: {today}.\n",
+        encoding="utf-8",
+    )
+
+    research_review = _research_review_status()
+    research_review_label = str(Path("docs") / "research-review.md")
+
+    assert research_review == {
+        "passed": False,
+        "detail": (
+            f"{research_review_label} must include Source Links for OpenAI Voice Agents, "
+            "Anthropic Claude, Google Gemini, xAI Grok, Ollama/local, LiveKit, Pipecat, and Qwen3-TTS."
         ),
     }
 

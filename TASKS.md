@@ -14,8 +14,8 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 
 - Branch: `main`
 - Remote: `https://github.com/JunWeiLi233/mix_human_voice_agents.git`
-- Latest pushed UI work includes the browser Launch Artifact Inventory panel backed by `/api/launch/artifacts`.
-- Current working tree adds structured launch-manifest voice diagnostics for browser and CLI dry-runs so agents can identify clipped or otherwise warning-blocked samples before import.
+- Recent pushed work includes structured launch-manifest voice diagnostics for browser and CLI dry-runs.
+- This handoff includes a stricter research readiness gate requiring primary source links for every supported provider family: OpenAI/ChatGPT, Anthropic/Claude, Google/Gemini, xAI/Grok, Ollama/local, LiveKit, Pipecat, and Qwen3-TTS.
 - Local Vite dev server for review: `http://127.0.0.1:5174/`
 - Backend launch readiness is still blocked because the repo does not yet have two real imported voices, a saved real blend, agent-provider preflight, Qwen verification with two profiles, or real Qwen mixed-voice output. The local backend venv now has `qwen-tts` installed and importable.
 
@@ -110,6 +110,8 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Added structured `voice_diagnostics` to launch manifest dry-run reports for clean samples and clipped/warning-blocked samples.
 - Updated `/api/launch/manifest/validate` so browser validation can return a failed dry-run report with per-voice diagnostics instead of only an HTTP error string.
 - Rendered manifest voice diagnostics in the Launch Readiness panel so users and other agents can see sample duration, sample rate, channels, warnings, and re-record actions.
+- Hardened launch readiness so `docs/research-review.md` must include Source Links for OpenAI Voice Agents, Anthropic Claude, Google Gemini, xAI Grok, Ollama/local, LiveKit, Pipecat, and Qwen3-TTS.
+- Updated README launch-readiness docs to describe the stricter all-provider research source gate.
 
 ## Verification Already Run
 
@@ -256,6 +258,17 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - `git diff --check` passed with line-ending normalization warnings only.
 - `cd backend; .\.venv\Scripts\python -m app.cli.launch_artifacts --report data\launch-artifacts-report.json --tasks ..\TASKS.md --summary` refreshed the Launch Artifact Inventory and reported 1 voice, 0 usable voices, 256 stale/nonmatching blends, 0 generations, and the launch manifest template command.
 - `cd backend; .\.venv\Scripts\python -m app.cli.launch_readiness --report data\launch-readiness-report.json --tasks ..\TASKS.md --summary` refreshed readiness tasks and still exits 1 until real launch artifacts are present.
+- Verified current primary source links in browser: OpenAI Voice Agents, Anthropic Messages, Google Gemini OpenAI compatibility, xAI Chat Completions, Ollama OpenAI compatibility, LiveKit Voice AI quickstart, Pipecat introduction, and Qwen3-TTS.
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_launch_readiness_core.py -q -k "provider_source_links"` first failed because provider source links were not required, then passed after hardening the gate.
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_launch_readiness_core.py -q -k "research_review"` passed: 4 tests.
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_routes.py -q -k "ready_after_full_qwen_verification"` passed after updating the launch-ready fixture to include the provider links.
+- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 278 tests.
+- `cd frontend; npm test -- --run` passed: 7 tests.
+- `cd frontend; npx tsc --noEmit` passed.
+- `cd frontend; npm run build` passed.
+- `git diff --check` passed with line-ending normalization warnings only.
+- `cd backend; .\.venv\Scripts\python -m app.cli.launch_artifacts --report data\launch-artifacts-report.json --tasks ..\TASKS.md --summary` refreshed the Launch Artifact Inventory and reported 1 voice, 0 usable voices, 258 stale/nonmatching blends, 0 generations, and the launch manifest template command.
+- `cd backend; .\.venv\Scripts\python -m app.cli.launch_readiness --report data\launch-readiness-report.json --tasks ..\TASKS.md --summary` refreshed readiness tasks and still exits 1 until real launch artifacts are present.
 - `cd backend; .\.venv\Scripts\python -m pytest tests\test_run_launch_sequence_cli.py -q -k "invokes_launch_steps"` first failed because `launch_artifacts_main` was not wired into the sequence, then passed after adding the artifact handoff refresh call.
 - `cd backend; .\.venv\Scripts\python -m pytest tests\test_run_launch_sequence_cli.py -q` passed: 29 tests.
 - `cd backend; .\.venv\Scripts\python -m app.cli.launch_artifacts --report data\launch-artifacts-report.json --tasks ..\TASKS.md --summary` refreshed the Launch Artifact Inventory and reported 1 voice, 0 usable voices, 253 stale/nonmatching blends, 0 generations, and the launch manifest template command.
@@ -296,7 +309,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T15:48:59.141192+00:00`
+- Checked at: `2026-05-23T15:53:26.814923+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Re-record or replace unusable voice samples, then import at least two clean consented WAV voices with matching transcripts.
@@ -320,7 +333,7 @@ Blocking reasons:
 ## Launch Artifact Inventory
 
 - Voices: `1` total; `0` usable; `1` unusable
-- Blends: `256` total; `0` launch-eligible; `256` stale/nonmatching
+- Blends: `258` total; `0` launch-eligible; `258` stale/nonmatching
 - Generations: `0` total; `0` Qwen; `0` launch-eligible; `0` stale/nonmatching
 - Usable voice IDs: `none`
 - Launch-eligible blend IDs: `none`
