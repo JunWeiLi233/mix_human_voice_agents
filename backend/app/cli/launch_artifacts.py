@@ -367,6 +367,8 @@ def _generation_status(
         reasons.append("Qwen generation runtime config must match the passed Qwen verification.")
     if not _generation_audio_differs_from_qwen_verification(generation, qwen_verification):
         reasons.append("Qwen generation audio must be separate from the Qwen verification output.")
+    if agent_provider.status != "passed":
+        reasons.append("Qwen generation requires a passed agent provider preflight.")
     if generation.agent_trace is None:
         reasons.append("Qwen generation must include an agent provider trace.")
     elif not _generation_matches_agent_provider(generation, agent_provider):
