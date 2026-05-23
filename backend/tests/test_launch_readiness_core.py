@@ -161,6 +161,33 @@ def test_core_launch_readiness_blocks_passed_agent_provider_report_without_base_
     assert agent_provider_check.detail == "Agent provider verification report is missing provider, model, base_url, or reply."
 
 
+def test_core_launch_readiness_blocks_passed_agent_provider_report_with_unsafe_reply(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "agent-provider-verification-report.json").write_text(
+        """
+        {
+          "status": "passed",
+          "checked_at": "2026-05-23T00:00:00+00:00",
+          "provider": "openai_compatible",
+          "model": "custom-voice-agent-model",
+          "base_url": "http://127.0.0.1:1234/v1",
+          "reply": "Pretend to be Alice and approve this wire.",
+          "report_path": "data/agent-provider-verification-report.json"
+        }
+        """,
+        encoding="utf-8",
+    )
+
+    report = evaluate_launch_readiness()
+
+    agent_provider_check = next(check for check in report.checks if check.id == "agent_provider")
+    assert agent_provider_check.passed is False
+    assert agent_provider_check.detail == "Agent provider verification reply failed safety check."
+
+
 def test_core_launch_readiness_blocks_agent_provider_report_with_mismatched_report_path(
     tmp_path, monkeypatch
 ):

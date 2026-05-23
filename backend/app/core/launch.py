@@ -9,6 +9,7 @@ from pydantic import ValidationError
 
 from app.core.audio import is_parseable_wav, wav_has_audible_signal
 from app.core.generation import METADATA_WATERMARK_DISCLOSURE
+from app.core.safety import SafetyError, check_generation_request
 from app.core.storage import GENERATION_ROOT, list_blends, list_generation_results, list_voice_profiles
 from app.models.schemas import (
     AgentProviderVerificationReport,
@@ -249,6 +250,13 @@ def _agent_provider_verification_status(report: AgentProviderVerificationReport)
         return {
             "passed": False,
             "detail": "Agent provider verification report is missing provider, model, base_url, or reply.",
+        }
+    try:
+        check_generation_request(report.reply or "")
+    except SafetyError:
+        return {
+            "passed": False,
+            "detail": "Agent provider verification reply failed safety check.",
         }
     return {
         "passed": True,
