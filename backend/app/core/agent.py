@@ -119,6 +119,7 @@ def generate_agent_reply(
     else:
         raise AgentProviderError(f"Unsupported agent provider: {config.provider}")
 
+    _validate_agent_reply_text(reply)
     check_generation_request(reply)
     return reply
 
@@ -126,3 +127,8 @@ def generate_agent_reply(
 def generate_agent_reply_record(prompt: str, config: AgentConfig) -> AgentReply:
     reply = generate_agent_reply(prompt=prompt, config=config)
     return AgentReply(reply=reply, provider=config.provider, model=config.model, base_url=config.base_url.rstrip("/"))
+
+
+def _validate_agent_reply_text(reply: str) -> None:
+    if not reply.strip():
+        raise AgentProviderError("Agent provider response must include non-empty text.")

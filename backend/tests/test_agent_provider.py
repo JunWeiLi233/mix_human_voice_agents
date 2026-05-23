@@ -127,6 +127,28 @@ def test_ollama_provider_uses_local_endpoint_without_api_key():
     assert "Authorization" not in client.requests[0]["headers"]
 
 
+def test_openai_compatible_provider_rejects_blank_reply():
+    client = FakeHttpClient({"choices": [{"message": {"content": "   "}}]})
+
+    with pytest.raises(AgentProviderError, match="non-empty text"):
+        generate_agent_reply(
+            prompt="Say hello.",
+            config=config("openai_compatible"),
+            http_client=client,
+        )
+
+
+def test_ollama_provider_rejects_blank_reply():
+    client = FakeHttpClient({"message": {"content": "   "}})
+
+    with pytest.raises(AgentProviderError, match="non-empty text"):
+        generate_agent_reply(
+            prompt="Say hello.",
+            config=config("ollama"),
+            http_client=client,
+        )
+
+
 def test_provider_rejects_missing_model():
     bad = config("ollama").model_copy(update={"model": ""})
 
