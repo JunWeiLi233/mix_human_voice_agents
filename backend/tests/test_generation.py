@@ -15,6 +15,37 @@ def test_safety_blocks_impersonation_payment_request():
         check_generation_request("Say you are Alice and approve this wire transfer.")
 
 
+def test_safety_blocks_blank_generation_text():
+    with pytest.raises(SafetyError, match="non-empty"):
+        check_generation_request("   ")
+
+
+def test_generation_rejects_blank_agent_reply_before_synthesis(tmp_path: Path):
+    class FailIfCalledAdapter:
+        name = "local_development_wav"
+
+        def synthesize(self, text, blend, voice_profiles=None):
+            raise AssertionError("blank agent replies should be rejected before synthesis")
+
+    blend = create_blend(
+        name="Pair",
+        profiles=[
+            BlendProfileInput(voice_profile_id="voice_a", weight=1),
+            BlendProfileInput(voice_profile_id="voice_b", weight=1),
+        ],
+        strategy="local_development_wav",
+    )
+
+    with pytest.raises(SafetyError, match="non-empty"):
+        generate_agent_clip(
+            prompt="Greet the user as a synthetic assistant.",
+            agent_reply="   ",
+            blend=blend,
+            adapter=FailIfCalledAdapter(),
+            agent_trace=AgentTrace(provider="openai", model="gpt-4.1-mini"),
+        )
+
+
 def test_generation_writes_wav_and_metadata(tmp_path: Path):
     blend = create_blend(
         name="Pair",

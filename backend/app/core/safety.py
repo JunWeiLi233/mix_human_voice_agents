@@ -15,6 +15,8 @@ BLOCKED_PHRASES = (
 
 
 def check_generation_request(text: str) -> None:
+    if not text.strip():
+        raise SafetyError("Voice generation text must be non-empty.")
     lowered = text.lower()
     if any(phrase in lowered for phrase in BLOCKED_PHRASES):
         raise SafetyError("Blocked impersonation or fraud-like voice generation request.")
