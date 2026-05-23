@@ -28,11 +28,18 @@ def new_voice_profile_id() -> str:
     return f"voice_{uuid4().hex[:12]}"
 
 
+def safe_storage_file_name(file_name: str | None) -> str:
+    candidate = Path(file_name or "").name.strip()
+    if candidate in {"", ".", ".."}:
+        return "sample.wav"
+    return candidate
+
+
 def save_voice_profile(profile: VoiceProfile, source_bytes: bytes, file_name: str) -> VoiceProfile:
     ensure_storage()
     voice_dir = VOICE_ROOT / profile.id
     voice_dir.mkdir(parents=True, exist_ok=True)
-    source_path = voice_dir / file_name
+    source_path = voice_dir / safe_storage_file_name(file_name)
     source_path.write_bytes(source_bytes)
     updated = profile.model_copy(
         update={

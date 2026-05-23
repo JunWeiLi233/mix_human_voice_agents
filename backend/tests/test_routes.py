@@ -2195,6 +2195,38 @@ def test_import_voice_requires_consent_fields(tmp_path: Path, monkeypatch):
     assert payload["quality"]["channel_count"] == 1
 
 
+def test_import_voice_sanitizes_uploaded_filename_inside_voice_directory(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    sample_path = tmp_path / "sample.wav"
+    write_reference_wav(sample_path)
+
+    with sample_path.open("rb") as sample:
+        response = client.post(
+            "/api/voices",
+            data={
+                "speaker_display_name": "Alice",
+                "consent_type": "self_or_written_permission",
+                "allowed_uses": "private_agent_voice,local_audio_export",
+                "confirmed_by": "local_user",
+                "notes": "approved for local prototype",
+                "reference_text": "Alice reads a clean reference sentence for Qwen cloning.",
+            },
+            files={"file": ("../escape.wav", sample, "audio/wav")},
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    source_audio_path = Path(payload["source_audio_path"]).resolve()
+    voice_dir = (tmp_path / "data" / "voices" / payload["id"]).resolve()
+    assert voice_dir in (source_audio_path, *source_audio_path.parents)
+    assert source_audio_path.name == "escape.wav"
+    assert not (tmp_path / "data" / "escape.wav").exists()
+
+    audio_response = client.get(f"/api/voices/{payload['id']}/audio")
+    assert audio_response.status_code == 200
+    assert audio_response.content.startswith(b"RIFF")
+
+
 def test_import_voice_requires_reference_text(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     sample_path = tmp_path / "sample.wav"

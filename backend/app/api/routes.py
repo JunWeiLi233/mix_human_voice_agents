@@ -34,6 +34,7 @@ from app.core.storage import (
     list_generation_results,
     list_voice_profiles,
     new_voice_profile_id,
+    safe_storage_file_name,
     save_blend,
     save_voice_profile,
 )
@@ -504,7 +505,8 @@ async def import_voice_route(
     ensure_storage()
     temp_dir = Path("data") / "tmp"
     temp_dir.mkdir(parents=True, exist_ok=True)
-    temp_path = temp_dir / (file.filename or "sample.wav")
+    safe_file_name = safe_storage_file_name(file.filename)
+    temp_path = temp_dir / safe_file_name
     temp_path.write_bytes(source_bytes)
     try:
         quality = analyze_audio_sample(temp_path)
@@ -520,7 +522,7 @@ async def import_voice_route(
         cleaned_audio_path="",
         quality=quality,
     )
-    return save_voice_profile(profile, source_bytes, file.filename or "sample.wav")
+    return save_voice_profile(profile, source_bytes, safe_file_name)
 
 
 @router.get("/voices", response_model=list[VoiceProfile])
