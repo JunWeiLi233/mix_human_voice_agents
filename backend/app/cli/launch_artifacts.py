@@ -200,7 +200,8 @@ def _next_commands(
         return commands
 
     selected_voice_ids = usable_distinct_voice_ids[:2]
-    if not _has_blend_for_voices(blends, selected_voice_ids):
+    launch_blend_id = _blend_id_for_voices(blends, selected_voice_ids)
+    if launch_blend_id is None:
         profiles = " ".join(f"--profile {voice_id}=1" for voice_id in selected_voice_ids)
         commands.append(
             'python -m app.cli.create_blend --name "Launch mixed voice" '
@@ -212,9 +213,10 @@ def _next_commands(
         profile_args = " ".join(f"--voice-profile-id {voice_id}" for voice_id in selected_voice_ids)
         commands.append(f"python -m app.cli.verify_qwen_runtime {profile_args}")
     if not any(status["launch_eligible"] for status in generation_statuses):
+        blend_id = launch_blend_id or "<saved-blend-id>"
         commands.append(
             "python -m app.cli.generate_voice "
-            "--blend-id <saved-blend-id> --prompt <prompt> "
+            f"--blend-id {blend_id} --prompt <prompt> "
             "--provider openai_compatible --model <model> --base-url <base-url> --api-key <api-key>"
         )
     return commands
@@ -251,12 +253,16 @@ def _agent_provider_commands() -> dict[str, str]:
 
 
 def _has_blend_for_voices(blends: list[VoiceBlend], voice_ids: list[str]) -> bool:
+    return _blend_id_for_voices(blends, voice_ids) is not None
+
+
+def _blend_id_for_voices(blends: list[VoiceBlend], voice_ids: list[str]) -> str | None:
     selected = set(voice_ids)
     for blend in blends:
         blend_ids = {profile.voice_profile_id for profile in blend.profiles}
         if selected.issubset(blend_ids) and blend.strategy == "multi_reference_prompt":
-            return True
-    return False
+            return blend.id
+    return None
 
 
 def _blend_status(blend: VoiceBlend, usable_voice_ids: list[str], voices: list[VoiceProfile]) -> dict[str, object]:

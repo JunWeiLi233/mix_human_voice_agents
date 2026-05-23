@@ -167,6 +167,65 @@ def test_launch_artifacts_cli_separates_launch_eligible_and_stale_blends(tmp_pat
     assert "Launch-eligible blends: 1; stale/nonmatching blends: 1" in output
 
 
+def test_launch_artifacts_cli_uses_existing_launch_blend_in_generation_command(
+    tmp_path: Path, monkeypatch
+):
+    voices = [
+        voice_profile("voice_alice", "Alice"),
+        voice_profile("voice_bob", "Bob"),
+    ]
+    launch_blend = VoiceBlend(
+        id="blend_launch_ready",
+        name="Alice + Bob",
+        strategy="multi_reference_prompt",
+        profiles=[
+            BlendProfile(voice_profile_id="voice_alice", weight=0.5),
+            BlendProfile(voice_profile_id="voice_bob", weight=0.5),
+        ],
+    )
+    monkeypatch.setattr("app.cli.launch_artifacts.list_voice_profiles", lambda: voices)
+    monkeypatch.setattr("app.cli.launch_artifacts.list_blends", lambda: [launch_blend])
+    monkeypatch.setattr("app.cli.launch_artifacts.list_generation_results", lambda: [])
+    monkeypatch.setattr(
+        "app.cli.launch_artifacts.get_agent_provider_verification_report",
+        lambda: AgentProviderVerificationReport(
+            status="passed",
+            report_path="data/agent-provider-verification-report.json",
+            provider="openai",
+            model="gpt-4.1-mini",
+            base_url="https://api.openai.com/v1",
+            reply="Provider connected.",
+        ),
+    )
+    monkeypatch.setattr(
+        "app.cli.launch_artifacts.get_qwen_verification_report",
+        lambda: QwenVerificationReport(
+            status="passed",
+            report_path="data/qwen-runtime-verification-report.json",
+            voice_profile_ids=["voice_alice", "voice_bob"],
+            output_audio_path=str(Path("data") / "generations" / "qwen_verify.wav"),
+        ),
+    )
+    monkeypatch.setattr(
+        "app.cli.launch_artifacts.QwenTtsAdapter.runtime_status",
+        lambda: TtsRuntimeStatus(
+            backend="qwen3_tts",
+            available=True,
+            model_id="Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+            message="qwen-tts package is importable.",
+        ),
+    )
+    report_path = tmp_path / "launch-artifacts.json"
+
+    exit_code = main(["--report", str(report_path)])
+
+    assert exit_code == 0
+    payload = json.loads(report_path.read_text(encoding="utf-8"))
+    commands = "\n".join(payload["next_commands"])
+    assert "--blend-id blend_launch_ready" in commands
+    assert "--blend-id <saved-blend-id>" not in commands
+
+
 def test_launch_artifacts_cli_explains_unusable_imported_voices(tmp_path: Path, monkeypatch, capsys):
     voices = [
         voice_profile("voice_alice", "Alice"),
