@@ -131,6 +131,8 @@ def _validate_manifest(manifest: dict[str, Any]) -> None:
             "agent_provider.provider must be one of: "
             f"{', '.join(SUPPORTED_AGENT_PROVIDERS)}."
         )
+    if "prompt" in provider and not str(provider["prompt"]).strip():
+        raise ValueError("agent_provider.prompt must not be blank when provided.")
     generation = manifest.get("generation") or {}
     _require(generation, "prompt", "generation")
     qwen = manifest.get("qwen") or {}

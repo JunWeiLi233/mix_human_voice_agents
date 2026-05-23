@@ -49,6 +49,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Hardened `app.cli.run_launch_sequence` so launch manifests reject blank supplied `qwen.text` before any import starts.
 - Hardened launch readiness so `docs/research-review.md` must include primary source links for OpenAI Voice Agents, LiveKit Voice AI, Pipecat, and Qwen3-TTS.
 - Hardened launch readiness so metadata-only Qwen generations report a missing generated audio artifact directly.
+- Hardened `app.cli.run_launch_sequence` so launch manifests reject blank supplied `agent_provider.prompt` before any import starts.
 
 ## Verification Already Run
 
@@ -57,7 +58,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - `cd frontend; npm run build` passed.
 - Chrome headless desktop screenshot was captured from `http://127.0.0.1:5174/`.
 - Chrome headless mobile screenshot was captured and mobile clipping was fixed.
-- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 223 tests.
+- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 224 tests.
 
 ## Next Tasks
 
@@ -81,7 +82,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T06:58:12.772048+00:00`
+- Checked at: `2026-05-23T07:01:14.043041+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Import two consented WAV voice samples with matching transcripts.
