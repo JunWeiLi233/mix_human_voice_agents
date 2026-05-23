@@ -75,7 +75,7 @@ def collect_launch_artifacts() -> dict[str, object]:
         blend.id for blend, status in zip(blends, blend_statuses, strict=True) if not status["launch_eligible"]
     ]
     generation_statuses = [
-        _generation_status(generation, blends, launch_eligible_blend_ids, agent_provider, qwen_verification)
+        _generation_status(generation, blends, launch_eligible_blend_ids, voices, agent_provider, qwen_verification)
         for generation in generations
     ]
     launch_eligible_generation_ids = [
@@ -335,6 +335,7 @@ def _generation_status(
     generation: GenerationResult,
     blends: list[VoiceBlend],
     launch_eligible_blend_ids: list[str],
+    voices: list[VoiceProfile],
     agent_provider: AgentProviderVerificationReport,
     qwen_verification: QwenVerificationReport,
 ) -> dict[str, object]:
@@ -352,6 +353,8 @@ def _generation_status(
         generation.source_profile_ids
     ):
         reasons.append("Qwen generation source details must match generated source profile ids.")
+    elif not _generation_source_details_match_current_profiles(generation, voices):
+        reasons.append("Qwen generation source details must match current imported voice profiles.")
     if not all(detail.reference_text_present for detail in generation.source_profile_details):
         reasons.append("Qwen generation source details must include reference transcripts.")
     if not all(REQUIRED_VOICE_USE in detail.allowed_uses for detail in generation.source_profile_details):
@@ -440,6 +443,26 @@ def _generation_audio_differs_from_qwen_verification(
     if qwen_verification.status != "passed" or not qwen_verification.output_audio_path:
         return True
     return not _same_artifact_path(generation.audio_path, qwen_verification.output_audio_path)
+
+
+def _generation_source_details_match_current_profiles(
+    generation: GenerationResult,
+    voices: list[VoiceProfile],
+) -> bool:
+    voice_by_id = {voice.id: voice for voice in voices}
+    for detail in generation.source_profile_details:
+        voice = voice_by_id.get(detail.voice_profile_id)
+        if voice is None:
+            return False
+        if detail.display_name != voice.display_name:
+            return False
+        if detail.consent_confirmed_by != voice.consent.confirmed_by:
+            return False
+        if sorted(detail.allowed_uses) != sorted(voice.consent.allowed_uses):
+            return False
+        if detail.reference_text_present != bool(voice.reference_text.strip()):
+            return False
+    return True
 
 
 def _generation_text_passes_safety(generation: GenerationResult) -> bool:
