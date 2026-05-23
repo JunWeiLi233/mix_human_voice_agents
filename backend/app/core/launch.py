@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 from pydantic import ValidationError
@@ -55,7 +56,14 @@ def get_qwen_verification_report() -> QwenVerificationReport:
                 error="Qwen runtime verification report is missing checked_at.",
             )
         payload.setdefault("report_path", str(report_path))
-        return QwenVerificationReport.model_validate(payload)
+        report = QwenVerificationReport.model_validate(payload)
+        if report.status == "passed" and _is_future_timestamp(report.checked_at):
+            return QwenVerificationReport(
+                status="failed",
+                report_path=str(report_path),
+                error="Qwen runtime verification report checked_at is in the future.",
+            )
+        return report
     except (json.JSONDecodeError, ValidationError):
         return QwenVerificationReport(
             status="failed",
@@ -93,7 +101,14 @@ def get_agent_provider_verification_report() -> AgentProviderVerificationReport:
                 error="Agent provider verification report is missing checked_at.",
             )
         payload.setdefault("report_path", str(report_path))
-        return AgentProviderVerificationReport.model_validate(payload)
+        report = AgentProviderVerificationReport.model_validate(payload)
+        if report.status == "passed" and _is_future_timestamp(report.checked_at):
+            return AgentProviderVerificationReport(
+                status="failed",
+                report_path=str(report_path),
+                error="Agent provider verification report checked_at is in the future.",
+            )
+        return report
     except (json.JSONDecodeError, ValidationError):
         return AgentProviderVerificationReport(
             status="failed",
@@ -175,6 +190,12 @@ def evaluate_launch_readiness() -> LaunchReadinessReport:
         checks=checks,
         blocking_reasons=blocking_reasons,
     )
+
+
+def _is_future_timestamp(value: datetime) -> bool:
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value > datetime.now(timezone.utc)
 
 
 def _agent_provider_verification_detail(report: AgentProviderVerificationReport) -> str:

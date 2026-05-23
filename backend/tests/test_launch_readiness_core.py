@@ -154,6 +154,33 @@ def test_core_launch_readiness_blocks_passed_agent_provider_report_without_check
     assert agent_provider_check.detail == "Agent provider verification report is missing checked_at."
 
 
+def test_core_launch_readiness_blocks_passed_agent_provider_report_with_future_checked_at(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "agent-provider-verification-report.json").write_text(
+        """
+        {
+          "status": "passed",
+          "checked_at": "2999-01-01T00:00:00+00:00",
+          "provider": "openai",
+          "model": "gpt-4.1-mini",
+          "base_url": "https://api.openai.com/v1",
+          "reply": "Provider ready.",
+          "report_path": "data/agent-provider-verification-report.json"
+        }
+        """,
+        encoding="utf-8",
+    )
+
+    report = evaluate_launch_readiness()
+
+    agent_provider_check = next(check for check in report.checks if check.id == "agent_provider")
+    assert agent_provider_check.passed is False
+    assert agent_provider_check.detail == "Agent provider verification report checked_at is in the future."
+
+
 def test_core_launch_readiness_blocks_invalid_agent_provider_report(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     report_path = tmp_path / "data" / "agent-provider-verification-report.json"
@@ -328,6 +355,57 @@ def test_core_launch_readiness_blocks_passed_qwen_verification_report_without_re
     qwen_verification_check = next(check for check in report.checks if check.id == "qwen_verification")
     assert qwen_verification_check.passed is False
     assert qwen_verification_check.detail == "Qwen runtime verification report is missing report_path."
+
+
+def test_core_launch_readiness_blocks_passed_qwen_verification_report_with_future_checked_at(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    output_path = tmp_path / "data" / "generations" / "qwen_verify.wav"
+    output_path.parent.mkdir(parents=True)
+    output_path.write_bytes(b"fake-qwen-wav")
+    report_path = tmp_path / "data" / "qwen-runtime-verification-report.json"
+    report_path.write_text(
+        json.dumps(
+            {
+                "status": "passed",
+                "checked_at": "2999-01-01T00:00:00+00:00",
+                "report_path": "data/qwen-runtime-verification-report.json",
+                "voice_profile_ids": ["voice_a", "voice_b"],
+                "tts_backend": "qwen3_tts",
+                "blend_strategy": "multi_reference_prompt",
+                "source_profile_details": [
+                    {
+                        "voice_profile_id": "voice_a",
+                        "display_name": "Alice",
+                        "weight": 0.5,
+                        "consent_confirmed_by": "local_user",
+                        "allowed_uses": ["private_agent_voice", "local_audio_export"],
+                        "reference_text_present": True,
+                    },
+                    {
+                        "voice_profile_id": "voice_b",
+                        "display_name": "Bob",
+                        "weight": 0.5,
+                        "consent_confirmed_by": "local_user",
+                        "allowed_uses": ["private_agent_voice", "local_audio_export"],
+                        "reference_text_present": True,
+                    },
+                ],
+                "output_audio_path": str(output_path),
+                "text": "This is a disclosed synthetic mixed voice runtime verification.",
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr("app.core.launch.is_parseable_wav", lambda path: True)
+    monkeypatch.setattr("app.core.launch.wav_has_audible_signal", lambda path: True)
+
+    report = evaluate_launch_readiness()
+
+    qwen_verification_check = next(check for check in report.checks if check.id == "qwen_verification")
+    assert qwen_verification_check.passed is False
+    assert qwen_verification_check.detail == "Qwen runtime verification report checked_at is in the future."
 
 
 def test_core_launch_readiness_blocks_saved_blend_without_current_imported_voices(
