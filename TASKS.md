@@ -18,7 +18,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Remote: `https://github.com/JunWeiLi233/mix_human_voice_agents.git`
 - Recent pushed work includes structured launch-manifest voice diagnostics for browser and CLI dry-runs.
 - Latest work blocks clipped browser microphone recordings before import and keeps recorded imports inside the launch voice quality requirements.
-- Latest handoff work adds a dedicated usage-limit CLI that refreshes launch artifacts, readiness, and a `## Usage Limit Handoff` section in `TASKS.md`.
+- Latest handoff work adds a dedicated usage-limit CLI that refreshes launch artifacts, readiness, usage-limit status, and a fallback `## Next Tasks` section in `TASKS.md`.
 - Latest cleanup work adds a dry-run-first stale blend prune command so agents can clear old nonmatching blends before creating the real launch blend.
 - Latest import hardening rejects too-short reference transcripts across CLI import, browser/API import, and launch-manifest dry-runs before Qwen verification.
 - Latest artifact inventory work now requires two distinct launch-usable speaker names before suggesting blend creation, Qwen verification, or Qwen generation commands.
@@ -26,7 +26,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 
 ## Usage Limit Handoff
 
-- Last refreshed: `2026-05-23T17:43:29.189679+00:00`
+- Last refreshed: `2026-05-23T18:24:49.696962+00:00`
 - Reason: Codex usage/session/context limit handoff.
 - Next agent should start from `## Next Tasks`, `## Launch Readiness Remaining Tasks`, and `## Launch Artifact Inventory`.
 - Preserve commit identity: `JunWeiLi233 <mcpejunwei@gmail.com>`.
@@ -34,7 +34,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T18:21:03.936973+00:00`
+- Checked at: `2026-05-23T18:24:49.685963+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Re-record or replace unusable voice samples, then import at least two clean consented WAV voices with matching transcripts.
@@ -93,6 +93,7 @@ Next artifact commands:
 
 ## Completed In Current Working Tree
 
+- Hardened `app.cli.handoff` so a usage/session/context limit handoff creates a real `## Next Tasks` continuation checklist when the section is missing.
 - Added frontend page navigation for `Studio`, `Evidence`, and `Launch`.
 - Kept `Studio` as the default full workflow page.
 - Added `Evidence` page for voice records and generation exports.

@@ -10,6 +10,7 @@ from app.cli.launch_readiness import main as launch_readiness_main
 
 
 USAGE_LIMIT_SECTION_HEADING = "## Usage Limit Handoff"
+NEXT_TASKS_SECTION_HEADING = "## Next Tasks"
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -62,7 +63,7 @@ def update_usage_limit_handoff(tasks_path: Path) -> None:
     heading_index = _find_heading_index(existing, USAGE_LIMIT_SECTION_HEADING)
     if heading_index == -1:
         separator = "" if existing.endswith("\n\n") else "\n\n"
-        tasks_path.write_text(f"{existing}{separator}{section}", encoding="utf-8")
+        tasks_path.write_text(_ensure_next_tasks_section(f"{existing}{separator}{section}"), encoding="utf-8")
         return
 
     next_heading_index = _find_next_section_heading_index(existing, heading_index + 1)
@@ -70,7 +71,7 @@ def update_usage_limit_handoff(tasks_path: Path) -> None:
         updated = f"{existing[:heading_index].rstrip()}\n\n{section}"
     else:
         updated = f"{existing[:heading_index].rstrip()}\n\n{section}\n{existing[next_heading_index:].lstrip()}"
-    tasks_path.write_text(updated, encoding="utf-8")
+    tasks_path.write_text(_ensure_next_tasks_section(updated), encoding="utf-8")
 
 
 def _find_heading_index(content: str, heading: str) -> int:
@@ -89,6 +90,27 @@ def _find_next_section_heading_index(content: str, start: int) -> int:
             return offset
         offset += len(line)
     return -1
+
+
+def _ensure_next_tasks_section(content: str) -> str:
+    if _find_heading_index(content, NEXT_TASKS_SECTION_HEADING) != -1:
+        return content
+    separator = "" if content.endswith("\n\n") else "\n\n"
+    return f"{content}{separator}{_next_tasks_section()}"
+
+
+def _next_tasks_section() -> str:
+    return "\n".join(
+        [
+            NEXT_TASKS_SECTION_HEADING,
+            "",
+            "1. Start from the refreshed launch blockers in `## Launch Readiness Remaining Tasks`.",
+            "2. Use the concrete artifact ids and commands in `## Launch Artifact Inventory`.",
+            "3. Commit future work as `JunWeiLi233 <mcpejunwei@gmail.com>` and push to `main`.",
+            "4. Watch GitHub Actions for the pushed commit until CI finishes.",
+            "",
+        ]
+    )
 
 
 def _usage_limit_section() -> str:

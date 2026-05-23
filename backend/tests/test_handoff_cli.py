@@ -68,6 +68,28 @@ def test_handoff_cli_refreshes_tasks_for_usage_limit(tmp_path: Path, monkeypatch
     assert "Usage-limit handoff written to" in output
 
 
+def test_handoff_cli_creates_next_tasks_for_other_agents(tmp_path: Path):
+    tasks_path = tmp_path / "TASKS.md"
+    tasks_path.write_text(
+        "# TASKS\n\n"
+        "## Usage Limit Handoff\n\n"
+        "- Old stamp.\n\n"
+        "## Launch Readiness Remaining Tasks\n\n"
+        "- [ ] imported_voices: Import at least two clean consented WAV voices.\n\n"
+        "## Launch Artifact Inventory\n\n"
+        "- Voices: `0` total; `0` usable; `0` unusable\n",
+        encoding="utf-8",
+    )
+
+    update_usage_limit_handoff(tasks_path)
+
+    content = tasks_path.read_text(encoding="utf-8")
+    assert "## Next Tasks" in content
+    assert "1. Start from the refreshed launch blockers in `## Launch Readiness Remaining Tasks`." in content
+    assert "2. Use the concrete artifact ids and commands in `## Launch Artifact Inventory`." in content
+    assert "3. Commit future work as `JunWeiLi233 <mcpejunwei@gmail.com>` and push to `main`." in content
+
+
 def test_usage_limit_handoff_only_replaces_real_section_headings(tmp_path: Path):
     tasks_path = tmp_path / "TASKS.md"
     tasks_path.write_text(
