@@ -120,6 +120,8 @@ def _validate_manifest(manifest: dict[str, Any]) -> None:
     if len(normalized_speakers) < 2:
         raise ValueError("Launch sequence manifest requires at least two distinct speaker display names.")
     blend = manifest.get("blend") or {}
+    if "name" in blend and not str(blend["name"]).strip():
+        raise ValueError("blend.name must not be blank when provided.")
     if str(blend.get("strategy", LAUNCH_BLEND_STRATEGY)) != LAUNCH_BLEND_STRATEGY:
         raise ValueError("blend.strategy must be multi_reference_prompt for Qwen launch generation.")
     provider = manifest.get("agent_provider") or {}

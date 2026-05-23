@@ -51,6 +51,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Hardened launch readiness so metadata-only Qwen generations report a missing generated audio artifact directly.
 - Hardened `app.cli.run_launch_sequence` so launch manifests reject blank supplied `agent_provider.prompt` before any import starts.
 - Hardened `app.cli.run_launch_sequence` so launch manifests reject blank supplied Qwen runtime options before any import starts.
+- Hardened `app.cli.run_launch_sequence` so launch manifests reject blank supplied `blend.name` before any import starts.
 
 ## Verification Already Run
 
@@ -59,7 +60,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - `cd frontend; npm run build` passed.
 - Chrome headless desktop screenshot was captured from `http://127.0.0.1:5174/`.
 - Chrome headless mobile screenshot was captured and mobile clipping was fixed.
-- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 225 tests.
+- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 226 tests.
 
 ## Next Tasks
 
@@ -83,7 +84,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T07:04:17.927219+00:00`
+- Checked at: `2026-05-23T07:07:46.543544+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Import two consented WAV voice samples with matching transcripts.

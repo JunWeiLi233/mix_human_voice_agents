@@ -239,6 +239,62 @@ def test_run_launch_sequence_dry_run_rejects_non_qwen_blend_strategy(
     }
 
 
+def test_run_launch_sequence_dry_run_rejects_blank_blend_name(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    manifest_path = tmp_path / "launch-manifest.json"
+    voice_a_audio = tmp_path / "alice.wav"
+    voice_b_audio = tmp_path / "bob.wav"
+    write_reference_wav(voice_a_audio)
+    write_reference_wav(voice_b_audio)
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "voices": [
+                    {
+                        "speaker_display_name": "Alice",
+                        "confirmed_by": "Junwei",
+                        "reference_text": "Alice reads a launch reference.",
+                        "audio": str(voice_a_audio),
+                    },
+                    {
+                        "speaker_display_name": "Bob",
+                        "confirmed_by": "Junwei",
+                        "reference_text": "Bob reads a launch reference.",
+                        "audio": str(voice_b_audio),
+                    },
+                ],
+                "blend": {"name": "   "},
+                "agent_provider": {
+                    "provider": "openai_compatible",
+                    "model": "local-qwen-agent",
+                    "base_url": "http://127.0.0.1:1234/v1",
+                },
+                "generation": {"prompt": "Greet the user as a disclosed synthetic assistant."},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    def fail_if_called(argv):
+        raise AssertionError("blank blend names should validate before launch subcommands")
+
+    monkeypatch.setattr("app.cli.run_launch_sequence.import_voice_main", fail_if_called)
+    monkeypatch.setattr("app.cli.run_launch_sequence.create_blend_main", fail_if_called)
+
+    exit_code = main(
+        ["--manifest", str(manifest_path), "--dry-run", "--report", "sequence-report.json"]
+    )
+
+    assert exit_code == 2
+    report = json.loads(Path("sequence-report.json").read_text(encoding="utf-8"))
+    assert report == {
+        "status": "failed",
+        "error": "blend.name must not be blank when provided.",
+    }
+
+
 def test_run_launch_sequence_dry_run_rejects_blank_qwen_verification_text(
     tmp_path: Path, monkeypatch
 ):
