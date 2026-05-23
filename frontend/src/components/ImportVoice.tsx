@@ -5,6 +5,7 @@ import type { VoiceProfile } from "../types";
 
 const minRecordedSeconds = 5;
 const maxRecordedSeconds = 30;
+const minAudiblePeak = 0.001;
 
 type Props = {
   onImported?: (profile: VoiceProfile) => void;
@@ -27,6 +28,7 @@ export function ImportVoice({ onImported }: Props) {
   const [consentConfirmed, setConsentConfirmed] = useState(false);
   const [recordedFile, setRecordedFile] = useState<File | null>(null);
   const [recordedSeconds, setRecordedSeconds] = useState<number | null>(null);
+  const [recordedPeak, setRecordedPeak] = useState<number | null>(null);
   const [recording, setRecording] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +77,7 @@ export function ImportVoice({ onImported }: Props) {
     setError(null);
     setRecordedFile(null);
     setRecordedSeconds(null);
+    setRecordedPeak(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const context = new AudioContextConstructor();
@@ -135,11 +138,16 @@ export function ImportVoice({ onImported }: Props) {
     }
     const wavBlob = encodeMonoWav(session.chunks, session.sampleRate);
     const durationSeconds = sampleCount(session.chunks) / session.sampleRate;
+    setRecordedPeak(peakAmplitude(session.chunks));
     setRecordedFile(new File([wavBlob], `${displayName}-recording.wav`, { type: "audio/wav" }));
     setRecordedSeconds(durationSeconds);
   }
 
   const recordedDurationError = recordedSeconds === null ? null : recordedDurationErrorText(recordedSeconds);
+  const recordedSignalError = recordedPeak === null || recordedPeak >= minAudiblePeak
+    ? null
+    : "Recording must contain audible speech before importing.";
+  const recordedImportError = recordedDurationError ?? recordedSignalError;
 
   return (
     <section className="panel">
@@ -199,11 +207,11 @@ export function ImportVoice({ onImported }: Props) {
           <div>
             <span>{recordedFile.name}</span>
             {recordedSeconds !== null ? <small>{recordedSeconds.toFixed(1)}s recorded</small> : null}
-            {recordedDurationError ? <small className="duration-warning">{recordedDurationError}</small> : null}
+            {recordedImportError ? <small className="duration-warning">{recordedImportError}</small> : null}
           </div>
           <button
             type="button"
-            disabled={busy || !canImport || recordedDurationError !== null}
+            disabled={busy || !canImport || recordedImportError !== null}
             onClick={() => void handleFile(recordedFile)}
           >
             Import recorded sample
@@ -257,6 +265,16 @@ function encodeMonoWav(chunks: Float32Array[], sampleRate: number): Blob {
 
 function sampleCount(chunks: Float32Array[]): number {
   return chunks.reduce((count, chunk) => count + chunk.length, 0);
+}
+
+function peakAmplitude(chunks: Float32Array[]): number {
+  return chunks.reduce((peak, chunk) => {
+    let chunkPeak = peak;
+    chunk.forEach((sample) => {
+      chunkPeak = Math.max(chunkPeak, Math.abs(sample));
+    });
+    return chunkPeak;
+  }, 0);
 }
 
 function recordedDurationErrorText(durationSeconds: number): string | null {
