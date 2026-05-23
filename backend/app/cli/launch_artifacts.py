@@ -89,6 +89,9 @@ def collect_launch_artifacts() -> dict[str, object]:
         "usable_distinct_voice_ids": usable_distinct_voice_ids,
         "launch_eligible_blend_ids": launch_eligible_blend_ids,
         "stale_blend_ids": stale_blend_ids,
+        "stale_blend_reason_counts": _reason_counts(
+            status["stale_reasons"] for status in blend_statuses if not status["launch_eligible"]
+        ),
         "launch_eligible_generation_ids": launch_eligible_generation_ids,
         "stale_generation_ids": stale_generation_ids,
         "blends": [_blend_payload(blend, status) for blend, status in zip(blends, blend_statuses, strict=True)],
@@ -148,6 +151,14 @@ def _generation_payload(generation: GenerationResult, status: dict[str, object])
         "source_profile_ids": generation.source_profile_ids,
         **status,
     }
+
+
+def _reason_counts(reason_groups: Sequence[object]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for reasons in reason_groups:
+        for reason in reasons:
+            counts[str(reason)] = counts.get(str(reason), 0) + 1
+    return dict(sorted(counts.items(), key=lambda item: (-item[1], item[0])))
 
 
 def _next_commands(
@@ -421,6 +432,11 @@ def _tasks_handoff_section(report: dict[str, object]) -> str:
         for voice in unusable_voices:
             reasons = "; ".join(voice["unusable_reasons"])
             lines.append(f"- `{voice['id']}` {voice['display_name']}: {reasons}")
+    stale_blend_reason_counts = report.get("stale_blend_reason_counts", {})
+    if stale_blend_reason_counts:
+        lines.extend(["", "Stale blend reason summary:"])
+        for reason, count in stale_blend_reason_counts.items():
+            lines.append(f"- `{count}` {reason}")
     stale_generations = [generation for generation in report["generations"] if not generation["launch_eligible"]]
     if stale_generations:
         lines.extend(["", "Stale/nonmatching generations:"])

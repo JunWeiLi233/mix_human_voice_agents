@@ -25,7 +25,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 
 ## Usage Limit Handoff
 
-- Last refreshed: `2026-05-23T17:01:03.451539+00:00`
+- Last refreshed: `2026-05-23T17:04:39.375423+00:00`
 - Reason: Codex usage/session/context limit handoff.
 - Next agent should start from `## Next Tasks`, `## Launch Readiness Remaining Tasks`, and `## Launch Artifact Inventory`.
 - Preserve commit identity: `JunWeiLi233 <mcpejunwei@gmail.com>`.
@@ -33,7 +33,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T17:01:03.441540+00:00`
+- Checked at: `2026-05-23T17:04:39.366424+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Re-record or replace unusable voice samples, then import at least two clean consented WAV voices with matching transcripts.
@@ -57,7 +57,7 @@ Blocking reasons:
 ## Launch Artifact Inventory
 
 - Voices: `2` total; `1` usable; `1` unusable; `1` distinct usable speakers
-- Blends: `273` total; `0` launch-eligible; `273` stale/nonmatching
+- Blends: `274` total; `0` launch-eligible; `274` stale/nonmatching
 - Generations: `0` total; `0` Qwen; `0` launch-eligible; `0` stale/nonmatching
 - Usable voice IDs: `voice_93f62f27a5b4`
 - Usable distinct-speaker voice IDs: `voice_93f62f27a5b4`
@@ -69,6 +69,11 @@ Blocking reasons:
 
 Unusable voices:
 - `voice_93dc1ef39402` Alice: Audio quality warnings must be resolved before launch.
+
+Stale blend reason summary:
+- `274` Blend must reference at least two distinct speaker display names.
+- `274` Blend must use the multi_reference_prompt strategy for Qwen launch.
+- `274` Blend references voices that are missing or not launch-usable: voice_a, voice_b.
 
 Next artifact commands:
 - [ ] `python -m app.cli.prune_launch_artifacts --report data/prune-launch-artifacts-report.json`
@@ -180,6 +185,7 @@ Next artifact commands:
 - Updated the frontend Launch Artifact Inventory panel to show distinct usable speaker counts and distinct-speaker voice IDs.
 - Hardened stale-blend prune reports so dry-runs include each stale blend's name, source voice ids, and stale reasons before any delete is applied.
 - Updated the frontend Launch Artifact Inventory panel to render stale blend names and stale reasons from the backend launch artifact report.
+- Added stale blend reason counts to the launch artifact report and `TASKS.md` handoff so agents can see why stale blends should be pruned.
 
 ## Verification Already Run
 

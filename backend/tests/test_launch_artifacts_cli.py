@@ -151,6 +151,10 @@ def test_launch_artifacts_cli_separates_launch_eligible_and_stale_blends(tmp_pat
     assert payload["stale_blend_count"] == 1
     assert payload["launch_eligible_blend_ids"] == ["blend_launch_ready"]
     assert payload["stale_blend_ids"] == ["blend_stale"]
+    assert payload["stale_blend_reason_counts"] == {
+        "Blend must reference at least two distinct speaker display names.": 1,
+        "Blend references voices that are missing or not launch-usable: voice_missing.": 1,
+    }
     assert payload["blends"][0]["launch_eligible"] is True
     assert payload["blends"][1]["launch_eligible"] is False
     assert payload["blends"][1]["missing_voice_profile_ids"] == ["voice_missing"]
@@ -440,6 +444,72 @@ def test_launch_artifacts_cli_updates_tasks_handoff_with_artifact_inventory(tmp_
     assert "Next artifact commands:" in content
     assert "- [ ] `python -m app.cli.create_blend --name \"Launch mixed voice\"" in content
     assert "- [ ] `python -m app.cli.verify_agent_provider --provider openai_compatible" in content
+
+
+def test_launch_artifacts_tasks_handoff_summarizes_stale_blend_reasons(tmp_path: Path, monkeypatch):
+    voices = [voice_profile("voice_alice", "Alice")]
+    blends = [
+        VoiceBlend(
+            id="blend_missing",
+            name="Missing voice",
+            strategy="multi_reference_prompt",
+            profiles=[
+                BlendProfile(voice_profile_id="voice_alice", weight=0.5),
+                BlendProfile(voice_profile_id="voice_missing", weight=0.5),
+            ],
+        ),
+        VoiceBlend(
+            id="blend_preview",
+            name="Preview blend",
+            strategy="local_development_wav",
+            profiles=[
+                BlendProfile(voice_profile_id="voice_alice", weight=1.0),
+            ],
+        ),
+    ]
+    monkeypatch.setattr("app.cli.launch_artifacts.list_voice_profiles", lambda: voices)
+    monkeypatch.setattr("app.cli.launch_artifacts.list_blends", lambda: blends)
+    monkeypatch.setattr("app.cli.launch_artifacts.list_generation_results", lambda: [])
+    monkeypatch.setattr(
+        "app.cli.launch_artifacts.get_agent_provider_verification_report",
+        lambda: AgentProviderVerificationReport(status="missing", report_path="data/agent-provider-verification-report.json"),
+    )
+    monkeypatch.setattr(
+        "app.cli.launch_artifacts.get_qwen_verification_report",
+        lambda: QwenVerificationReport(status="missing", report_path="data/qwen-runtime-verification-report.json"),
+    )
+    monkeypatch.setattr(
+        "app.cli.launch_artifacts.QwenTtsAdapter.runtime_status",
+        lambda: TtsRuntimeStatus(
+            backend="qwen3_tts",
+            available=True,
+            model_id="Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+            message="qwen-tts package is importable.",
+        ),
+    )
+    tasks_path = tmp_path / "TASKS.md"
+
+    exit_code = main(
+        [
+            "--report",
+            str(tmp_path / "launch-artifacts.json"),
+            "--tasks",
+            str(tasks_path),
+        ]
+    )
+
+    assert exit_code == 0
+    payload = json.loads((tmp_path / "launch-artifacts.json").read_text(encoding="utf-8"))
+    assert payload["stale_blend_reason_counts"] == {
+        "Blend must reference at least two distinct speaker display names.": 2,
+        "Blend references voices that are missing or not launch-usable: voice_missing.": 1,
+        "Blend must use the multi_reference_prompt strategy for Qwen launch.": 1,
+        "Blend must reference at least two imported voice profiles.": 1,
+    }
+    content = tasks_path.read_text(encoding="utf-8")
+    assert "Stale blend reason summary:" in content
+    assert "- `2` Blend must reference at least two distinct speaker display names." in content
+    assert "- `1` Blend references voices that are missing or not launch-usable: voice_missing." in content
 
 
 def test_launch_artifacts_tasks_update_only_replaces_real_section_heading(tmp_path: Path, monkeypatch):
