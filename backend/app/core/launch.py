@@ -5,7 +5,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from app.core.audio import is_parseable_wav
+from app.core.audio import is_parseable_wav, wav_has_audible_signal
 from app.core.generation import METADATA_WATERMARK_DISCLOSURE
 from app.core.storage import GENERATION_ROOT, list_blends, list_generation_results, list_voice_profiles
 from app.models.schemas import (
@@ -241,6 +241,11 @@ def _qwen_verification_status(report: QwenVerificationReport, output_exists: boo
         return {
             "passed": False,
             "detail": "Qwen verification output audio must be a parseable WAV file.",
+        }
+    if not wav_has_audible_signal(Path(report.output_audio_path or "")):
+        return {
+            "passed": False,
+            "detail": "Qwen verification output audio must contain audible signal.",
         }
     return {
         "passed": True,
@@ -518,6 +523,11 @@ def _qwen_mixed_generation_status(
             return {
                 "passed": False,
                 "detail": "Qwen mixed voice audio must be a parseable WAV file.",
+            }
+        if not wav_has_audible_signal(Path(generation.audio_path)):
+            return {
+                "passed": False,
+                "detail": "Qwen mixed voice audio must contain audible signal.",
             }
         return {
             "passed": True,

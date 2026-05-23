@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Sequence
 
-from app.core.audio import is_parseable_wav
+from app.core.audio import is_parseable_wav, wav_has_audible_signal
 from app.core.blends import create_blend
 from app.core.generation import build_source_profile_details
 from app.core.qwen_profiles import validate_qwen_voice_profiles
@@ -165,6 +165,8 @@ def _qwen_generated_audio_error(path: Path, label: str) -> str | None:
         return f"{label} must be non-empty."
     if not is_parseable_wav(path):
         return f"{label} must be a parseable WAV file."
+    if not wav_has_audible_signal(path):
+        return f"{label} must contain audible signal."
     return None
 
 

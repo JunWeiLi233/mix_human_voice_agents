@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 from pathlib import Path
+import wave
 
 from app.core.launch import _qwen_mixed_generation_status, _qwen_verification_status, evaluate_launch_readiness
 from app.models.schemas import (
@@ -282,6 +283,46 @@ def test_core_launch_readiness_blocks_invalid_qwen_verification_wav(tmp_path, mo
     assert status == {
         "passed": False,
         "detail": "Qwen verification output audio must be a parseable WAV file.",
+    }
+
+
+def test_core_launch_readiness_blocks_silent_qwen_verification_wav(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    output_path = tmp_path / "data" / "generations" / "qwen_verify.wav"
+    write_silent_wav(output_path)
+    report = QwenVerificationReport(
+        status="passed",
+        report_path="data/qwen-runtime-verification-report.json",
+        voice_profile_ids=["voice_a", "voice_b"],
+        tts_backend="qwen3_tts",
+        blend_strategy="multi_reference_prompt",
+        source_profile_details=[
+            SourceProfileDetail(
+                voice_profile_id="voice_a",
+                display_name="Alice",
+                weight=0.5,
+                consent_confirmed_by="local_user",
+                allowed_uses=["private_agent_voice", "local_audio_export"],
+                reference_text_present=True,
+            ),
+            SourceProfileDetail(
+                voice_profile_id="voice_b",
+                display_name="Bob",
+                weight=0.5,
+                consent_confirmed_by="local_user",
+                allowed_uses=["private_agent_voice", "local_audio_export"],
+                reference_text_present=True,
+            ),
+        ],
+        output_audio_path=str(output_path),
+        text="This is a disclosed synthetic mixed voice runtime verification.",
+    )
+
+    status = _qwen_verification_status(report, output_exists=True)
+
+    assert status == {
+        "passed": False,
+        "detail": "Qwen verification output audio must contain audible signal.",
     }
 
 
@@ -1349,6 +1390,70 @@ def test_core_launch_readiness_blocks_invalid_generated_qwen_wav(tmp_path, monke
     assert status == {
         "passed": False,
         "detail": "Qwen mixed voice audio must be a parseable WAV file.",
+    }
+
+
+def test_core_launch_readiness_blocks_silent_generated_qwen_wav(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    audio_path = tmp_path / "data" / "generations" / "mixed.wav"
+    metadata_path = tmp_path / "data" / "generations" / "mixed.json"
+    write_silent_wav(audio_path)
+    source_details = [
+        SourceProfileDetail(
+            voice_profile_id="voice_a",
+            display_name="Alice",
+            weight=0.5,
+            consent_confirmed_by="local_user",
+            allowed_uses=["private_agent_voice", "local_audio_export"],
+            reference_text_present=True,
+        ),
+        SourceProfileDetail(
+            voice_profile_id="voice_b",
+            display_name="Bob",
+            weight=0.5,
+            consent_confirmed_by="local_user",
+            allowed_uses=["private_agent_voice", "local_audio_export"],
+            reference_text_present=True,
+        ),
+    ]
+    generation = GenerationResult(
+        id="generation_silent_audio",
+        audio_path=str(Path("data") / "generations" / "mixed.wav"),
+        metadata_path=str(Path("data") / "generations" / "mixed.json"),
+        prompt="Say hello as a synthetic assistant.",
+        agent_reply="Hello from a synthetic mixed voice.",
+        synthetic_label="synthetic mixed voice",
+        source_profile_ids=["voice_a", "voice_b"],
+        source_profile_details=source_details,
+        blend_strategy="multi_reference_prompt",
+        tts_backend="qwen3_tts",
+        agent_trace=AgentTrace(
+            provider="openai",
+            model="gpt-4.1-mini",
+            base_url="https://api.openai.com/v1",
+        ),
+    )
+    metadata_path.write_text(generation.model_dump_json(), encoding="utf-8")
+
+    status = _qwen_mixed_generation_status(
+        [generation],
+        AgentProviderVerificationReport(
+            status="passed",
+            report_path="data/agent-provider-verification-report.json",
+            provider="openai",
+            model="gpt-4.1-mini",
+            base_url="https://api.openai.com/v1",
+            reply="Provider ready.",
+        ),
+        QwenVerificationReport(
+            status="missing",
+            report_path="data/qwen-runtime-verification-report.json",
+        ),
+    )
+
+    assert status == {
+        "passed": False,
+        "detail": "Qwen mixed voice audio must contain audible signal.",
     }
 
 
@@ -3835,6 +3940,15 @@ def test_core_launch_readiness_blocks_when_qwen_verification_lacks_private_voice
     qwen_verification_check = next(check for check in report.checks if check.id == "qwen_verification")
     assert qwen_verification_check.passed is False
     assert qwen_verification_check.detail == "Qwen verification report includes a source profile not allowed for private agent voice use."
+
+
+def write_silent_wav(path: Path, duration_seconds: int = 1, sample_rate: int = 16000) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with wave.open(str(path), "wb") as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(sample_rate)
+        wav_file.writeframes(b"\x00\x00" * sample_rate * duration_seconds)
 
 
 def test_core_launch_readiness_blocks_when_qwen_generation_lacks_private_voice_use(

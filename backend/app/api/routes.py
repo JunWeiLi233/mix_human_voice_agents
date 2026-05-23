@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from app.core.agent import AgentProviderError, generate_agent_reply_record
-from app.core.audio import AudioQualityError, analyze_audio_sample, is_parseable_wav
+from app.core.audio import AudioQualityError, analyze_audio_sample, is_parseable_wav, wav_has_audible_signal
 from app.core.blends import BlendError, create_blend, validate_blend
 from app.core.consent import ConsentError, create_consent_record
 from app.core.generation import generate_agent_clip
@@ -236,6 +236,8 @@ def _qwen_generated_audio_error(path: Path, label: str) -> str | None:
         return f"{label} must be non-empty."
     if not is_parseable_wav(path):
         return f"{label} must be a parseable WAV file."
+    if not wav_has_audible_signal(path):
+        return f"{label} must contain audible signal."
     return None
 
 
@@ -347,6 +349,11 @@ def _validate_qwen_runtime_verification(request: GenerateRequest) -> None:
         raise HTTPException(
             status_code=400,
             detail="Qwen verification output audio must be a parseable WAV file.",
+        )
+    if not wav_has_audible_signal(Path(report.output_audio_path)):
+        raise HTTPException(
+            status_code=400,
+            detail="Qwen verification output audio must contain audible signal.",
         )
     requested_voice_ids = sorted(profile.voice_profile_id for profile in request.blend.profiles)
     if sorted(report.voice_profile_ids) != requested_voice_ids:

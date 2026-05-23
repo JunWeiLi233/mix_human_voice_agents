@@ -71,6 +71,17 @@ def is_parseable_wav(path: Path) -> bool:
         return False
 
 
+def wav_has_audible_signal(path: Path) -> bool:
+    try:
+        with wave.open(str(path), "rb") as wav_file:
+            frames = wav_file.getnframes()
+            sample_width = wav_file.getsampwidth()
+            pcm = wav_file.readframes(frames)
+    except (wave.Error, EOFError, OSError):
+        return False
+    return _peak_pcm_amplitude(pcm, sample_width) > 1
+
+
 def _peak_pcm_amplitude(pcm: bytes, sample_width: int) -> int:
     if not pcm or sample_width <= 0:
         return 0

@@ -163,6 +163,60 @@ def test_verify_qwen_runtime_writes_failed_report_when_output_is_invalid_wav(
     assert report["output_audio_path"] == str(tmp_path / "qwen_verify.wav")
 
 
+def test_verify_qwen_runtime_writes_failed_report_when_output_is_silent_wav(
+    tmp_path: Path, monkeypatch
+):
+    def fake_get_profiles(profile_ids):
+        voice_a_audio = tmp_path / "voice_a.wav"
+        voice_b_audio = tmp_path / "voice_b.wav"
+        write_reference_wav(voice_a_audio)
+        write_reference_wav(voice_b_audio)
+        return {
+            "voice_a": profile(
+                "voice_a",
+                "Alice",
+                "Alice reads the reference text.",
+                cleaned_audio_path=str(voice_a_audio),
+            ),
+            "voice_b": profile(
+                "voice_b",
+                "Bob",
+                "Bob reads the reference text.",
+                cleaned_audio_path=str(voice_b_audio),
+            ),
+        }
+
+    class SilentQwenAdapter:
+        @classmethod
+        def from_pretrained(cls, output_root=None, **kwargs):
+            return cls()
+
+        def synthesize(self, text, blend, voice_profiles=None):
+            output = tmp_path / "qwen_verify.wav"
+            write_silent_wav(output)
+            return output
+
+    monkeypatch.setattr("app.cli.verify_qwen_runtime.get_voice_profiles_by_ids", fake_get_profiles)
+    monkeypatch.setattr("app.cli.verify_qwen_runtime.QwenTtsAdapter", SilentQwenAdapter)
+    report_path = tmp_path / "report.json"
+
+    exit_code = main(
+        [
+            "--voice-profile-id",
+            "voice_a",
+            "--voice-profile-id",
+            "voice_b",
+            "--report",
+            str(report_path),
+        ]
+    )
+
+    assert exit_code == 1
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["status"] == "failed"
+    assert report["error"] == "Qwen verification output audio must contain audible signal."
+
+
 def test_verify_qwen_runtime_requires_two_profiles(tmp_path: Path):
     exit_code = main(
         [
@@ -289,3 +343,12 @@ def write_reference_wav(path: Path, duration_seconds: int = 1, sample_rate: int 
             for index in range(sample_rate * duration_seconds)
         )
         wav_file.writeframes(frames)
+
+
+def write_silent_wav(path: Path, duration_seconds: int = 1, sample_rate: int = 16000) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with wave.open(str(path), "wb") as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(sample_rate)
+        wav_file.writeframes(b"\x00\x00" * sample_rate * duration_seconds)
