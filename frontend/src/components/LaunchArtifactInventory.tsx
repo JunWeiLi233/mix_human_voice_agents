@@ -6,6 +6,16 @@ type Props = {
 
 export function LaunchArtifactInventory({ artifacts }: Props) {
   const staleBlendReasonCounts = artifacts ? Object.entries(artifacts.stale_blend_reason_counts) : [];
+  const providerCommands = artifacts
+    ? [
+        ["ChatGPT command", artifacts.agent_provider_commands.chatgpt],
+        ["Claude command", artifacts.agent_provider_commands.claude],
+        ["Grok command", artifacts.agent_provider_commands.grok],
+        ["Gemini command", artifacts.agent_provider_commands.gemini],
+        ["API command", artifacts.agent_provider_commands.openai_compatible_api],
+        ["Local command", artifacts.agent_provider_commands.local_ollama],
+      ]
+    : [];
 
   return (
     <section className="panel launch-artifacts" aria-labelledby="launch-artifacts-heading">
@@ -78,6 +88,21 @@ export function LaunchArtifactInventory({ artifacts }: Props) {
                   </li>
                 ))}
               </ul>
+            </div>
+          ) : null}
+          {providerCommands.length > 0 ? (
+            <div className="artifact-list">
+              <h3>Provider preflight commands</h3>
+              <dl>
+                {providerCommands.map(([label, command]) => (
+                  <div key={label}>
+                    <dt>{label}</dt>
+                    <dd>
+                      <code>{command}</code>
+                    </dd>
+                  </div>
+                ))}
+              </dl>
             </div>
           ) : null}
           {staleBlendReasonCounts.length > 0 ? (

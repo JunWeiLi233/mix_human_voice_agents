@@ -231,6 +231,20 @@ describe("App", () => {
           launch_eligible_blend_ids: [],
           launch_eligible_generation_ids: [],
           agent_provider: { status: "missing" },
+          agent_provider_commands: {
+            chatgpt:
+              "python -m app.cli.verify_agent_provider --provider openai --model gpt-4.1-mini --base-url https://api.openai.com/v1 --api-key <openai-api-key>",
+            claude:
+              "python -m app.cli.verify_agent_provider --provider anthropic --model claude-sonnet-4-5 --base-url https://api.anthropic.com --api-key <anthropic-api-key>",
+            grok:
+              "python -m app.cli.verify_agent_provider --provider xai --model grok-4 --base-url https://api.x.ai/v1 --api-key <xai-api-key>",
+            gemini:
+              "python -m app.cli.verify_agent_provider --provider google --model gemini-2.5-flash --base-url https://generativelanguage.googleapis.com/v1beta --api-key <google-api-key>",
+            openai_compatible_api:
+              "python -m app.cli.verify_agent_provider --provider openai_compatible --model <model> --base-url <base-url> --api-key <api-key>",
+            local_ollama:
+              "python -m app.cli.verify_agent_provider --provider ollama --model llama3.1 --base-url http://127.0.0.1:11434",
+          },
           qwen_verification: { status: "missing" },
           qwen_runtime: { available: true, model_id: "Qwen/Qwen3-TTS-12Hz-0.6B-Base" },
           voices: [
@@ -292,6 +306,23 @@ describe("App", () => {
     expect(screen.getByText("Distinct-speaker voice IDs")).toBeInTheDocument();
     expect(screen.getAllByText("voice_alice").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("4 total / 0 eligible / 4 stale")).toBeInTheDocument();
+    expect(screen.getByText("Provider preflight commands")).toBeInTheDocument();
+    expect(screen.getByText("ChatGPT command")).toBeInTheDocument();
+    expect(screen.getByText("Claude command")).toBeInTheDocument();
+    expect(screen.getByText("Grok command")).toBeInTheDocument();
+    expect(screen.getByText("Gemini command")).toBeInTheDocument();
+    expect(screen.getByText("API command")).toBeInTheDocument();
+    expect(screen.getByText("Local command")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "python -m app.cli.verify_agent_provider --provider openai --model gpt-4.1-mini --base-url https://api.openai.com/v1 --api-key <openai-api-key>",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "python -m app.cli.verify_agent_provider --provider xai --model grok-4 --base-url https://api.x.ai/v1 --api-key <xai-api-key>",
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByText("Stale blend reason summary")).toBeInTheDocument();
     expect(
       screen.getByText((_content, element) =>

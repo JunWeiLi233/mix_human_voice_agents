@@ -198,6 +198,14 @@ export type LaunchArtifactsReport = {
   launch_eligible_blend_ids: string[];
   launch_eligible_generation_ids: string[];
   agent_provider: { status: "missing" | "passed" | "failed" };
+  agent_provider_commands: {
+    chatgpt: string;
+    claude: string;
+    grok: string;
+    gemini: string;
+    openai_compatible_api: string;
+    local_ollama: string;
+  };
   qwen_verification: { status: "missing" | "passed" | "failed" };
   qwen_runtime: { available: boolean; model_id?: string | null };
   voices: LaunchArtifactVoice[];
