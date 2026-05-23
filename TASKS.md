@@ -82,10 +82,11 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Hardened voice profile listing so malformed profile metadata is ignored instead of crashing launch readiness.
 - Hardened blend listing so malformed blend metadata is ignored instead of crashing launch readiness.
 - Hardened voice deletion cleanup so malformed blend or generation metadata is ignored while valid references are still removed.
+- Persisted non-secret frontend agent provider settings so user-selected API/local LLM endpoint, model, provider, and system prompt survive reloads without storing API keys.
 
 ## Verification Already Run
 
-- `cd frontend; npm test -- --run` passed: 6 tests.
+- `cd frontend; npm test -- --run` passed: 7 tests.
 - `cd frontend; npx tsc --noEmit` passed.
 - `cd frontend; npm run build` passed.
 - Chrome headless desktop screenshot was captured from `http://127.0.0.1:5174/`.
@@ -115,7 +116,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T09:02:53.607190+00:00`
+- Checked at: `2026-05-23T14:08:34.361692+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Import two consented WAV voice samples with matching transcripts.

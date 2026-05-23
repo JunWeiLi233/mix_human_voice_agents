@@ -5,6 +5,7 @@ import App from "../src/App";
 describe("App", () => {
   afterEach(() => {
     cleanup();
+    localStorage.clear();
     vi.restoreAllMocks();
   });
 
@@ -729,6 +730,65 @@ describe("App", () => {
     expect(screen.getByLabelText("Base URL")).toHaveValue("http://127.0.0.1:1234/v1");
     expect(screen.getByLabelText("Model")).toHaveValue("local-qwen-agent");
     expect(screen.getByLabelText("API key (optional)")).toHaveValue("");
+  });
+
+  it("keeps non-secret API and local LLM settings across reloads", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = input.toString();
+      if (url === "/api/voices" && !init) {
+        return jsonResponse([]);
+      }
+      if (url === "/api/generations" && !init) {
+        return jsonResponse([]);
+      }
+      if (url === "/api/blends" && !init) {
+        return jsonResponse([]);
+      }
+      if (url === "/api/tts/qwen/status" && !init) {
+        return jsonResponse({
+          backend: "qwen3_tts",
+          available: false,
+          model_id: "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+          message: "qwen-tts is not installed.",
+        });
+      }
+      if (url === "/api/tts/qwen/verification" && !init) {
+        return jsonResponse({
+          status: "missing",
+          tts_backend: "qwen3_tts",
+          report_path: "data/qwen-runtime-verification-report.json",
+          voice_profile_ids: [],
+        });
+      }
+      if (url === "/api/agent/provider-verification" && !init) {
+        return jsonResponse({
+          status: "missing",
+          report_path: "data/agent-provider-verification-report.json",
+        });
+      }
+      if (url === "/api/launch/readiness" && !init) {
+        return jsonResponse({
+          status: "blocked",
+          blocking_reasons: [],
+          checks: [],
+        });
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    const firstRender = render(<App />);
+    await screen.findByText("No imported voices yet.");
+
+    fireEvent.click(screen.getByRole("button", { name: "Local" }));
+    fireEvent.change(screen.getByLabelText("Base URL"), { target: { value: "http://127.0.0.1:1234" } });
+    fireEvent.change(screen.getByLabelText("Model"), { target: { value: "qwen2.5:14b" } });
+    firstRender.unmount();
+
+    render(<App />);
+
+    expect(await screen.findByLabelText("Base URL")).toHaveValue("http://127.0.0.1:1234");
+    expect(screen.getByLabelText("Model")).toHaveValue("qwen2.5:14b");
+    expect(screen.queryByLabelText("API key")).not.toBeInTheDocument();
   });
 
   it("lets the user delete an imported voice and removes dependent blends", async () => {

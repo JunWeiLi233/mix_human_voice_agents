@@ -39,15 +39,19 @@ import "./styles.css";
 
 type WorkspacePage = "studio" | "evidence" | "launch";
 
+const defaultAgentConfig: AgentConfig = {
+  provider: "ollama",
+  model: "llama3.1",
+  base_url: "http://127.0.0.1:11434",
+  api_key: "",
+  system_prompt: "You are a disclosed synthetic mixed-voice assistant.",
+};
+
+const agentConfigStorageKey = "mixedVoiceAgent.providerSettings";
+
 export default function App() {
   const [activePage, setActivePage] = useState<WorkspacePage>("studio");
-  const [agentConfig, setAgentConfig] = useState<AgentConfig>({
-    provider: "ollama",
-    model: "llama3.1",
-    base_url: "http://127.0.0.1:11434",
-    api_key: "",
-    system_prompt: "You are a disclosed synthetic mixed-voice assistant.",
-  });
+  const [agentConfig, setAgentConfig] = useState<AgentConfig>(() => loadStoredAgentConfig());
   const [ttsBackend, setTtsBackend] = useState<TtsBackend>("local_development_wav");
   const [voices, setVoices] = useState<VoiceProfile[]>([]);
   const [blendProfiles, setBlendProfiles] = useState<BlendDraftProfile[]>([]);
@@ -145,6 +149,10 @@ export default function App() {
         });
       });
   }, []);
+
+  useEffect(() => {
+    storeAgentConfig(agentConfig);
+  }, [agentConfig]);
 
   useEffect(() => {
     void getAgentProviderVerification()
@@ -464,4 +472,56 @@ function toBlendDrafts(voices: VoiceProfile[], current: BlendDraftProfile[]): Bl
       weight: existing?.weight ?? 1,
     };
   });
+}
+
+function loadStoredAgentConfig(): AgentConfig {
+  try {
+    const stored = localStorage.getItem(agentConfigStorageKey);
+    if (!stored) return defaultAgentConfig;
+    const parsed = JSON.parse(stored) as Partial<AgentConfig>;
+    if (!isAgentProvider(parsed.provider)) return defaultAgentConfig;
+    return {
+      ...defaultAgentConfig,
+      provider: parsed.provider,
+      model: typeof parsed.model === "string" && parsed.model.trim() ? parsed.model : defaultAgentConfig.model,
+      base_url:
+        typeof parsed.base_url === "string" && parsed.base_url.trim()
+          ? parsed.base_url
+          : defaultAgentConfig.base_url,
+      system_prompt:
+        typeof parsed.system_prompt === "string" && parsed.system_prompt.trim()
+          ? parsed.system_prompt
+          : defaultAgentConfig.system_prompt,
+      api_key: "",
+    };
+  } catch {
+    return defaultAgentConfig;
+  }
+}
+
+function storeAgentConfig(config: AgentConfig) {
+  try {
+    localStorage.setItem(
+      agentConfigStorageKey,
+      JSON.stringify({
+        provider: config.provider,
+        model: config.model,
+        base_url: config.base_url,
+        system_prompt: config.system_prompt,
+      }),
+    );
+  } catch {
+    return;
+  }
+}
+
+function isAgentProvider(provider: unknown): provider is AgentConfig["provider"] {
+  return (
+    provider === "openai" ||
+    provider === "anthropic" ||
+    provider === "google" ||
+    provider === "xai" ||
+    provider === "openai_compatible" ||
+    provider === "ollama"
+  );
 }
