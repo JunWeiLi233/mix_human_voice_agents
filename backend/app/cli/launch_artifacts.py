@@ -359,6 +359,8 @@ def _generation_status(
         reasons.append("Qwen generation must include at least two distinct source speakers.")
     if not _generation_matches_qwen_verification(generation, qwen_verification):
         reasons.append("Qwen generation must match each verified Qwen voice id exactly once.")
+    if not _generation_matches_qwen_runtime_config(generation, qwen_verification):
+        reasons.append("Qwen generation runtime config must match the passed Qwen verification.")
     if generation.agent_trace is None:
         reasons.append("Qwen generation must include an agent provider trace.")
     elif not _generation_matches_agent_provider(generation, agent_provider):
@@ -396,6 +398,33 @@ def _generation_matches_qwen_verification(
     if qwen_verification.status != "passed":
         return True
     return sorted(generation.source_profile_ids) == sorted(qwen_verification.voice_profile_ids)
+
+
+def _generation_matches_qwen_runtime_config(
+    generation: GenerationResult,
+    qwen_verification: QwenVerificationReport,
+) -> bool:
+    if qwen_verification.status != "passed":
+        return True
+    verified_config = _qwen_verification_runtime_config(qwen_verification)
+    if not verified_config:
+        return True
+    return _compact_qwen_runtime_config(generation.qwen_runtime_config) == verified_config
+
+
+def _qwen_verification_runtime_config(qwen_verification: QwenVerificationReport) -> dict[str, str]:
+    return _compact_qwen_runtime_config(
+        {
+            "model_id": qwen_verification.model_id,
+            "device_map": qwen_verification.device_map,
+            "dtype": qwen_verification.dtype,
+            "attn_implementation": qwen_verification.attn_implementation,
+        }
+    )
+
+
+def _compact_qwen_runtime_config(config: dict[str, str | None] | None) -> dict[str, str]:
+    return {key: value for key, value in (config or {}).items() if value is not None}
 
 
 def _generation_matches_agent_provider(
