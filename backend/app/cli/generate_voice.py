@@ -50,6 +50,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         blend = _get_saved_blend(args.blend_id)
         _validate_agent_provider_preflight(config)
         _validate_qwen_verification(blend)
+        _validate_requested_qwen_runtime_config(
+            {
+                "model_id": args.qwen_model_id,
+                "device_map": args.qwen_device_map,
+                "dtype": args.qwen_dtype,
+                "attn_implementation": args.qwen_attn_implementation,
+            }
+        )
         voice_profiles = get_voice_profiles_by_ids([profile.voice_profile_id for profile in blend.profiles])
         agent_reply = generate_agent_reply_record(prompt=args.prompt, config=config)
         agent_trace = AgentTrace(
@@ -130,21 +138,39 @@ def _validate_qwen_verification(blend: VoiceBlend) -> None:
         raise ValueError("Qwen generation voices must match the passed Qwen runtime verification.")
 
 
-def _validate_resolved_qwen_runtime_config(runtime_config: dict[str, str | None]) -> None:
+def _validate_requested_qwen_runtime_config(requested_config: dict[str, str | None]) -> None:
     report = get_qwen_verification_report()
-    verified = {
-        key: value
-        for key, value in {
+    verified = _compact_runtime_config(
+        {
             "model_id": report.model_id,
             "device_map": report.device_map,
             "dtype": report.dtype,
             "attn_implementation": report.attn_implementation,
-        }.items()
-        if value is not None
-    }
-    resolved = {key: value for key, value in runtime_config.items() if value is not None}
+        }
+    )
+    requested = _compact_runtime_config(requested_config)
+    for key, value in requested.items():
+        if key in verified and verified[key] != value:
+            raise ValueError("Qwen generation runtime config must match the passed Qwen verification.")
+
+
+def _validate_resolved_qwen_runtime_config(runtime_config: dict[str, str | None]) -> None:
+    report = get_qwen_verification_report()
+    verified = _compact_runtime_config(
+        {
+            "model_id": report.model_id,
+            "device_map": report.device_map,
+            "dtype": report.dtype,
+            "attn_implementation": report.attn_implementation,
+        }
+    )
+    resolved = _compact_runtime_config(runtime_config)
     if verified and resolved != verified:
         raise ValueError("Qwen generation runtime config must match the passed Qwen verification.")
+
+
+def _compact_runtime_config(runtime_config: dict[str, str | None]) -> dict[str, str]:
+    return {key: value for key, value in runtime_config.items() if value is not None}
 
 
 def _write_metadata(metadata_path: str | None, payload: dict[str, object]) -> None:
