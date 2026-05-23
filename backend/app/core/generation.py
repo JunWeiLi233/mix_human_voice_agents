@@ -57,7 +57,7 @@ def generate_agent_clip(
         source_profile_details=build_source_profile_details(blend.profiles, voice_profiles),
         blend_strategy=blend.strategy,
         tts_backend=tts_backend,
-        qwen_runtime_config=qwen_runtime_config,
+        qwen_runtime_config=_resolve_qwen_runtime_config(tts_backend, adapter, qwen_runtime_config),
         agent_trace=agent_trace,
         watermark=MetadataWatermark(
             label=blend.synthetic_label,
@@ -69,6 +69,16 @@ def generate_agent_clip(
         encoding="utf-8",
     )
     return result
+
+
+def _resolve_qwen_runtime_config(
+    tts_backend: TtsBackend,
+    adapter: TtsAdapter,
+    requested_config: dict[str, str | None] | None,
+) -> dict[str, str | None] | None:
+    if tts_backend != "qwen3_tts":
+        return requested_config
+    return requested_config or getattr(adapter, "runtime_config", None)
 
 
 def _validate_qwen_generation_inputs(

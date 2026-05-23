@@ -25,11 +25,13 @@ class QwenTtsAdapter:
         output_root: Path | None = None,
         language: str = "English",
         x_vector_only_mode: bool = False,
+        runtime_config: dict[str, str | None] | None = None,
     ):
         self.model = model
         self.output_root = output_root or Path("data/generations")
         self.language = language
         self.x_vector_only_mode = x_vector_only_mode
+        self.runtime_config = runtime_config
         self.output_root.mkdir(parents=True, exist_ok=True)
 
     @classmethod
@@ -60,7 +62,16 @@ class QwenTtsAdapter:
         if resolved_attn:
             kwargs["attn_implementation"] = resolved_attn
         model = Qwen3TTSModel.from_pretrained(resolved_model_id, **kwargs)
-        return cls(model=model, output_root=output_root)
+        return cls(
+            model=model,
+            output_root=output_root,
+            runtime_config={
+                "model_id": resolved_model_id,
+                "device_map": resolved_device_map,
+                "dtype": resolved_dtype if isinstance(resolved_dtype, str) else None,
+                "attn_implementation": resolved_attn,
+            },
+        )
 
     @staticmethod
     def runtime_status(model_id: str = DEFAULT_QWEN_TTS_MODEL_ID) -> TtsRuntimeStatus:

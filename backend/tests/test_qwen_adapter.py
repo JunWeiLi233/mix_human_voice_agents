@@ -179,6 +179,12 @@ def test_qwen_adapter_loads_model_from_environment_config(monkeypatch, tmp_path:
     adapter = QwenTtsAdapter.from_pretrained(output_root=tmp_path)
 
     assert adapter.model is not None
+    assert adapter.runtime_config == {
+        "model_id": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+        "device_map": "cuda:0",
+        "dtype": "bfloat16",
+        "attn_implementation": "flash_attention_2",
+    }
     assert seen == {
         "model_id": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
         "kwargs": {
