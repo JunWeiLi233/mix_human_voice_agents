@@ -105,7 +105,14 @@ cd backend
 .\.venv\Scripts\python -m app.cli.run_launch_sequence --manifest launch-manifest.json --tasks ..\TASKS.md
 ```
 
-The sequence validates at least two distinct speaker display names and checks each listed audio file exists, is a parseable WAV, and contains audible signal before importing anything, then exits successfully only if the final launch-readiness audit is ready.
+Validate a launch manifest without importing voices, calling the agent provider, running Qwen, or refreshing readiness:
+
+```powershell
+cd backend
+.\.venv\Scripts\python -m app.cli.run_launch_sequence --manifest launch-manifest.json --dry-run --report data\launch-sequence\sequence-report.json
+```
+
+The sequence validates at least two distinct speaker display names and checks each listed audio file exists, is a parseable WAV, and contains audible signal before importing anything. A normal run exits successfully only if the final launch-readiness audit is ready.
 
 Manifest shape:
 

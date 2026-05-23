@@ -7,6 +7,67 @@ import wave
 from app.cli.run_launch_sequence import main
 
 
+def test_run_launch_sequence_dry_run_validates_manifest_without_side_effects(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    manifest_path = tmp_path / "launch-manifest.json"
+    voice_a_audio = tmp_path / "alice.wav"
+    voice_b_audio = tmp_path / "bob.wav"
+    write_reference_wav(voice_a_audio)
+    write_reference_wav(voice_b_audio)
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "voices": [
+                    {
+                        "speaker_display_name": "Alice",
+                        "confirmed_by": "Junwei",
+                        "reference_text": "Alice reads a launch reference.",
+                        "audio": str(voice_a_audio),
+                    },
+                    {
+                        "speaker_display_name": "Bob",
+                        "confirmed_by": "Junwei",
+                        "reference_text": "Bob reads a launch reference.",
+                        "audio": str(voice_b_audio),
+                    },
+                ],
+                "agent_provider": {
+                    "provider": "openai_compatible",
+                    "model": "local-qwen-agent",
+                    "base_url": "http://127.0.0.1:1234/v1",
+                },
+                "generation": {"prompt": "Greet the user as a disclosed synthetic assistant."},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    def fail_if_called(argv):
+        raise AssertionError("dry run should not call launch subcommands")
+
+    monkeypatch.setattr("app.cli.run_launch_sequence.import_voice_main", fail_if_called)
+    monkeypatch.setattr("app.cli.run_launch_sequence.create_blend_main", fail_if_called)
+    monkeypatch.setattr("app.cli.run_launch_sequence.verify_agent_provider_main", fail_if_called)
+    monkeypatch.setattr("app.cli.run_launch_sequence.verify_qwen_runtime_main", fail_if_called)
+    monkeypatch.setattr("app.cli.run_launch_sequence.generate_voice_main", fail_if_called)
+    monkeypatch.setattr("app.cli.run_launch_sequence.launch_readiness_main", fail_if_called)
+
+    exit_code = main(
+        ["--manifest", str(manifest_path), "--dry-run", "--report", "sequence-report.json"]
+    )
+
+    assert exit_code == 0
+    report = json.loads(Path("sequence-report.json").read_text(encoding="utf-8"))
+    assert report == {
+        "status": "passed",
+        "mode": "dry_run",
+        "voice_count": 2,
+        "speaker_display_names": ["Alice", "Bob"],
+    }
+
+
 def test_run_launch_sequence_invokes_launch_steps_from_manifest(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     manifest_path = tmp_path / "launch-manifest.json"

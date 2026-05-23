@@ -23,12 +23,30 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR), help="Directory for intermediate reports.")
     parser.add_argument("--report", default=str(DEFAULT_OUTPUT_DIR / "sequence-report.json"))
     parser.add_argument("--tasks", default="../TASKS.md", help="TASKS.md path to refresh at the end.")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate the manifest and write a dry-run report without importing voices or calling providers.",
+    )
     args = parser.parse_args(argv)
 
     report_path = Path(args.report)
     try:
         manifest = _load_manifest(Path(args.manifest))
         _validate_manifest(manifest)
+        if args.dry_run:
+            _write_report(
+                report_path,
+                {
+                    "status": "passed",
+                    "mode": "dry_run",
+                    "voice_count": len(manifest["voices"]),
+                    "speaker_display_names": [
+                        str(voice["speaker_display_name"]).strip() for voice in manifest["voices"]
+                    ],
+                },
+            )
+            return 0
         output_dir = Path(args.output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
 
