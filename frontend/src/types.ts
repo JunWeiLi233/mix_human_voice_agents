@@ -50,7 +50,7 @@ export type GenerationResult = {
   } | null;
 };
 
-export type AgentProviderKind = "openai" | "anthropic" | "xai" | "openai_compatible" | "ollama";
+export type AgentProviderKind = "openai" | "anthropic" | "google" | "xai" | "openai_compatible" | "ollama";
 
 export type AgentConfig = {
   provider: AgentProviderKind;

@@ -390,6 +390,9 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Grok" }));
     expect(screen.getByLabelText("Base URL")).toHaveValue("https://api.x.ai/v1");
     expect(screen.getByLabelText("Model")).toHaveValue("grok-4");
+    fireEvent.click(screen.getByRole("button", { name: "Gemini" }));
+    expect(screen.getByLabelText("Base URL")).toHaveValue("https://generativelanguage.googleapis.com/v1beta");
+    expect(screen.getByLabelText("Model")).toHaveValue("gemini-2.5-flash");
     fireEvent.click(screen.getByRole("button", { name: "ChatGPT" }));
     expect(screen.getByLabelText("Base URL")).toHaveValue("https://api.openai.com/v1");
     expect(screen.getByLabelText("Model")).toHaveValue("gpt-4.1-mini");

@@ -8,7 +8,7 @@ Local-first prototype for an AI voice agent that imports multiple consented voic
 - Lists imported voice profiles from local storage.
 - Builds a mixed voice from two or more imported profiles with user-controlled weights.
 - Deletes imported voice profiles, saved blends, and generated clips that depend on deleted voices.
-- Lets the user choose ChatGPT/OpenAI, Claude/Anthropic, Grok/xAI, a custom OpenAI-compatible API, or an Ollama-compatible local LLM endpoint.
+- Lets the user choose ChatGPT/OpenAI, Claude/Anthropic, Gemini/Google, Grok/xAI, a custom OpenAI-compatible API, or an Ollama-compatible local LLM endpoint.
 - Generates an agent reply first, then synthesizes audio with either:
   - `local_development_wav`: deterministic preview WAV for development.
   - `qwen3_tts`: Qwen3-TTS voice-clone path, then weighted waveform mixing across imported profiles.
@@ -87,6 +87,7 @@ Open `http://127.0.0.1:5173`.
    - `ChatGPT`: OpenAI chat completions endpoint, model, and API key.
    - `Claude`: Anthropic Messages API endpoint, model, and API key.
    - `Grok`: xAI chat completions endpoint, model, and API key.
+   - `Gemini`: Google Gemini `generateContent` endpoint, model, and API key.
    - `API`: custom OpenAI-compatible base URL, model, and API key.
    - `Local`: Ollama-compatible endpoint such as `http://127.0.0.1:11434`.
 3. For each voice, enter who confirmed consent, add consent notes, paste the reference transcript, check the consent confirmation box, and import a clean 5-30 second WAV sample where the speaker is you or has given written permission.

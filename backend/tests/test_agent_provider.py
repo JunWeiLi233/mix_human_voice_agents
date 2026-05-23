@@ -29,6 +29,7 @@ def config(provider: AgentProviderKind) -> AgentConfig:
     base_urls = {
         "openai": "https://api.openai.com/v1",
         "anthropic": "https://api.anthropic.com",
+        "google": "https://generativelanguage.googleapis.com/v1beta",
         "xai": "https://api.x.ai/v1",
         "openai_compatible": "https://api.example.test/v1",
         "ollama": "http://127.0.0.1:11434",
@@ -111,6 +112,50 @@ def test_anthropic_provider_uses_claude_messages_api_settings():
     assert client.requests[0]["json"]["system"] == "You are a disclosed synthetic mixed-voice assistant."
     assert client.requests[0]["json"]["messages"] == [{"role": "user", "content": "Say hello."}]
     assert client.requests[0]["json"]["max_tokens"] == 1024
+
+
+def test_google_provider_uses_gemini_generate_content_api_settings():
+    client = FakeHttpClient(
+        {
+            "candidates": [
+                {
+                    "content": {
+                        "parts": [
+                            {"text": "Hello from Gemini."},
+                        ],
+                    },
+                },
+            ],
+        }
+    )
+
+    reply = generate_agent_reply(
+        prompt="Say hello.",
+        config=config("google"),
+        http_client=client,
+    )
+
+    assert reply == "Hello from Gemini."
+    assert client.requests[0]["url"] == (
+        "https://generativelanguage.googleapis.com/v1beta/models/demo-model:generateContent"
+    )
+    assert client.requests[0]["headers"]["x-goog-api-key"] == "sk-test"
+    assert client.requests[0]["headers"]["Content-Type"] == "application/json"
+    assert client.requests[0]["json"] == {
+        "systemInstruction": {
+            "parts": [
+                {
+                    "text": "You are a disclosed synthetic mixed-voice assistant.",
+                }
+            ],
+        },
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": "Say hello."}],
+            }
+        ],
+    }
 
 
 def test_ollama_provider_uses_local_endpoint_without_api_key():

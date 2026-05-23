@@ -15,7 +15,7 @@ BlendStrategy = Literal[
     "designed_voice_proxy",
     "local_development_wav",
 ]
-AgentProviderKind = Literal["openai", "anthropic", "xai", "openai_compatible", "ollama"]
+AgentProviderKind = Literal["openai", "anthropic", "google", "xai", "openai_compatible", "ollama"]
 
 
 class ConsentRequest(BaseModel):

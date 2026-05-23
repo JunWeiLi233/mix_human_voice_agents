@@ -22,7 +22,7 @@ How are current programmers building voice agents and voice-cloning tools, and w
 ## Practices To Adopt
 
 - Use a chained local-first architecture for launch: import, consent, quality analysis, profile storage, blend creation, LLM reply, safety check, TTS synthesis, metadata, playback/history.
-- Keep LLM provider selection independent from TTS. The app should work with ChatGPT/OpenAI, Claude/Anthropic, Grok/xAI, OpenAI-compatible APIs, and Ollama-compatible local endpoints through one agent interface.
+- Keep LLM provider selection independent from TTS. The app should work with ChatGPT/OpenAI, Claude/Anthropic, Gemini/Google, Grok/xAI, OpenAI-compatible APIs, and Ollama-compatible local endpoints through one agent interface.
 - Keep TTS model integration behind adapters. Each adapter must declare or encode the blend strategy it actually implements instead of pretending all models can interpolate speakers identically.
 - Persist reference transcripts with profiles because Qwen3-TTS, Fish-style cloning, F5-style cloning, and Dia-style prompting all depend on prompt text or benefit from it.
 - Treat reusable profile artifacts as first-class local data. Direct references are useful for tests and one-off synthesis, but saved profiles are better for a repeatable mixed-voice agent.

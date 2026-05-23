@@ -16,6 +16,7 @@ export function AgentProviderSettings({ value, onChange, testReply, testing, onT
   const presets: Record<AgentProviderKind, Pick<AgentConfig, "base_url" | "model" | "api_key">> = {
     openai: { base_url: "https://api.openai.com/v1", model: "gpt-4.1-mini", api_key: value.api_key },
     anthropic: { base_url: "https://api.anthropic.com", model: "claude-sonnet-4-5", api_key: value.api_key },
+    google: { base_url: "https://generativelanguage.googleapis.com/v1beta", model: "gemini-2.5-flash", api_key: value.api_key },
     xai: { base_url: "https://api.x.ai/v1", model: "grok-4", api_key: value.api_key },
     openai_compatible: { base_url: "https://llm.example.test/v1", model: "custom-chat-model", api_key: value.api_key },
     ollama: { base_url: "http://127.0.0.1:11434", model: "llama3.1", api_key: "" },
@@ -49,6 +50,13 @@ export function AgentProviderSettings({ value, onChange, testReply, testing, onT
           onClick={() => switchProvider("xai")}
         >
           Grok
+        </button>
+        <button
+          type="button"
+          className={value.provider === "google" ? "active" : ""}
+          onClick={() => switchProvider("google")}
+        >
+          Gemini
         </button>
         <button
           type="button"

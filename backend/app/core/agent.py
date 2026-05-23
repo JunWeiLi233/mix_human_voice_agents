@@ -58,6 +58,30 @@ def build_anthropic_payload(config: AgentConfig, prompt: str) -> dict[str, Any]:
     }
 
 
+def build_google_payload(config: AgentConfig, prompt: str) -> dict[str, Any]:
+    if not config.model.strip():
+        raise AgentProviderError("Agent model is required.")
+    if not config.base_url.strip():
+        raise AgentProviderError("Agent base_url is required.")
+    check_generation_request(prompt)
+
+    return {
+        "systemInstruction": {
+            "parts": [
+                {
+                    "text": config.system_prompt,
+                }
+            ],
+        },
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": prompt}],
+            }
+        ],
+    }
+
+
 def generate_agent_reply(
     prompt: str,
     config: AgentConfig,
@@ -106,6 +130,21 @@ def generate_agent_reply(
         )
         if not reply:
             raise AgentProviderError("Anthropic response did not include text content.")
+    elif config.provider == "google":
+        if not config.api_key.strip():
+            raise AgentProviderError("API key is required for Google Gemini providers.")
+        response = client.post(
+            f"{base_url}/{_google_model_path(config.model)}:generateContent",
+            headers={
+                "x-goog-api-key": config.api_key,
+                "Content-Type": "application/json",
+            },
+            json=build_google_payload(config, prompt),
+            timeout=60,
+        )
+        response.raise_for_status()
+        data = response.json()
+        reply = _extract_google_reply(data)
     elif config.provider == "ollama":
         response = client.post(
             f"{base_url}/api/chat",
@@ -132,3 +171,21 @@ def generate_agent_reply_record(prompt: str, config: AgentConfig) -> AgentReply:
 def _validate_agent_reply_text(reply: str) -> None:
     if not reply.strip():
         raise AgentProviderError("Agent provider response must include non-empty text.")
+
+
+def _google_model_path(model: str) -> str:
+    cleaned = model.strip()
+    if cleaned.startswith("models/"):
+        return cleaned
+    return f"models/{cleaned}"
+
+
+def _extract_google_reply(data: dict[str, Any]) -> str:
+    candidates = data.get("candidates", [])
+    if not candidates:
+        raise AgentProviderError("Google Gemini response did not include candidates.")
+    parts = candidates[0].get("content", {}).get("parts", [])
+    reply = "".join(part.get("text", "") for part in parts)
+    if not reply:
+        raise AgentProviderError("Google Gemini response did not include text content.")
+    return reply
