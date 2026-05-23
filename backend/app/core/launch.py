@@ -384,18 +384,23 @@ def _saved_blend_status(
         }
     if verification.status != "passed" or not verification.voice_profile_ids:
         imported_ids = {voice.id for voice in voices if hasattr(voice, "id")}
+        imported_by_id = {voice.id: voice for voice in voices if hasattr(voice, "id")}
         for blend in blends:
             if not hasattr(blend, "profiles"):
                 continue
             blend_ids = [profile.voice_profile_id for profile in blend.profiles]
-            if len(set(blend_ids)) >= 2 and set(blend_ids).issubset(imported_ids):
+            if (
+                len(set(blend_ids)) >= 2
+                and set(blend_ids).issubset(imported_ids)
+                and _details_have_distinct_speakers([imported_by_id[voice_id] for voice_id in set(blend_ids)])
+            ):
                 return {
                     "passed": True,
                     "detail": f"{len(blends)} saved blends",
                 }
         return {
             "passed": False,
-            "detail": "No saved blend references at least two currently imported voices.",
+            "detail": _saved_blend_missing_detail(blends, imported_by_id),
         }
 
     verified_ids = sorted(verification.voice_profile_ids)
@@ -423,6 +428,11 @@ def _imported_voices_status(voices: list[object], verification: QwenVerification
             "detail": f"{len(voices)} imported voices",
         }
     if verification.status != "passed" or not verification.voice_profile_ids:
+        if not _details_have_distinct_speakers(voices):
+            return {
+                "passed": False,
+                "detail": "Imported voices must come from at least two distinct speakers.",
+            }
         return {
             "passed": True,
             "detail": f"{len(voices)} imported voices",
@@ -458,6 +468,16 @@ def _imported_voices_status(voices: list[object], verification: QwenVerification
         "passed": True,
         "detail": f"{len(voices)} imported voices",
     }
+
+
+def _saved_blend_missing_detail(blends: list[object], imported_by_id: dict[str, object]) -> str:
+    for blend in blends:
+        if not hasattr(blend, "profiles"):
+            continue
+        blend_ids = {profile.voice_profile_id for profile in blend.profiles}
+        if len(blend_ids) >= 2 and blend_ids.issubset(imported_by_id):
+            return "No saved blend references at least two distinct imported speakers."
+    return "No saved blend references at least two currently imported voices."
 
 
 def _research_review_status() -> dict[str, object]:

@@ -591,6 +591,53 @@ def test_core_launch_readiness_blocks_saved_blend_without_current_imported_voice
     assert saved_blend_check.detail == "No saved blend references at least two currently imported voices."
 
 
+def test_core_launch_readiness_blocks_imported_voices_from_same_speaker_before_qwen_verification(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        "app.core.launch.list_voice_profiles",
+        lambda: [
+            SimpleNamespace(id="voice_a", display_name="Alice"),
+            SimpleNamespace(id="voice_b", display_name=" alice "),
+        ],
+    )
+
+    report = evaluate_launch_readiness()
+
+    imported_voices_check = next(check for check in report.checks if check.id == "imported_voices")
+    assert imported_voices_check.passed is False
+    assert imported_voices_check.detail == "Imported voices must come from at least two distinct speakers."
+
+
+def test_core_launch_readiness_blocks_saved_blend_from_same_imported_speaker_before_qwen_verification(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    same_speaker_blend = VoiceBlend(
+        name="Same speaker blend",
+        profiles=[
+            BlendProfile(voice_profile_id="voice_a", weight=0.5),
+            BlendProfile(voice_profile_id="voice_b", weight=0.5),
+        ],
+        strategy="multi_reference_prompt",
+    )
+    monkeypatch.setattr(
+        "app.core.launch.list_voice_profiles",
+        lambda: [
+            SimpleNamespace(id="voice_a", display_name="Alice"),
+            SimpleNamespace(id="voice_b", display_name=" alice "),
+        ],
+    )
+    monkeypatch.setattr("app.core.launch.list_blends", lambda: [same_speaker_blend])
+
+    report = evaluate_launch_readiness()
+
+    saved_blend_check = next(check for check in report.checks if check.id == "saved_blend")
+    assert saved_blend_check.passed is False
+    assert saved_blend_check.detail == "No saved blend references at least two distinct imported speakers."
+
+
 def test_core_launch_readiness_blocks_passed_qwen_verification_without_text(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     output_path = tmp_path / "data" / "generations" / "qwen_verify.wav"

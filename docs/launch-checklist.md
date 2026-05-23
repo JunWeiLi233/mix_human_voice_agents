@@ -34,7 +34,7 @@
 - Deleting an imported voice profile removes generated clip audio and metadata that reference that profile.
 - Voice Engine panel shows the saved Qwen runtime verification report status and verified output path when present.
 - Voice Engine can run Qwen verification with at least two selected imported consented voices and persist the report with `report_path`, `checked_at`, and `source_profile_details`.
-- Launch Readiness panel and `/api/launch/readiness` report blockers until imported voices, a saved blend, at least one Qwen3-TTS mixed voice clip with imported source details, passed agent provider verification, Qwen runtime availability, and passed Qwen verification are present.
+- Launch Readiness panel and `/api/launch/readiness` report blockers until imported voices from at least two distinct speakers, a saved blend from distinct imported speakers, at least one Qwen3-TTS mixed voice clip with imported source details, passed agent provider verification, Qwen runtime availability, and passed Qwen verification are present.
 - `data/launch-readiness-report.json` can be generated from the CLI for a saved launch audit outside the browser.
 
 ## Known MVP Limits
