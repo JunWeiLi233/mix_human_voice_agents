@@ -347,6 +347,8 @@ def _generation_status(generation: GenerationResult, blends: list[VoiceBlend]) -
         reasons.append("Qwen generation must include the agent prompt and spoken reply transcript.")
     if not _generation_references_current_blend(generation, blends):
         reasons.append("Qwen generation must reference a current saved blend.")
+    if not Path(generation.audio_path).exists():
+        reasons.append("Qwen generation audio is missing.")
     return {
         "launch_eligible": not reasons,
         "stale_reasons": reasons,

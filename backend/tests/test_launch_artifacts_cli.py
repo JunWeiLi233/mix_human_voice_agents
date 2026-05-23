@@ -337,6 +337,7 @@ def test_launch_artifacts_cli_requires_two_distinct_usable_speakers_for_launch_c
 
 
 def test_launch_artifacts_cli_explains_stale_qwen_generations(tmp_path: Path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
     voices = [
         voice_profile("voice_alice", "Alice"),
         voice_profile("voice_bob", "Bob"),
@@ -379,6 +380,9 @@ def test_launch_artifacts_cli_explains_stale_qwen_generations(tmp_path: Path, mo
             source_details=[source_detail("voice_alice", "Alice")],
         ),
     ]
+    ready_audio = tmp_path / "data" / "generations" / "generation_ready.wav"
+    ready_audio.parent.mkdir(parents=True)
+    ready_audio.write_bytes(b"fake-qwen-wav")
     monkeypatch.setattr("app.cli.launch_artifacts.list_voice_profiles", lambda: voices)
     monkeypatch.setattr("app.cli.launch_artifacts.list_blends", lambda: [launch_blend])
     monkeypatch.setattr("app.cli.launch_artifacts.list_generation_results", lambda: generations)
@@ -432,15 +436,88 @@ def test_launch_artifacts_cli_explains_stale_qwen_generations(tmp_path: Path, mo
         "Qwen generation must include at least two imported source profile details.",
         "Qwen generation must include an agent provider trace.",
         "Qwen generation must reference a current saved blend.",
+        "Qwen generation audio is missing.",
     ]
     output = capsys.readouterr().out
     assert "Qwen launch-eligible generations: 1; stale/nonmatching generations: 2" in output
     assert (
         "generation_stale: qwen3_tts (stale: Qwen generation must include at least two imported source profile "
         "details.; Qwen generation must include an agent provider trace.; Qwen generation must reference a current "
-        "saved blend.)"
+        "saved blend.; Qwen generation audio is missing.)"
         in output
     )
+
+
+def test_launch_artifacts_cli_rejects_qwen_generation_missing_audio_artifact(
+    tmp_path: Path, monkeypatch
+):
+    voices = [
+        voice_profile("voice_alice", "Alice"),
+        voice_profile("voice_bob", "Bob"),
+    ]
+    launch_blend = VoiceBlend(
+        id="blend_launch_ready",
+        name="Alice + Bob",
+        strategy="multi_reference_prompt",
+        profiles=[
+            BlendProfile(voice_profile_id="voice_alice", weight=0.5),
+            BlendProfile(voice_profile_id="voice_bob", weight=0.5),
+        ],
+    )
+    generation = generation_result(
+        "generation_metadata_only",
+        "qwen3_tts",
+        blend_id="blend_launch_ready",
+        blend_name="Alice + Bob",
+        source_profiles=launch_blend.profiles,
+        source_details=[
+            source_detail("voice_alice", "Alice"),
+            source_detail("voice_bob", "Bob"),
+        ],
+        agent_trace=AgentTrace(provider="openai", model="gpt-4.1-mini", base_url="https://api.openai.com/v1"),
+    )
+    monkeypatch.setattr("app.cli.launch_artifacts.list_voice_profiles", lambda: voices)
+    monkeypatch.setattr("app.cli.launch_artifacts.list_blends", lambda: [launch_blend])
+    monkeypatch.setattr("app.cli.launch_artifacts.list_generation_results", lambda: [generation])
+    monkeypatch.setattr(
+        "app.cli.launch_artifacts.get_agent_provider_verification_report",
+        lambda: AgentProviderVerificationReport(
+            status="passed",
+            report_path="data/agent-provider-verification-report.json",
+            provider="openai",
+            model="gpt-4.1-mini",
+            base_url="https://api.openai.com/v1",
+            reply="Provider connected.",
+        ),
+    )
+    monkeypatch.setattr(
+        "app.cli.launch_artifacts.get_qwen_verification_report",
+        lambda: QwenVerificationReport(
+            status="passed",
+            report_path="data/qwen-runtime-verification-report.json",
+            voice_profile_ids=["voice_alice", "voice_bob"],
+            output_audio_path=str(Path("data") / "generations" / "qwen_verify.wav"),
+        ),
+    )
+    monkeypatch.setattr(
+        "app.cli.launch_artifacts.QwenTtsAdapter.runtime_status",
+        lambda: TtsRuntimeStatus(
+            backend="qwen3_tts",
+            available=True,
+            model_id="Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+            message="qwen-tts package is importable.",
+        ),
+    )
+    report_path = tmp_path / "launch-artifacts.json"
+
+    exit_code = main(["--report", str(report_path)])
+
+    assert exit_code == 0
+    payload = json.loads(report_path.read_text(encoding="utf-8"))
+    assert payload["launch_eligible_generation_ids"] == []
+    generation_payload = payload["generations"][0]
+    assert generation_payload["launch_eligible"] is False
+    assert generation_payload["stale_reasons"] == ["Qwen generation audio is missing."]
 
 
 def test_launch_artifacts_cli_updates_tasks_handoff_with_artifact_inventory(tmp_path: Path, monkeypatch):
