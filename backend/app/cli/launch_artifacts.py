@@ -113,6 +113,9 @@ def collect_launch_artifacts() -> dict[str, object]:
         ),
         "launch_eligible_generation_ids": launch_eligible_generation_ids,
         "stale_generation_ids": stale_generation_ids,
+        "stale_generation_reason_counts": _reason_counts(
+            status["stale_reasons"] for status in generation_statuses if not status["launch_eligible"]
+        ),
         "blends": [_blend_payload(blend, status) for blend, status in zip(blends, blend_statuses, strict=True)],
         "generations": [
             _generation_payload(generation, status)
@@ -678,6 +681,11 @@ def _tasks_handoff_section(report: dict[str, object]) -> str:
     if stale_blend_reason_counts:
         lines.extend(["", "Stale blend reason summary:"])
         for reason, count in stale_blend_reason_counts.items():
+            lines.append(f"- `{count}` {reason}")
+    stale_generation_reason_counts = report.get("stale_generation_reason_counts", {})
+    if stale_generation_reason_counts:
+        lines.extend(["", "Stale generation reason summary:"])
+        for reason, count in stale_generation_reason_counts.items():
             lines.append(f"- `{count}` {reason}")
     if report.get("reviewed_prune_apply_command"):
         lines.extend(

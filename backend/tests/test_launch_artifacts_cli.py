@@ -2157,6 +2157,94 @@ def test_launch_artifacts_tasks_handoff_summarizes_stale_blend_reasons(tmp_path:
     assert "- `1` Blend references voices that are missing or not launch-usable: voice_missing." in content
 
 
+def test_launch_artifacts_tasks_handoff_summarizes_stale_generation_reasons(
+    tmp_path: Path, monkeypatch
+):
+    voices = [
+        voice_profile("voice_alice", "Alice"),
+        voice_profile("voice_bob", "Bob"),
+    ]
+    blend = VoiceBlend(
+        id="blend_launch_ready",
+        name="Alice + Bob",
+        strategy="multi_reference_prompt",
+        profiles=[
+            BlendProfile(voice_profile_id="voice_alice", weight=0.5),
+            BlendProfile(voice_profile_id="voice_bob", weight=0.5),
+        ],
+    )
+    generations = [
+        generation_result(
+            "generation_local",
+            "local_development_wav",
+            blend_id="blend_launch_ready",
+            blend_name="Alice + Bob",
+            source_profiles=blend.profiles,
+        ),
+        generation_result(
+            "generation_missing_audio",
+            "qwen3_tts",
+            blend_id="blend_launch_ready",
+            blend_name="Alice + Bob",
+            source_profiles=blend.profiles,
+            source_details=[
+                source_detail("voice_alice", "Alice"),
+                source_detail("voice_bob", "Bob"),
+            ],
+            agent_trace=AgentTrace(provider="openai", model="gpt-4.1-mini", base_url="https://api.openai.com/v1"),
+        ),
+    ]
+    for generation in generations:
+        write_generation_metadata(generation)
+    monkeypatch.setattr("app.cli.launch_artifacts.list_voice_profiles", lambda: voices)
+    monkeypatch.setattr("app.cli.launch_artifacts.list_blends", lambda: [blend])
+    monkeypatch.setattr("app.cli.launch_artifacts.list_generation_results", lambda: generations)
+    monkeypatch.setattr(
+        "app.cli.launch_artifacts.get_agent_provider_verification_report",
+        lambda: AgentProviderVerificationReport(
+            status="passed",
+            report_path="data/agent-provider-verification-report.json",
+            provider="openai",
+            model="gpt-4.1-mini",
+            base_url="https://api.openai.com/v1",
+            reply="Provider connected.",
+        ),
+    )
+    monkeypatch.setattr(
+        "app.cli.launch_artifacts.get_qwen_verification_report",
+        lambda: QwenVerificationReport(
+            status="passed",
+            report_path="data/qwen-runtime-verification-report.json",
+            voice_profile_ids=["voice_alice", "voice_bob"],
+            output_audio_path=str(Path("data") / "generations" / "qwen_verify.wav"),
+        ),
+    )
+    monkeypatch.setattr(
+        "app.cli.launch_artifacts.QwenTtsAdapter.runtime_status",
+        lambda: TtsRuntimeStatus(
+            backend="qwen3_tts",
+            available=True,
+            model_id="Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+            message="qwen-tts package is importable.",
+        ),
+    )
+    tasks_path = tmp_path / "TASKS.md"
+    report_path = tmp_path / "launch-artifacts.json"
+
+    exit_code = main(["--report", str(report_path), "--tasks", str(tasks_path)])
+
+    assert exit_code == 0
+    payload = json.loads(report_path.read_text(encoding="utf-8"))
+    assert payload["stale_generation_reason_counts"] == {
+        "Generation was not created with Qwen3-TTS.": 1,
+        "Qwen generation audio is missing.": 1,
+    }
+    content = tasks_path.read_text(encoding="utf-8")
+    assert "Stale generation reason summary:" in content
+    assert "- `1` Generation was not created with Qwen3-TTS." in content
+    assert "- `1` Qwen generation audio is missing." in content
+
+
 def test_launch_artifacts_handoff_includes_reviewed_prune_apply_command(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     voices = [voice_profile("voice_alice", "Alice")]
