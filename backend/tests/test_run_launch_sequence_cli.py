@@ -606,6 +606,48 @@ def test_run_launch_sequence_rejects_manifest_with_fewer_than_two_voices(
     }
 
 
+def test_run_launch_sequence_rejects_non_object_voice_entries_before_import(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    manifest_path = tmp_path / "launch-manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "voices": [
+                    "Alice",
+                    {
+                        "speaker_display_name": "Bob",
+                        "confirmed_by": "Junwei",
+                        "reference_text": "Bob reads a launch reference.",
+                        "audio": str(tmp_path / "bob.wav"),
+                    },
+                ],
+                "agent_provider": {
+                    "provider": "openai_compatible",
+                    "model": "local-qwen-agent",
+                    "base_url": "http://127.0.0.1:1234/v1",
+                },
+                "generation": {"prompt": "Hello."},
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        "app.cli.run_launch_sequence.import_voice_main",
+        lambda argv: (_ for _ in ()).throw(AssertionError("voice shape should validate before imports")),
+    )
+
+    exit_code = main(["--manifest", str(manifest_path), "--report", "sequence-report.json"])
+
+    assert exit_code == 2
+    report = json.loads(Path("sequence-report.json").read_text(encoding="utf-8"))
+    assert report == {
+        "status": "failed",
+        "error": "voices[1] must be an object.",
+    }
+
+
 def test_run_launch_sequence_rejects_missing_audio_file_before_import(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     manifest_path = tmp_path / "launch-manifest.json"

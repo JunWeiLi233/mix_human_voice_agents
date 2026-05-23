@@ -102,6 +102,8 @@ def _validate_manifest(manifest: dict[str, Any]) -> None:
         raise ValueError("Launch sequence manifest requires at least two voices.")
     normalized_speakers: set[str] = set()
     for index, voice in enumerate(voices, start=1):
+        if not isinstance(voice, dict):
+            raise ValueError(f"voices[{index}] must be an object.")
         _require(voice, "speaker_display_name", f"voices[{index}]")
         _require(voice, "confirmed_by", f"voices[{index}]")
         _require(voice, "reference_text", f"voices[{index}]")
