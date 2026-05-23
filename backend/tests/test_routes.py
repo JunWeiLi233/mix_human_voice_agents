@@ -1554,6 +1554,49 @@ def test_generate_endpoint_rejects_qwen_with_mismatched_runtime_verification_voi
     assert response.json()["detail"] == "Qwen generation voices must match the passed Qwen runtime verification."
 
 
+def test_generate_endpoint_rejects_qwen_unsaved_blend_before_loading_profiles(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    write_agent_provider_verification_report()
+    write_qwen_runtime_verification_report(["voice_a", "voice_b"])
+
+    def fail_if_profiles_load(profile_ids):
+        raise AssertionError("unsaved Qwen blend should be rejected before loading voice profiles")
+
+    def fail_if_qwen_loads(**kwargs):
+        raise AssertionError("unsaved Qwen blend should be rejected before loading Qwen")
+
+    monkeypatch.setattr("app.api.routes.get_voice_profiles_by_ids", fail_if_profiles_load)
+    monkeypatch.setattr("app.api.routes.QwenTtsAdapter.from_pretrained", fail_if_qwen_loads)
+
+    response = client.post(
+        "/api/generate",
+        json={
+            "prompt": "Say hello as a disclosed synthetic assistant.",
+            "agent_reply": "Hello from a synthetic mixed voice.",
+            "tts_backend": "qwen3_tts",
+            "agent_trace": {
+                "provider": "openai",
+                "model": "gpt-4.1-mini",
+            },
+            "blend": {
+                "id": "blend_unsaved",
+                "name": "Unsaved Qwen blend",
+                "strategy": "multi_reference_prompt",
+                "synthetic_label": "synthetic mixed voice",
+                "profiles": [
+                    {"voice_profile_id": "voice_a", "weight": 0.5},
+                    {"voice_profile_id": "voice_b", "weight": 0.5},
+                ],
+            },
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Qwen generation requires a current saved blend."
+
+
 def test_generate_endpoint_rejects_qwen_with_mismatched_runtime_config_before_loading_profiles(
     tmp_path: Path, monkeypatch
 ):
@@ -1648,6 +1691,7 @@ def test_generate_endpoint_accepts_qwen_runtime_config_matching_non_null_verifie
         },
     )
     monkeypatch.setattr("app.api.routes.QwenTtsAdapter", FakeQwenAdapter)
+    write_saved_blend("blend_default_runtime", "Default Runtime")
 
     response = client.post(
         "/api/generate",
@@ -1732,6 +1776,7 @@ def test_generate_endpoint_accepts_omitted_qwen_runtime_when_adapter_resolves_ve
         },
     )
     monkeypatch.setattr("app.api.routes.QwenTtsAdapter", RuntimeConfigQwenAdapter)
+    write_saved_blend("blend_resolved_verified_runtime", "Resolved Verified Runtime")
 
     response = client.post(
         "/api/generate",
@@ -1811,6 +1856,7 @@ def test_generate_endpoint_rejects_qwen_when_resolved_runtime_differs_from_verif
         },
     )
     monkeypatch.setattr("app.api.routes.QwenTtsAdapter", RuntimeMismatchQwenAdapter)
+    write_saved_blend("blend_unverified_resolved_runtime", "Unverified Resolved Runtime")
 
     response = client.post(
         "/api/generate",
@@ -2034,6 +2080,7 @@ def test_generate_endpoint_rejects_qwen_profile_without_private_voice_consent_be
             "voice_b": voice_profile("voice_b", "Bob"),
         },
     )
+    write_saved_blend("blend_revoked", "Revoked consent")
 
     response = client.post(
         "/api/generate",
@@ -2080,6 +2127,7 @@ def test_generate_endpoint_rejects_qwen_profile_without_reference_text_before_lo
             "voice_b": voice_profile("voice_b", "Bob"),
         },
     )
+    write_saved_blend("blend_missing_text", "Missing text")
 
     response = client.post(
         "/api/generate",
@@ -2130,6 +2178,7 @@ def test_generate_endpoint_rejects_qwen_profile_with_quality_warnings_before_loa
             "voice_b": voice_profile("voice_b", "Bob"),
         },
     )
+    write_saved_blend("blend_warning", "Warning")
 
     response = client.post(
         "/api/generate",
@@ -2835,6 +2884,33 @@ def write_qwen_runtime_verification_report(
                 "dtype": dtype,
                 "attn_implementation": attn_implementation,
                 "output_audio_path": str(output_path),
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def write_saved_blend(
+    blend_id: str,
+    name: str,
+    voice_profile_ids: list[str] | None = None,
+    weights: list[float] | None = None,
+) -> None:
+    resolved_voice_profile_ids = voice_profile_ids or ["voice_a", "voice_b"]
+    resolved_weights = weights or [0.5, 0.5]
+    blend_path = Path("data") / "blends" / f"{blend_id}.json"
+    blend_path.parent.mkdir(parents=True, exist_ok=True)
+    blend_path.write_text(
+        json.dumps(
+            {
+                "id": blend_id,
+                "name": name,
+                "strategy": "multi_reference_prompt",
+                "synthetic_label": "synthetic mixed voice",
+                "profiles": [
+                    {"voice_profile_id": voice_profile_id, "weight": weight}
+                    for voice_profile_id, weight in zip(resolved_voice_profile_ids, resolved_weights)
+                ],
             }
         ),
         encoding="utf-8",

@@ -311,8 +311,9 @@ def list_blends_route() -> list[VoiceBlend]:
 @router.post("/generate", response_model=GenerationResult)
 def generate_route(request: GenerateRequest) -> GenerationResult:
     ensure_storage()
+    blend = request.blend
     try:
-        validate_blend(request.blend)
+        validate_blend(blend)
     except BlendError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     if request.tts_backend == "qwen3_tts" and request.agent_trace is None:
@@ -320,7 +321,8 @@ def generate_route(request: GenerateRequest) -> GenerationResult:
     if request.tts_backend == "qwen3_tts":
         _validate_qwen_agent_provider_preflight(request.agent_trace)
         _validate_qwen_runtime_verification(request)
-    source_ids = [profile.voice_profile_id for profile in request.blend.profiles]
+        blend = _current_saved_qwen_blend(blend)
+    source_ids = [profile.voice_profile_id for profile in blend.profiles]
     voice_profiles = _load_voice_profiles_for_generation(source_ids, strict=request.tts_backend == "qwen3_tts")
     qwen_runtime_config = _qwen_runtime_config_from_request(request)
     if request.tts_backend == "qwen3_tts":
@@ -343,7 +345,7 @@ def generate_route(request: GenerateRequest) -> GenerationResult:
         return generate_agent_clip(
             prompt=request.prompt,
             agent_reply=request.agent_reply,
-            blend=request.blend,
+            blend=blend,
             adapter=adapter,
             voice_profiles=voice_profiles,
             tts_backend=request.tts_backend,
@@ -352,6 +354,20 @@ def generate_route(request: GenerateRequest) -> GenerationResult:
         )
     except (BlendError, QwenTtsNotConfigured, SafetyError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+def _current_saved_qwen_blend(requested_blend: VoiceBlend) -> VoiceBlend:
+    for saved_blend in list_blends():
+        if saved_blend.id != requested_blend.id:
+            continue
+        if (
+            saved_blend.name != requested_blend.name
+            or saved_blend.strategy != requested_blend.strategy
+            or saved_blend.profiles != requested_blend.profiles
+        ):
+            raise HTTPException(status_code=400, detail="Qwen generation requires a current saved blend.")
+        return saved_blend
+    raise HTTPException(status_code=400, detail="Qwen generation requires a current saved blend.")
 
 
 def _validate_qwen_agent_provider_preflight(agent_trace: AgentTrace | None) -> None:

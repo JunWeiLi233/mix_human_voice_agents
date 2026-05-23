@@ -85,6 +85,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Persisted non-secret frontend agent provider settings so user-selected API/local LLM endpoint, model, provider, and system prompt survive reloads without storing API keys.
 - Added generated-clip blend traceability so audio metadata and history show the saved blend id/name that produced each mixed voice clip.
 - Hardened launch readiness so Qwen generated clips must reference a current saved blend whose name, strategy, and source weights match the generated metadata.
+- Hardened the `/api/generate` Qwen path so it rejects unsaved or stale blend payloads before loading voice profiles or Qwen.
 
 ## Verification Already Run
 
@@ -97,6 +98,13 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - `cd backend; .\.venv\Scripts\python -m pytest tests\test_storage.py -q` passed: 10 tests.
 - `cd backend; .\.venv\Scripts\python -m pytest tests\test_generation.py -q` passed: 14 tests.
 - `cd backend; .\.venv\Scripts\python -m pytest tests\test_launch_readiness_core.py -q -k "without_matching_saved_blend or generation_metadata or generated_audio"` passed: 3 tests.
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_routes.py -q` passed: 70 tests.
+- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 263 tests.
+- `cd frontend; npm test -- --run` passed: 7 tests.
+- `cd frontend; npx tsc --noEmit` passed.
+- `cd frontend; npm run build` passed.
+- `git diff --check` passed with line-ending normalization warnings only.
+- `cd backend; .\.venv\Scripts\python -m app.cli.launch_readiness --report data\launch-readiness-report.json --tasks ..\TASKS.md` refreshed readiness tasks and still exits 1 until real launch artifacts are present.
 
 ## Next Tasks
 
@@ -120,7 +128,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T14:15:47.440208+00:00`
+- Checked at: `2026-05-23T14:22:57.886005+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Import two consented WAV voice samples with matching transcripts.
