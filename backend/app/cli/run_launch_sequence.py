@@ -79,11 +79,13 @@ def _validate_manifest(manifest: dict[str, Any]) -> None:
     voices = manifest.get("voices", [])
     if len(voices) < 2:
         raise ValueError("Launch sequence manifest requires at least two voices.")
+    normalized_speakers: set[str] = set()
     for index, voice in enumerate(voices, start=1):
         _require(voice, "speaker_display_name", f"voices[{index}]")
         _require(voice, "confirmed_by", f"voices[{index}]")
         _require(voice, "reference_text", f"voices[{index}]")
         _require(voice, "audio", f"voices[{index}]")
+        normalized_speakers.add(str(voice["speaker_display_name"]).strip().casefold())
         audio_path = Path(str(voice["audio"]))
         if not audio_path.exists():
             raise ValueError(f"voices[{index}].audio does not exist: {audio_path}")
@@ -93,6 +95,8 @@ def _validate_manifest(manifest: dict[str, Any]) -> None:
             raise ValueError(f"voices[{index}].audio must be a parseable WAV file: {audio_path}")
         if not wav_has_audible_signal(audio_path):
             raise ValueError(f"voices[{index}].audio must contain audible signal: {audio_path}")
+    if len(normalized_speakers) < 2:
+        raise ValueError("Launch sequence manifest requires at least two distinct speaker display names.")
     provider = manifest.get("agent_provider") or {}
     _require(provider, "provider", "agent_provider")
     _require(provider, "model", "agent_provider")

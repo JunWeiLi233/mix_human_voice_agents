@@ -197,6 +197,55 @@ def test_run_launch_sequence_rejects_missing_audio_file_before_import(tmp_path: 
     }
 
 
+def test_run_launch_sequence_rejects_duplicate_speaker_names_before_import(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    manifest_path = tmp_path / "launch-manifest.json"
+    voice_a_audio = tmp_path / "alice-a.wav"
+    voice_b_audio = tmp_path / "alice-b.wav"
+    write_reference_wav(voice_a_audio)
+    write_reference_wav(voice_b_audio)
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "voices": [
+                    {
+                        "speaker_display_name": "Alice",
+                        "confirmed_by": "Junwei",
+                        "reference_text": "Alice reads the first launch reference.",
+                        "audio": str(voice_a_audio),
+                    },
+                    {
+                        "speaker_display_name": " alice ",
+                        "confirmed_by": "Junwei",
+                        "reference_text": "Alice reads the second launch reference.",
+                        "audio": str(voice_b_audio),
+                    },
+                ],
+                "agent_provider": {
+                    "provider": "openai_compatible",
+                    "model": "local-qwen-agent",
+                    "base_url": "http://127.0.0.1:1234/v1",
+                },
+                "generation": {"prompt": "Greet the user as a disclosed synthetic assistant."},
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        "app.cli.run_launch_sequence.import_voice_main",
+        lambda argv: (_ for _ in ()).throw(AssertionError("duplicate speakers should validate before imports")),
+    )
+
+    exit_code = main(["--manifest", str(manifest_path), "--report", "sequence-report.json"])
+
+    assert exit_code == 2
+    report = json.loads(Path("sequence-report.json").read_text(encoding="utf-8"))
+    assert report == {
+        "status": "failed",
+        "error": "Launch sequence manifest requires at least two distinct speaker display names.",
+    }
+
+
 def test_run_launch_sequence_rejects_invalid_wav_before_import(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     manifest_path = tmp_path / "launch-manifest.json"
