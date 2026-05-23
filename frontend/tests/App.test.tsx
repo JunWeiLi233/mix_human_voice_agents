@@ -171,6 +171,10 @@ describe("App", () => {
           status: "passed",
           tts_backend: "qwen3_tts",
           report_path: "data/qwen-runtime-verification-report.json",
+          model_id: "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+          device_map: "cuda:0",
+          dtype: "bfloat16",
+          attn_implementation: "flash_attention_2",
           voice_profile_ids: ["voice_saved_a", "voice_saved_b"],
           source_profile_details: [
             {
@@ -360,6 +364,10 @@ describe("App", () => {
     await screen.findByText("Installed");
     expect((await screen.findAllByText("Verification passed")).length).toBeGreaterThan(0);
     expect(screen.getByText("data/generations/qwen_verify.wav")).toBeInTheDocument();
+    expect(screen.getByLabelText("Qwen model id")).toHaveValue("Qwen/Qwen3-TTS-12Hz-1.7B-Base");
+    expect(screen.getByLabelText("Qwen device map")).toHaveValue("cuda:0");
+    expect(screen.getByLabelText("Qwen dtype")).toHaveValue("bfloat16");
+    expect(screen.getByLabelText("Qwen attention implementation")).toHaveValue("flash_attention_2");
     expect(screen.getByText("Saved Alice 60% + Saved Bob 40%")).toBeInTheDocument();
     await screen.findByRole("button", { name: "Saved Alice + Bob" });
     expect(screen.getByRole("button", { name: "Generate AI Voice" })).toBeEnabled();

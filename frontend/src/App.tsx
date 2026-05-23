@@ -119,7 +119,18 @@ export default function App() {
 
   useEffect(() => {
     void getQwenVerificationReport()
-      .then(setQwenVerification)
+      .then((report) => {
+        setQwenVerification(report);
+        if (report.status === "passed") {
+          setQwenVerificationVoiceIds(report.voice_profile_ids);
+          setQwenRuntimeConfig((current) => ({
+            model_id: report.model_id ?? current.model_id,
+            device_map: report.device_map ?? current.device_map,
+            dtype: report.dtype ?? current.dtype,
+            attn_implementation: report.attn_implementation ?? current.attn_implementation,
+          }));
+        }
+      })
       .catch(() => {
         setQwenVerification({
           status: "missing",
@@ -186,7 +197,10 @@ export default function App() {
     const next = [...voices, profile];
     setVoices(next);
     setBlendProfiles((currentProfiles) => toBlendDrafts(next, currentProfiles));
-    setQwenVerificationVoiceIds((currentIds) => [...currentIds, profile.id]);
+    setQwenVerificationVoiceIds((currentIds) => {
+      const nextVoiceIds = new Set(next.map((voice) => voice.id));
+      return [...currentIds.filter((voiceId) => nextVoiceIds.has(voiceId)), profile.id];
+    });
     setBlend(null);
     void refreshLaunchReadiness();
   }
