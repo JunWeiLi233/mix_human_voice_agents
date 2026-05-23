@@ -361,6 +361,8 @@ def _generation_status(
     }
     if len(generation.source_profile_details) >= 2 and len(distinct_speakers) < 2:
         reasons.append("Qwen generation must include at least two distinct source speakers.")
+    if qwen_verification.status != "passed":
+        reasons.append("Qwen generation requires a passed Qwen verification report.")
     if not _generation_matches_qwen_verification(generation, qwen_verification):
         reasons.append("Qwen generation must match each verified Qwen voice id exactly once.")
     if not _generation_matches_qwen_runtime_config(generation, qwen_verification):
