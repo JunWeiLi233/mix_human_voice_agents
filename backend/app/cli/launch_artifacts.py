@@ -25,6 +25,8 @@ REQUIRED_VOICE_USE = "private_agent_voice"
 TASKS_ARTIFACT_SECTION_HEADING = "## Launch Artifact Inventory"
 PRUNE_REPORT_PATH = Path("data") / "prune-launch-artifacts-report.json"
 GENERATION_ROOT = Path("data") / "generations"
+REQUIRED_SYNTHETIC_LABEL = "synthetic mixed voice"
+METADATA_WATERMARK_DISCLOSURE = "Generated audio is synthetic and mixed from consented imported voice profiles."
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -373,6 +375,8 @@ def _generation_status(
         reasons.append("Qwen generation must include the agent prompt and spoken reply transcript.")
     elif not _generation_text_passes_safety(generation):
         reasons.append("Qwen generation prompt and reply must pass voice safety checks.")
+    if not _generation_has_synthetic_disclosure(generation):
+        reasons.append("Qwen generation must include synthetic disclosure metadata.")
     if not _generation_references_current_blend(generation, blends):
         reasons.append("Qwen generation must reference a current saved blend.")
     audio_path = Path(generation.audio_path)
@@ -438,6 +442,14 @@ def _generation_text_passes_safety(generation: GenerationResult) -> bool:
     except SafetyError:
         return False
     return True
+
+
+def _generation_has_synthetic_disclosure(generation: GenerationResult) -> bool:
+    return (
+        generation.synthetic_label == REQUIRED_SYNTHETIC_LABEL
+        and generation.watermark.label == REQUIRED_SYNTHETIC_LABEL
+        and generation.watermark.disclosure == METADATA_WATERMARK_DISCLOSURE
+    )
 
 
 def _qwen_verification_runtime_config(qwen_verification: QwenVerificationReport) -> dict[str, str]:
