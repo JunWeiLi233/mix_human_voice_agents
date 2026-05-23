@@ -20,7 +20,7 @@
 - Blend creation with two distinct profiles succeeds and weights normalize to 100%.
 - Blend creation and Qwen verification reject duplicate voice profile IDs.
 - Agent provider settings accept ChatGPT/OpenAI, Claude/Anthropic, Gemini/Google, Grok/xAI, custom OpenAI-compatible API, and Ollama-compatible local endpoints.
-- The selected agent provider passes the in-app `Test provider` preflight and persists `data/agent-provider-verification-report.json` with `checked_at` before using it for voice generation.
+- The selected agent provider passes the in-app `Test provider` preflight and persists `data/agent-provider-verification-report.json` with `report_path` and `checked_at` before using it for voice generation.
 - Agent reply generation succeeds through the selected provider before TTS synthesis.
 - Audio generation creates a `.wav` file and adjacent `.json` metadata file.
 - Metadata includes `synthetic_label`, `source_profile_ids`, `source_profiles` with normalized weights, `source_profile_details` for imported people, `agent_trace` with provider/model, `blend_strategy`, and a synthetic metadata watermark disclosure.
@@ -30,7 +30,7 @@
 - Deleting an imported voice profile removes saved blend presets that reference that profile so stale blends cannot generate audio.
 - Deleting an imported voice profile removes generated clip audio and metadata that reference that profile.
 - Voice Engine panel shows the saved Qwen runtime verification report status and verified output path when present.
-- Voice Engine can run Qwen verification with at least two selected imported consented voices and persist the report with `checked_at` and `source_profile_details`.
+- Voice Engine can run Qwen verification with at least two selected imported consented voices and persist the report with `report_path`, `checked_at`, and `source_profile_details`.
 - Launch Readiness panel and `/api/launch/readiness` report blockers until imported voices, a saved blend, at least one Qwen3-TTS mixed voice clip with imported source details, passed agent provider verification, Qwen runtime availability, and passed Qwen verification are present.
 - `data/launch-readiness-report.json` can be generated from the CLI for a saved launch audit outside the browser.
 
@@ -50,6 +50,6 @@
 - Select the imported voices for verification, run Qwen verification from the Voice Engine panel, and confirm the verified output path exists.
 - Run `cd backend && .\.venv\Scripts\python -m app.cli.verify_qwen_runtime --voice-profile-id <id-a> --voice-profile-id <id-b> --report data/qwen-runtime-verification-report.json`.
 - Generate a short reply and confirm the output WAV is produced by Qwen3-TTS rather than the local development adapter.
-- Confirm `data/qwen-runtime-verification-report.json` contains `"status": "passed"`, `checked_at`, and an existing `output_audio_path`.
+- Confirm `data/qwen-runtime-verification-report.json` contains `"status": "passed"`, `report_path`, `checked_at`, and an existing `output_audio_path`.
 - Confirm the Voice Engine panel shows `Verification passed` and the verified output path from the report.
 - Follow `docs/qwen-runtime-verification.md` before claiming real acoustic cloning/mixing is verified on a target machine.

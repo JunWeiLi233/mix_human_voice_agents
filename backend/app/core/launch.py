@@ -36,6 +36,12 @@ def get_qwen_verification_report() -> QwenVerificationReport:
         )
     try:
         payload = json.loads(report_path.read_text(encoding="utf-8"))
+        if payload.get("status") == "passed" and not payload.get("report_path"):
+            return QwenVerificationReport(
+                status="failed",
+                report_path=str(report_path),
+                error="Qwen runtime verification report is missing report_path.",
+            )
         if payload.get("report_path") and not _same_audio_path(str(payload["report_path"]), str(report_path)):
             return QwenVerificationReport(
                 status="failed",
@@ -68,6 +74,12 @@ def get_agent_provider_verification_report() -> AgentProviderVerificationReport:
         )
     try:
         payload = json.loads(report_path.read_text(encoding="utf-8"))
+        if payload.get("status") == "passed" and not payload.get("report_path"):
+            return AgentProviderVerificationReport(
+                status="failed",
+                report_path=str(report_path),
+                error="Agent provider verification report is missing report_path.",
+            )
         if payload.get("report_path") and not _same_audio_path(str(payload["report_path"]), str(report_path)):
             return AgentProviderVerificationReport(
                 status="failed",

@@ -61,6 +61,7 @@ def test_qwen_verification_report_returns_saved_report(tmp_path: Path, monkeypat
             {
                 "status": "passed",
                 "checked_at": "2026-05-23T00:00:00+00:00",
+                "report_path": str(Path("data") / "qwen-runtime-verification-report.json"),
                 "voice_profile_ids": ["voice_a", "voice_b"],
                 "tts_backend": "qwen3_tts",
                 "blend_strategy": "multi_reference_prompt",
@@ -642,6 +643,7 @@ def test_launch_readiness_reports_ready_after_full_qwen_verification(tmp_path: P
             {
                 "status": "passed",
                 "checked_at": "2026-05-23T00:00:00+00:00",
+                "report_path": str(Path("data") / "qwen-runtime-verification-report.json"),
                 "voice_profile_ids": [voices[0]["id"], voices[1]["id"]],
                 "source_profile_details": [
                     {
