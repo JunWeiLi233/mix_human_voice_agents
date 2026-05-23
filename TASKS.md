@@ -34,15 +34,15 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T19:14:56.180906+00:00`
+- Checked at: `2026-05-23T22:17:52.526736+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Re-record or replace unusable voice samples, then import at least two clean consented WAV voices with matching transcripts.
   Evidence: 1 launch-usable imported voices; 2 imported voices; unusable: voice_93dc1ef39402 has audio quality warnings.
 - [ ] saved_blend: Create and save a multi-reference blend from imported voices.
-  Evidence: No saved blend references at least two currently imported voices.
+  Evidence: 0 saved blends
 - [ ] generated_audio: Generate a Qwen mixed voice clip with imported source details.
-  Evidence: Qwen mixed voice generation must reference a current saved blend.
+  Evidence: 0 Qwen mixed voice clips with imported source details
 - [ ] agent_provider: Run Test provider and keep the passed provider verification report.
   Evidence: Run the Agent Provider Test provider preflight before launch.
 - [ ] qwen_verification: Run Qwen verification with two imported voices and keep the passed report.
@@ -58,8 +58,8 @@ Blocking reasons:
 ## Launch Artifact Inventory
 
 - Voices: `2` total; `1` usable; `1` unusable; `1` distinct usable speakers
-- Blends: `280` total; `0` launch-eligible; `280` stale/nonmatching
-- Generations: `2` total; `1` Qwen; `0` launch-eligible; `2` stale/nonmatching
+- Blends: `0` total; `0` launch-eligible; `0` stale/nonmatching
+- Generations: `0` total; `0` Qwen; `0` launch-eligible; `0` stale/nonmatching
 - Usable voice IDs: `voice_93f62f27a5b4`
 - Usable distinct-speaker voice IDs: `voice_93f62f27a5b4`
 - Launch-eligible blend IDs: `none`
@@ -71,22 +71,6 @@ Blocking reasons:
 Unusable voices:
 - `voice_93dc1ef39402` Alice: Audio quality warnings must be resolved before launch.
 
-Stale blend reason summary:
-- `280` Blend must reference at least two distinct speaker display names.
-- `280` Blend must use the multi_reference_prompt strategy for Qwen launch.
-- `280` Blend references voices that are missing or not launch-usable: voice_a, voice_b.
-
-Stale generation reason summary:
-- `1` Generation was not created with Qwen3-TTS.
-- `1` Qwen generation audio is missing.
-- `1` Qwen generation must reference a current saved blend.
-- `1` Qwen generation requires a passed Qwen verification report.
-- `1` Qwen generation requires a passed agent provider preflight.
-- `1` Qwen generation source details must match current imported voice profiles.
-
-Reviewed prune apply command:
-- [ ] `python -m app.cli.prune_launch_artifacts --apply --report data\prune-launch-artifacts-report.json`
-
 Provider preflight command options:
 - ChatGPT: `python -m app.cli.verify_agent_provider --provider openai --model gpt-4.1-mini --base-url https://api.openai.com/v1 --api-key <openai-api-key>`
 - Claude: `python -m app.cli.verify_agent_provider --provider anthropic --model claude-sonnet-4-5 --base-url https://api.anthropic.com --api-key <anthropic-api-key>`
@@ -95,12 +79,7 @@ Provider preflight command options:
 - API: `python -m app.cli.verify_agent_provider --provider openai_compatible --model <model> --base-url <base-url> --api-key <api-key>`
 - Local: `python -m app.cli.verify_agent_provider --provider ollama --model llama3.1 --base-url http://127.0.0.1:11434`
 
-Stale/nonmatching generations:
-- `generation_missing_audio` qwen3_tts: Qwen generation source details must match current imported voice profiles.; Qwen generation requires a passed Qwen verification report.; Qwen generation requires a passed agent provider preflight.; Qwen generation must reference a current saved blend.; Qwen generation audio is missing.
-- `generation_local` local_development_wav: Generation was not created with Qwen3-TTS.
-
 Next artifact commands:
-- [ ] `python -m app.cli.prune_launch_artifacts --report data/prune-launch-artifacts-report.json`
 - [ ] `python -m app.cli.run_launch_sequence --write-template data/launch-sequence/launch-manifest.template.json`
 
 ## Completed In Current Working Tree
@@ -246,6 +225,7 @@ Next artifact commands:
 - Updated the frontend Launch Artifact Inventory panel to show ChatGPT, Claude, Grok, Gemini, API, and local provider preflight commands from the artifact report.
 - Updated the generated `TASKS.md` Launch Artifact Inventory handoff to include ChatGPT, Claude, Grok, Gemini, API, and local provider preflight command options.
 - Added a reviewed apply command to stale blend prune dry-run reports so agents can inspect the report before deleting stale blends.
+- Extended `app.cli.prune_launch_artifacts` to also detect, dry-run, and apply-delete stale Qwen generation metadata + audio files so the launch artifact store can be cleaned with a single command.
 
 ## Verification Already Run
 

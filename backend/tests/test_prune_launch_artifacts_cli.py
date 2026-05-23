@@ -2,7 +2,14 @@ from pathlib import Path
 import json
 
 from app.cli.prune_launch_artifacts import main
-from app.models.schemas import AudioQuality, BlendProfile, ConsentRecord, VoiceBlend, VoiceProfile
+from app.models.schemas import (
+    AudioQuality,
+    BlendProfile,
+    ConsentRecord,
+    GenerationResult,
+    VoiceBlend,
+    VoiceProfile,
+)
 
 
 def test_prune_launch_artifacts_dry_run_reports_stale_blends_without_deleting(tmp_path: Path, monkeypatch, capsys):
@@ -39,10 +46,14 @@ def test_prune_launch_artifacts_dry_run_reports_stale_blends_without_deleting(tm
         ],
         "deleted_blend_ids": [],
         "kept_blend_ids": ["blend_ready"],
+        "stale_generation_ids": [],
+        "stale_generations": [],
+        "deleted_generation_ids": [],
+        "kept_generation_ids": [],
         "reviewed_apply_command": f"python -m app.cli.prune_launch_artifacts --apply --report {report_path}",
     }
     output = capsys.readouterr().out
-    assert "Dry run: 1 stale blends would be deleted." in output
+    assert "Dry run: 1 stale blends would be deleted; 0 stale generations would be deleted." in output
     assert f"Review {report_path}, then run: python -m app.cli.prune_launch_artifacts --apply --report {report_path}" in output
     assert "blend_stale" in output
 
@@ -66,6 +77,82 @@ def test_prune_launch_artifacts_apply_deletes_only_stale_blends(tmp_path: Path, 
     assert payload["kept_blend_ids"] == ["blend_ready"]
     output = capsys.readouterr().out
     assert "Deleted 1 stale blends." in output
+
+
+def test_prune_launch_artifacts_dry_run_reports_stale_generations_without_deleting(tmp_path: Path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    write_voice(voice_profile("voice_alice", "Alice"))
+    write_voice(voice_profile("voice_bob", "Bob"))
+    write_generation(local_generation("generation_local"))
+    report_path = tmp_path / "prune-report.json"
+
+    exit_code = main(["--report", str(report_path)])
+
+    assert exit_code == 0
+    assert (tmp_path / "data" / "generations" / "generation_local.json").exists()
+    assert (tmp_path / "data" / "generations" / "generation_local.wav").exists()
+    payload = json.loads(report_path.read_text(encoding="utf-8"))
+    assert payload["mode"] == "dry_run"
+    assert payload["stale_generation_ids"] == ["generation_local"]
+    assert payload["stale_generations"] == [
+        {
+            "id": "generation_local",
+            "tts_backend": "local_development_wav",
+            "audio_path": str(Path("data") / "generations" / "generation_local.wav"),
+            "metadata_path": str(Path("data") / "generations" / "generation_local.json"),
+            "stale_reasons": ["Generation was not created with Qwen3-TTS."],
+        }
+    ]
+    assert payload["deleted_generation_ids"] == []
+    assert payload["kept_generation_ids"] == []
+    output = capsys.readouterr().out
+    assert "Dry run:" in output
+    assert "1 stale generations would be deleted" in output
+    assert "generation_local" in output
+
+
+def test_prune_launch_artifacts_apply_deletes_stale_generation_metadata_and_audio(
+    tmp_path: Path, monkeypatch, capsys
+):
+    monkeypatch.chdir(tmp_path)
+    write_voice(voice_profile("voice_alice", "Alice"))
+    write_voice(voice_profile("voice_bob", "Bob"))
+    write_generation(local_generation("generation_local"))
+    report_path = tmp_path / "prune-report.json"
+
+    exit_code = main(["--apply", "--report", str(report_path)])
+
+    assert exit_code == 0
+    assert not (tmp_path / "data" / "generations" / "generation_local.json").exists()
+    assert not (tmp_path / "data" / "generations" / "generation_local.wav").exists()
+    payload = json.loads(report_path.read_text(encoding="utf-8"))
+    assert payload["mode"] == "apply"
+    assert payload["deleted_generation_ids"] == ["generation_local"]
+    assert payload["kept_generation_ids"] == []
+    output = capsys.readouterr().out
+    assert "Deleted 0 stale blends." in output
+    assert "Deleted 1 stale generations." in output
+
+
+def write_generation(result: GenerationResult) -> None:
+    generation_root = Path("data") / "generations"
+    generation_root.mkdir(parents=True, exist_ok=True)
+    (generation_root / f"{result.id}.json").write_text(result.model_dump_json(), encoding="utf-8")
+    Path(result.audio_path).write_bytes(b"fake-wav")
+
+
+def local_generation(generation_id: str) -> GenerationResult:
+    audio_path = Path("data") / "generations" / f"{generation_id}.wav"
+    metadata_path = Path("data") / "generations" / f"{generation_id}.json"
+    return GenerationResult(
+        id=generation_id,
+        audio_path=str(audio_path),
+        metadata_path=str(metadata_path),
+        synthetic_label="synthetic mixed voice",
+        source_profile_ids=["voice_alice", "voice_bob"],
+        blend_strategy="multi_reference_prompt",
+        tts_backend="local_development_wav",
+    )
 
 
 def write_voice(profile: VoiceProfile) -> None:
