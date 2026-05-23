@@ -509,9 +509,12 @@ async def import_voice_route(
     temp_path = temp_dir / safe_file_name
     temp_path.write_bytes(source_bytes)
     try:
-        quality = analyze_audio_sample(temp_path)
-    except AudioQualityError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        try:
+            quality = analyze_audio_sample(temp_path)
+        except AudioQualityError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+    finally:
+        temp_path.unlink(missing_ok=True)
 
     profile = VoiceProfile(
         id=voice_id,

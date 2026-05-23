@@ -2227,6 +2227,52 @@ def test_import_voice_sanitizes_uploaded_filename_inside_voice_directory(tmp_pat
     assert audio_response.content.startswith(b"RIFF")
 
 
+def test_import_voice_removes_temporary_analysis_copy_after_success(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    sample_path = tmp_path / "sample.wav"
+    write_reference_wav(sample_path)
+
+    with sample_path.open("rb") as sample:
+        response = client.post(
+            "/api/voices",
+            data={
+                "speaker_display_name": "Alice",
+                "consent_type": "self_or_written_permission",
+                "allowed_uses": "private_agent_voice,local_audio_export",
+                "confirmed_by": "local_user",
+                "notes": "approved for local prototype",
+                "reference_text": "Alice reads a clean reference sentence for Qwen cloning.",
+            },
+            files={"file": ("sample.wav", sample, "audio/wav")},
+        )
+
+    assert response.status_code == 200
+    assert not (tmp_path / "data" / "tmp" / "sample.wav").exists()
+
+
+def test_import_voice_removes_temporary_analysis_copy_after_rejection(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    sample_path = tmp_path / "sample.wav"
+    sample_path.write_bytes(b"not a real wav")
+
+    with sample_path.open("rb") as sample:
+        response = client.post(
+            "/api/voices",
+            data={
+                "speaker_display_name": "Alice",
+                "consent_type": "self_or_written_permission",
+                "allowed_uses": "private_agent_voice,local_audio_export",
+                "confirmed_by": "local_user",
+                "notes": "approved for local prototype",
+                "reference_text": "Alice reads a clean reference sentence for Qwen cloning.",
+            },
+            files={"file": ("sample.wav", sample, "audio/wav")},
+        )
+
+    assert response.status_code == 400
+    assert not (tmp_path / "data" / "tmp" / "sample.wav").exists()
+
+
 def test_import_voice_requires_reference_text(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     sample_path = tmp_path / "sample.wav"
