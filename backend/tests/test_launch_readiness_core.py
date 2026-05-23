@@ -638,8 +638,26 @@ def test_core_launch_readiness_blocks_imported_voices_from_same_speaker_before_q
     monkeypatch.setattr(
         "app.core.launch.list_voice_profiles",
         lambda: [
-            SimpleNamespace(id="voice_a", display_name="Alice"),
-            SimpleNamespace(id="voice_b", display_name=" alice "),
+            SimpleNamespace(
+                id="voice_a",
+                display_name="Alice",
+                reference_text="Alice reads a clean reference sentence.",
+                consent=SimpleNamespace(
+                    synthetic_voice_allowed=True,
+                    allowed_uses=["private_agent_voice", "local_audio_export"],
+                ),
+                quality=SimpleNamespace(warnings=[]),
+            ),
+            SimpleNamespace(
+                id="voice_b",
+                display_name=" alice ",
+                reference_text="Alice reads a second clean reference sentence.",
+                consent=SimpleNamespace(
+                    synthetic_voice_allowed=True,
+                    allowed_uses=["private_agent_voice", "local_audio_export"],
+                ),
+                quality=SimpleNamespace(warnings=[]),
+            ),
         ],
     )
 
@@ -647,7 +665,33 @@ def test_core_launch_readiness_blocks_imported_voices_from_same_speaker_before_q
 
     imported_voices_check = next(check for check in report.checks if check.id == "imported_voices")
     assert imported_voices_check.passed is False
-    assert imported_voices_check.detail == "Imported voices must come from at least two distinct speakers."
+    assert imported_voices_check.detail == "Imported launch-usable voices must come from at least two distinct speakers."
+
+
+def test_core_launch_readiness_reports_launch_usable_voice_count_before_qwen_verification():
+    voices = [
+        SimpleNamespace(
+            id="voice_alice",
+            display_name="Alice",
+            reference_text="Alice reads a clean reference sentence.",
+            consent=SimpleNamespace(
+                synthetic_voice_allowed=True,
+                allowed_uses=["private_agent_voice", "local_audio_export"],
+            ),
+            quality=SimpleNamespace(warnings=["Reference audio appears clipped; record a cleaner sample."]),
+        )
+    ]
+    verification = QwenVerificationReport(
+        status="missing",
+        report_path="data/qwen-runtime-verification-report.json",
+    )
+
+    status = _imported_voices_status(voices, verification)
+
+    assert status == {
+        "passed": False,
+        "detail": "0 launch-usable imported voices; 1 imported voices; unusable: voice_alice has audio quality warnings.",
+    }
 
 
 def test_core_launch_readiness_blocks_saved_blend_from_same_imported_speaker_before_qwen_verification(

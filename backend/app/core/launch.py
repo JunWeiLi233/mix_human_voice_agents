@@ -442,20 +442,25 @@ def _saved_blend_status(
 
 
 def _imported_voices_status(voices: list[object], verification: QwenVerificationReport) -> dict[str, object]:
-    if len(voices) < 2:
-        return {
-            "passed": False,
-            "detail": f"{len(voices)} imported voices",
-        }
     if verification.status != "passed" or not verification.voice_profile_ids:
-        if not _details_have_distinct_speakers(voices):
+        usable_voices = [voice for voice in voices if _voice_is_launch_usable_before_verification(voice)]
+        unusable_details = _unusable_voice_details_before_verification(voices)
+        if len(usable_voices) < 2:
+            detail = f"{len(usable_voices)} launch-usable imported voices; {len(voices)} imported voices"
+            if unusable_details:
+                detail = f"{detail}; unusable: {'; '.join(unusable_details)}."
             return {
                 "passed": False,
-                "detail": "Imported voices must come from at least two distinct speakers.",
+                "detail": detail,
+            }
+        if not _details_have_distinct_speakers(usable_voices):
+            return {
+                "passed": False,
+                "detail": "Imported launch-usable voices must come from at least two distinct speakers.",
             }
         return {
             "passed": True,
-            "detail": f"{len(voices)} imported voices",
+            "detail": f"{len(usable_voices)} launch-usable imported voices; {len(voices)} imported voices",
         }
 
     imported_by_id = {voice.id: voice for voice in voices if hasattr(voice, "id")}
@@ -511,6 +516,35 @@ def _saved_blend_missing_detail(blends: list[object], imported_by_id: dict[str, 
         if len(blend_ids) >= 2 and blend_ids.issubset(imported_by_id):
             return "No saved blend references at least two distinct imported speakers."
     return "No saved blend references at least two currently imported voices."
+
+
+def _voice_is_launch_usable_before_verification(voice: object) -> bool:
+    return not _unusable_voice_reasons_before_verification(voice)
+
+
+def _unusable_voice_details_before_verification(voices: list[object]) -> list[str]:
+    details: list[str] = []
+    for voice in voices:
+        reasons = _unusable_voice_reasons_before_verification(voice)
+        if reasons:
+            details.append(f"{getattr(voice, 'id', '<unknown>')} {', '.join(reasons)}")
+    return details
+
+
+def _unusable_voice_reasons_before_verification(voice: object) -> list[str]:
+    reasons: list[str] = []
+    if not _voice_allows_private_agent_voice(voice):
+        reasons.append("does not allow private agent voice synthesis")
+    if not _voice_has_reference_text(voice):
+        reasons.append("is missing a reference transcript")
+    if not _voice_has_clean_quality(voice):
+        reasons.append("has audio quality warnings")
+    if hasattr(voice, "cleaned_audio_path"):
+        if not _voice_has_reference_audio(voice):
+            reasons.append("is missing reference audio")
+        elif not _voice_has_managed_reference_audio(voice):
+            reasons.append("does not have managed reference audio")
+    return reasons
 
 
 def _research_review_status() -> dict[str, object]:
