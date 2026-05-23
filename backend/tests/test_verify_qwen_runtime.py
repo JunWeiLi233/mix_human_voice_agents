@@ -86,6 +86,7 @@ def test_verify_qwen_runtime_generates_report_with_selected_profiles(tmp_path: P
     assert report_path.exists()
     report = json.loads(report_path.read_text(encoding="utf-8"))
     assert report["status"] == "passed"
+    assert report["report_path"] == str(report_path)
     assert report["tts_backend"] == "qwen3_tts"
     assert report["voice_profile_ids"] == ["voice_a", "voice_b"]
     assert report["source_profile_details"] == [

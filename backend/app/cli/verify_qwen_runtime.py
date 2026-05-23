@@ -195,6 +195,7 @@ def _qwen_runtime_config_from_args(args: argparse.Namespace) -> dict[str, str | 
 
 def _write_report(report_path: Path, payload: dict[str, object]) -> None:
     report_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {**payload, "report_path": str(report_path)}
     report_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
