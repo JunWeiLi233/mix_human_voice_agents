@@ -73,6 +73,32 @@ def test_core_launch_readiness_blocks_passed_agent_provider_report_without_base_
     assert agent_provider_check.detail == "Agent provider verification report is missing provider, model, base_url, or reply."
 
 
+def test_core_launch_readiness_blocks_agent_provider_report_with_mismatched_report_path(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "agent-provider-verification-report.json").write_text(
+        """
+        {
+          "status": "passed",
+          "provider": "openai",
+          "model": "gpt-4.1-mini",
+          "base_url": "https://api.openai.com/v1",
+          "reply": "Provider ready.",
+          "report_path": "data/other-agent-provider-report.json"
+        }
+        """,
+        encoding="utf-8",
+    )
+
+    report = evaluate_launch_readiness()
+
+    agent_provider_check = next(check for check in report.checks if check.id == "agent_provider")
+    assert agent_provider_check.passed is False
+    assert agent_provider_check.detail == "Agent provider verification report path does not match the persisted report file."
+
+
 def test_core_launch_readiness_blocks_invalid_agent_provider_report(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     report_path = tmp_path / "data" / "agent-provider-verification-report.json"

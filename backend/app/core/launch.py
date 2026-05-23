@@ -56,6 +56,12 @@ def get_agent_provider_verification_report() -> AgentProviderVerificationReport:
         )
     try:
         payload = json.loads(report_path.read_text(encoding="utf-8"))
+        if payload.get("report_path") and not _same_audio_path(str(payload["report_path"]), str(report_path)):
+            return AgentProviderVerificationReport(
+                status="failed",
+                report_path=str(report_path),
+                error="Agent provider verification report path does not match the persisted report file.",
+            )
         payload.setdefault("report_path", str(report_path))
         return AgentProviderVerificationReport.model_validate(payload)
     except (json.JSONDecodeError, ValidationError):
