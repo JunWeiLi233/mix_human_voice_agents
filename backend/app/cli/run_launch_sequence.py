@@ -21,6 +21,13 @@ from app.models.schemas import AgentProviderKind, ConsentRequest
 
 DEFAULT_OUTPUT_DIR = Path("data") / "launch-sequence"
 SUPPORTED_AGENT_PROVIDERS = list(AgentProviderKind.__args__)
+VOICE_RERECORD_ACTION = "Re-record this speaker as a clean 5-30 second WAV sample with no clipping."
+
+
+class LaunchManifestValidationError(ValueError):
+    def __init__(self, message: str, *, voice_diagnostics: list[dict[str, object]] | None = None):
+        super().__init__(message)
+        self.voice_diagnostics = voice_diagnostics or []
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -85,6 +92,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                 str(args.tasks),
             ]
         )
+    except LaunchManifestValidationError as exc:
+        payload: dict[str, object] = {"status": "failed", "error": str(exc)}
+        if exc.voice_diagnostics:
+            payload["voice_diagnostics"] = exc.voice_diagnostics
+        _write_report(report_path, payload)
+        return 2
     except (KeyError, OSError, ValueError, json.JSONDecodeError) as exc:
         _write_report(report_path, {"status": "failed", "error": str(exc)})
         return 2
@@ -119,7 +132,7 @@ def _load_manifest(manifest_path: Path) -> dict[str, Any]:
 
 
 def validate_launch_manifest(manifest: dict[str, Any]) -> dict[str, object]:
-    _validate_manifest(manifest)
+    voice_diagnostics = _validate_manifest(manifest)
     return {
         "status": "passed",
         "mode": "dry_run",
@@ -127,6 +140,7 @@ def validate_launch_manifest(manifest: dict[str, Any]) -> dict[str, object]:
         "speaker_display_names": [
             str(voice["speaker_display_name"]).strip() for voice in manifest["voices"]
         ],
+        "voice_diagnostics": voice_diagnostics,
     }
 
 
@@ -135,12 +149,13 @@ def _write_launch_manifest_template(template_path: Path) -> None:
     template_path.write_text(json.dumps(launch_manifest_template(), indent=2), encoding="utf-8")
 
 
-def _validate_manifest(manifest: dict[str, Any]) -> None:
+def _validate_manifest(manifest: dict[str, Any]) -> list[dict[str, object]]:
     voices = manifest.get("voices", [])
     if not isinstance(voices, list):
         raise ValueError("voices must be an array.")
     if len(voices) < 2:
         raise ValueError("Launch sequence manifest requires at least two voices.")
+    voice_diagnostics: list[dict[str, object]] = []
     normalized_speakers: set[str] = set()
     for index, voice in enumerate(voices, start=1):
         if not isinstance(voice, dict):
@@ -167,7 +182,27 @@ def _validate_manifest(manifest: dict[str, Any]) -> None:
         except AudioQualityError as exc:
             raise ValueError(f"voices[{index}].audio failed quality check: {exc}") from exc
         if quality.warnings:
-            raise ValueError(f"voices[{index}].audio failed quality check: {'; '.join(quality.warnings)}")
+            failed_diagnostic = _voice_quality_diagnostic(
+                index=index,
+                voice=voice,
+                audio_path=audio_path,
+                status="failed",
+                quality=quality,
+                next_action=VOICE_RERECORD_ACTION,
+            )
+            raise LaunchManifestValidationError(
+                f"voices[{index}].audio failed quality check: {'; '.join(quality.warnings)}",
+                voice_diagnostics=[*voice_diagnostics, failed_diagnostic],
+            )
+        voice_diagnostics.append(
+            _voice_quality_diagnostic(
+                index=index,
+                voice=voice,
+                audio_path=audio_path,
+                status="passed",
+                quality=quality,
+            )
+        )
     if len(normalized_speakers) < 2:
         raise ValueError("Launch sequence manifest requires at least two distinct speaker display names.")
     blend = _optional_object(manifest.get("blend"), "blend")
@@ -197,6 +232,31 @@ def _validate_manifest(manifest: dict[str, Any]) -> None:
     if "text" in qwen:
         _validate_generation_safety(str(qwen["text"]), "qwen.text")
     _validate_optional_qwen_runtime_options(qwen)
+    return voice_diagnostics
+
+
+def _voice_quality_diagnostic(
+    *,
+    index: int,
+    voice: dict[str, Any],
+    audio_path: Path,
+    status: str,
+    quality: object,
+    next_action: str | None = None,
+) -> dict[str, object]:
+    diagnostic: dict[str, object] = {
+        "index": index,
+        "speaker_display_name": str(voice["speaker_display_name"]).strip(),
+        "audio": str(audio_path),
+        "status": status,
+        "duration_seconds": getattr(quality, "duration_seconds"),
+        "sample_rate_hz": getattr(quality, "sample_rate_hz"),
+        "channel_count": getattr(quality, "channel_count"),
+        "warnings": list(getattr(quality, "warnings")),
+    }
+    if next_action:
+        diagnostic["next_action"] = next_action
+    return diagnostic
 
 
 def _require(payload: dict[str, Any], key: str, label: str) -> None:

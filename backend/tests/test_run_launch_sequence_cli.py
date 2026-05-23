@@ -60,12 +60,32 @@ def test_run_launch_sequence_dry_run_validates_manifest_without_side_effects(
 
     assert exit_code == 0
     report = json.loads(Path("sequence-report.json").read_text(encoding="utf-8"))
-    assert report == {
-        "status": "passed",
-        "mode": "dry_run",
-        "voice_count": 2,
-        "speaker_display_names": ["Alice", "Bob"],
-    }
+    assert report["status"] == "passed"
+    assert report["mode"] == "dry_run"
+    assert report["voice_count"] == 2
+    assert report["speaker_display_names"] == ["Alice", "Bob"]
+    assert report["voice_diagnostics"] == [
+        {
+            "index": 1,
+            "speaker_display_name": "Alice",
+            "audio": str(voice_a_audio),
+            "status": "passed",
+            "duration_seconds": 5.0,
+            "sample_rate_hz": 16000,
+            "channel_count": 1,
+            "warnings": [],
+        },
+        {
+            "index": 2,
+            "speaker_display_name": "Bob",
+            "audio": str(voice_b_audio),
+            "status": "passed",
+            "duration_seconds": 5.0,
+            "sample_rate_hz": 16000,
+            "channel_count": 1,
+            "warnings": [],
+        },
+    ]
 
 
 def test_run_launch_sequence_writes_manifest_template_without_side_effects(
@@ -1545,13 +1565,24 @@ def test_run_launch_sequence_rejects_clipped_reference_audio_before_import(
 
     assert exit_code == 2
     report = json.loads(Path("sequence-report.json").read_text(encoding="utf-8"))
-    assert report == {
-        "status": "failed",
-        "error": (
-            "voices[1].audio failed quality check: "
-            "Reference audio appears clipped; record a cleaner sample."
-        ),
-    }
+    assert report["status"] == "failed"
+    assert report["error"] == (
+        "voices[1].audio failed quality check: "
+        "Reference audio appears clipped; record a cleaner sample."
+    )
+    assert report["voice_diagnostics"] == [
+        {
+            "index": 1,
+            "speaker_display_name": "Alice",
+            "audio": str(clipped_audio),
+            "status": "failed",
+            "duration_seconds": 5.0,
+            "sample_rate_hz": 16000,
+            "channel_count": 1,
+            "warnings": ["Reference audio appears clipped; record a cleaner sample."],
+            "next_action": "Re-record this speaker as a clean 5-30 second WAV sample with no clipping.",
+        }
+    ]
 
 
 def test_run_launch_sequence_fails_when_final_readiness_is_blocked(tmp_path: Path, monkeypatch):

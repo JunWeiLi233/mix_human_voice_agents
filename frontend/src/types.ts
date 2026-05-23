@@ -139,7 +139,20 @@ export type LaunchManifestValidationReport = {
   mode?: "dry_run";
   voice_count?: number;
   speaker_display_names?: string[];
+  voice_diagnostics?: LaunchManifestVoiceDiagnostic[];
   error?: string;
+};
+
+export type LaunchManifestVoiceDiagnostic = {
+  index: number;
+  speaker_display_name: string;
+  audio: string;
+  status: "passed" | "failed";
+  duration_seconds?: number | null;
+  sample_rate_hz?: number | null;
+  channel_count?: number | null;
+  warnings: string[];
+  next_action?: string;
 };
 
 export type LaunchArtifactVoice = {

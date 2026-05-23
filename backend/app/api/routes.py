@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 import httpx
 from pydantic import BaseModel
 
-from app.cli.run_launch_sequence import validate_launch_manifest
+from app.cli.run_launch_sequence import LaunchManifestValidationError, validate_launch_manifest
 from app.cli.launch_artifacts import collect_launch_artifacts
 from app.core.agent import AgentProviderError, generate_agent_reply_record
 from app.core.audio import AudioQualityError, analyze_audio_sample, is_parseable_wav, wav_has_audible_signal
@@ -175,6 +175,12 @@ def launch_manifest_template_route() -> FileResponse:
 def launch_manifest_validate_route(manifest: dict[str, object]) -> dict[str, object]:
     try:
         return validate_launch_manifest(manifest)
+    except LaunchManifestValidationError as exc:
+        return {
+            "status": "failed",
+            "error": str(exc),
+            "voice_diagnostics": exc.voice_diagnostics,
+        }
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

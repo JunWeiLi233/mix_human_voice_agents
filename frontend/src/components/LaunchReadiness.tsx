@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { validateLaunchManifest } from "../api";
-import type { LaunchManifestValidationReport, LaunchReadinessReport } from "../types";
+import type { LaunchManifestValidationReport, LaunchManifestVoiceDiagnostic, LaunchReadinessReport } from "../types";
 
 type Props = {
   readiness: LaunchReadinessReport | null;
@@ -38,6 +38,20 @@ function readManifestFile(file: File) {
     });
     reader.readAsText(file);
   });
+}
+
+function manifestDiagnosticText(diagnostic: LaunchManifestVoiceDiagnostic) {
+  const duration =
+    typeof diagnostic.duration_seconds === "number" ? `${diagnostic.duration_seconds}s` : "unknown duration";
+  const sampleRate =
+    typeof diagnostic.sample_rate_hz === "number" ? `${diagnostic.sample_rate_hz}Hz` : "unknown sample rate";
+  const channels =
+    typeof diagnostic.channel_count === "number"
+      ? `${diagnostic.channel_count} ${diagnostic.channel_count === 1 ? "channel" : "channels"}`
+      : "unknown channels";
+  const warningText = diagnostic.warnings.length > 0 ? `. ${diagnostic.warnings.join("; ")}` : "";
+  const nextActionText = diagnostic.next_action ? ` Next: ${diagnostic.next_action}` : "";
+  return `${diagnostic.speaker_display_name}: ${diagnostic.status}, ${duration}, ${sampleRate}, ${channels}${warningText}${nextActionText}`;
 }
 
 export function LaunchReadiness({ readiness }: Props) {
@@ -98,11 +112,23 @@ export function LaunchReadiness({ readiness }: Props) {
               />
             </label>
             {manifestValidation ? (
-              <p className={manifestValidation.status === "passed" ? "manifest-pass" : "manifest-fail"}>
-                {manifestValidation.status === "passed"
-                  ? `Manifest dry run passed for ${manifestValidation.voice_count ?? 0} voices: ${(manifestValidation.speaker_display_names ?? []).join(", ")}`
-                  : `Manifest dry run failed: ${manifestValidation.error ?? "Validation failed."}`}
-              </p>
+              <>
+                <p className={manifestValidation.status === "passed" ? "manifest-pass" : "manifest-fail"}>
+                  {manifestValidation.status === "passed"
+                    ? `Manifest dry run passed for ${manifestValidation.voice_count ?? 0} voices: ${(manifestValidation.speaker_display_names ?? []).join(", ")}`
+                    : `Manifest dry run failed: ${manifestValidation.error ?? "Validation failed."}`}
+                </p>
+                {manifestValidation.voice_diagnostics?.length ? (
+                  <div className="manifest-diagnostics" aria-labelledby="manifest-diagnostics-heading">
+                    <h3 id="manifest-diagnostics-heading">Manifest voice diagnostics</h3>
+                    <ul>
+                      {manifestValidation.voice_diagnostics.map((diagnostic) => (
+                        <li key={`${diagnostic.index}-${diagnostic.audio}`}>{manifestDiagnosticText(diagnostic)}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </>
             ) : null}
           </div>
           {launchActions.length > 0 ? (

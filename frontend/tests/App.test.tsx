@@ -82,6 +82,29 @@ describe("App", () => {
           mode: "dry_run",
           voice_count: 2,
           speaker_display_names: ["Alice", "Bob"],
+          voice_diagnostics: [
+            {
+              index: 1,
+              speaker_display_name: "Alice",
+              audio: "samples/alice.wav",
+              status: "passed",
+              duration_seconds: 5,
+              sample_rate_hz: 16000,
+              channel_count: 1,
+              warnings: [],
+            },
+            {
+              index: 2,
+              speaker_display_name: "Bob",
+              audio: "samples/bob.wav",
+              status: "failed",
+              duration_seconds: 5,
+              sample_rate_hz: 16000,
+              channel_count: 1,
+              warnings: ["Reference audio appears clipped; record a cleaner sample."],
+              next_action: "Re-record this speaker as a clean 5-30 second WAV sample with no clipping.",
+            },
+          ],
         });
       }
       return new Response("not found", { status: 404 });
@@ -121,6 +144,13 @@ describe("App", () => {
       },
     });
     expect(await screen.findByText("Manifest dry run passed for 2 voices: Alice, Bob")).toBeInTheDocument();
+    expect(screen.getByText("Manifest voice diagnostics")).toBeInTheDocument();
+    expect(screen.getByText("Alice: passed, 5s, 16000Hz, 1 channel")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Bob: failed, 5s, 16000Hz, 1 channel. Reference audio appears clipped; record a cleaner sample. Next: Re-record this speaker as a clean 5-30 second WAV sample with no clipping.",
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByText("Next launch actions")).toBeInTheDocument();
     expect(screen.getByText("Backend action: import two consented source voices.")).toBeInTheDocument();
     expect(screen.getByText("Backend action: run Qwen verification with two profiles.")).toBeInTheDocument();

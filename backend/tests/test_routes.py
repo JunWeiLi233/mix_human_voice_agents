@@ -760,12 +760,97 @@ def test_launch_manifest_validation_route_dry_runs_without_side_effects(tmp_path
     )
 
     assert response.status_code == 200
-    assert response.json() == {
-        "status": "passed",
-        "mode": "dry_run",
-        "voice_count": 2,
-        "speaker_display_names": ["Alice", "Bob"],
-    }
+    payload = response.json()
+    assert payload["status"] == "passed"
+    assert payload["mode"] == "dry_run"
+    assert payload["voice_count"] == 2
+    assert payload["speaker_display_names"] == ["Alice", "Bob"]
+    assert payload["voice_diagnostics"] == [
+        {
+            "index": 1,
+            "speaker_display_name": "Alice",
+            "audio": str(voice_a_audio),
+            "status": "passed",
+            "duration_seconds": 5.0,
+            "sample_rate_hz": 16000,
+            "channel_count": 1,
+            "warnings": [],
+        },
+        {
+            "index": 2,
+            "speaker_display_name": "Bob",
+            "audio": str(voice_b_audio),
+            "status": "passed",
+            "duration_seconds": 5.0,
+            "sample_rate_hz": 16000,
+            "channel_count": 1,
+            "warnings": [],
+        },
+    ]
+    assert not (tmp_path / "data" / "voices").exists()
+
+
+def test_launch_manifest_validation_route_reports_voice_diagnostics_for_bad_audio(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    clipped_audio = tmp_path / "alice.wav"
+    voice_b_audio = tmp_path / "bob.wav"
+    write_clipped_wav(clipped_audio)
+    write_reference_wav(voice_b_audio)
+
+    def fail_if_called(argv):
+        raise AssertionError("manifest validation must not run launch subcommands")
+
+    monkeypatch.setattr("app.cli.run_launch_sequence.import_voice_main", fail_if_called)
+    monkeypatch.setattr("app.cli.run_launch_sequence.verify_agent_provider_main", fail_if_called)
+
+    response = client.post(
+        "/api/launch/manifest/validate",
+        json={
+            "voices": [
+                {
+                    "speaker_display_name": "Alice",
+                    "confirmed_by": "Junwei",
+                    "reference_text": "Alice reads a clean reference sentence for Qwen cloning.",
+                    "audio": str(clipped_audio),
+                },
+                {
+                    "speaker_display_name": "Bob",
+                    "confirmed_by": "Junwei",
+                    "reference_text": "Bob reads a clean reference sentence for Qwen cloning.",
+                    "audio": str(voice_b_audio),
+                },
+            ],
+            "agent_provider": {
+                "provider": "openai_compatible",
+                "model": "local-qwen-agent",
+                "base_url": "http://127.0.0.1:1234/v1",
+            },
+            "generation": {"prompt": "Greet the user as a disclosed synthetic assistant."},
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "failed"
+    assert payload["error"] == (
+        "voices[1].audio failed quality check: "
+        "Reference audio appears clipped; record a cleaner sample."
+    )
+    assert payload["voice_diagnostics"] == [
+        {
+            "index": 1,
+            "speaker_display_name": "Alice",
+            "audio": str(clipped_audio),
+            "status": "failed",
+            "duration_seconds": 5.0,
+            "sample_rate_hz": 16000,
+            "channel_count": 1,
+            "warnings": ["Reference audio appears clipped; record a cleaner sample."],
+            "next_action": "Re-record this speaker as a clean 5-30 second WAV sample with no clipping.",
+        }
+    ]
     assert not (tmp_path / "data" / "voices").exists()
 
 
