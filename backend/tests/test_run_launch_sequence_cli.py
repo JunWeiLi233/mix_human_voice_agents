@@ -89,6 +89,13 @@ def test_run_launch_sequence_writes_manifest_template_without_side_effects(
     assert exit_code == 0
     template = json.loads(template_path.read_text(encoding="utf-8"))
     assert [voice["speaker_display_name"] for voice in template["voices"]] == ["Alice", "Bob"]
+    assert template["launch_checklist"] == [
+        "Replace every audio path with a real clean WAV file that is 5-30 seconds long.",
+        "Use at least two distinct speakers with self or written permission for private_agent_voice synthesis.",
+        "Keep each reference_text matched to the spoken words in that speaker's WAV.",
+        "Choose an agent_provider for ChatGPT/OpenAI, Claude, Grok/xAI, Gemini, any OpenAI-compatible API, or local Ollama.",
+        "Run this manifest with --dry-run before importing voices or calling providers.",
+    ]
     assert template["blend"] == {"name": "Launch mixed voice", "strategy": "multi_reference_prompt"}
     assert template["agent_provider"]["provider"] == "openai_compatible"
     assert template["agent_provider"]["base_url"] == "http://127.0.0.1:1234/v1"

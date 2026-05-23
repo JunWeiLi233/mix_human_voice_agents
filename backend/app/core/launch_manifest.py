@@ -8,6 +8,16 @@ LAUNCH_BLEND_STRATEGY = "multi_reference_prompt"
 
 def launch_manifest_template() -> dict[str, Any]:
     return {
+        "launch_checklist": [
+            "Replace every audio path with a real clean WAV file that is 5-30 seconds long.",
+            "Use at least two distinct speakers with self or written permission for private_agent_voice synthesis.",
+            "Keep each reference_text matched to the spoken words in that speaker's WAV.",
+            (
+                "Choose an agent_provider for ChatGPT/OpenAI, Claude, Grok/xAI, Gemini, "
+                "any OpenAI-compatible API, or local Ollama."
+            ),
+            "Run this manifest with --dry-run before importing voices or calling providers.",
+        ],
         "voices": [
             {
                 "speaker_display_name": "Alice",
