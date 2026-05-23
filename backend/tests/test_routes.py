@@ -2410,7 +2410,7 @@ def test_import_voice_rejects_silent_wav(tmp_path: Path, monkeypatch):
     assert "silence" in response.json()["detail"]
 
 
-def test_import_voice_records_clipping_warning(tmp_path: Path, monkeypatch):
+def test_import_voice_rejects_clipping_warning_before_saving(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     sample_path = tmp_path / "sample.wav"
     write_clipped_wav(sample_path)
@@ -2429,8 +2429,10 @@ def test_import_voice_records_clipping_warning(tmp_path: Path, monkeypatch):
             files={"file": ("sample.wav", sample, "audio/wav")},
         )
 
-    assert response.status_code == 200
-    assert response.json()["quality"]["warnings"] == ["Reference audio appears clipped; record a cleaner sample."]
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Reference audio appears clipped; record a cleaner sample."
+    assert list((tmp_path / "data" / "voices").glob("*/profile.json")) == []
+    assert not (tmp_path / "data" / "tmp" / "sample.wav").exists()
 
 
 def test_import_voice_blocks_public_figure_label(tmp_path: Path, monkeypatch):

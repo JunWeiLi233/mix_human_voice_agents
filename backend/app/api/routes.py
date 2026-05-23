@@ -521,6 +521,8 @@ async def import_voice_route(
     try:
         try:
             quality = analyze_audio_sample(temp_path)
+            if quality.warnings:
+                raise HTTPException(status_code=400, detail="; ".join(quality.warnings))
         except AudioQualityError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
     finally:

@@ -67,6 +67,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Hardened `app.cli.run_launch_sequence --dry-run` so unsafe generation/provider prompts fail with a structured report before imports or provider calls.
 - Hardened `app.cli.verify_qwen_runtime` and launch dry-run validation so unsafe Qwen verification text fails before profile loading or Qwen calls.
 - Hardened `app.cli.import_voice` so clipped reference audio is rejected before a voice profile is saved.
+- Hardened the `/api/voices` UI import path so clipped reference audio is rejected before a voice profile is saved.
 
 ## Verification Already Run
 
@@ -99,7 +100,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T08:06:04.928832+00:00`
+- Checked at: `2026-05-23T08:09:51.063113+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Import two consented WAV voice samples with matching transcripts.
