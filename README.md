@@ -86,7 +86,7 @@ cd backend
 .\.venv\Scripts\python -m app.cli.import_voice --speaker-display-name Alice --confirmed-by Junwei --notes "Written permission captured for private local mixed voice testing." --reference-text "Alice reads a clean reference sentence for Qwen cloning." --audio C:\path\to\alice.wav --metadata data\voices\last-imported-alice.json
 ```
 
-Terminal blend creation from imported voices:
+Terminal blend creation from imported voices. The CLI requires saved profiles for at least two distinct speaker display names before it will save a mixed-voice blend:
 
 ```powershell
 cd backend
@@ -190,7 +190,7 @@ Open `http://127.0.0.1:5173`.
 3. For each voice, enter who confirmed consent, add consent notes, paste the reference transcript, check the consent confirmation box, and import a clean 5-30 second WAV sample where the speaker is you or has given written permission.
 4. Adjust each voice's blend weight in `Blend Mixer`.
 5. Select `Local preview` or `Qwen3-TTS` in `Voice Engine`.
-6. For Qwen launch checks, select the imported voices to verify in `Voice Engine`, run Qwen verification, and confirm the report passes.
+6. For Qwen launch checks, select the imported voices to verify in `Voice Engine`, run Qwen verification, and confirm the report passes. Qwen verification text is screened for impersonation or fraud-like requests before profiles or Qwen are loaded.
 7. Create the blend.
 8. Enter the agent prompt and generate AI voice.
 

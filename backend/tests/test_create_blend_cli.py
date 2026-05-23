@@ -61,6 +61,35 @@ def test_create_blend_cli_rejects_missing_imported_voice(tmp_path: Path, monkeyp
     assert list((tmp_path / "data" / "blends").glob("*.json")) == []
 
 
+def test_create_blend_cli_rejects_same_speaker_profiles(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    save_profile("voice_a", "Alice")
+    save_profile("voice_b", " alice ")
+    metadata_path = tmp_path / "blend-failed.json"
+
+    exit_code = main(
+        [
+            "--name",
+            "Same speaker blend",
+            "--profile",
+            "voice_a=1",
+            "--profile",
+            "voice_b=1",
+            "--metadata",
+            str(metadata_path),
+        ]
+    )
+
+    assert exit_code == 1
+    assert metadata_path.read_text(encoding="utf-8") == (
+        "{\n"
+        '  "status": "failed",\n'
+        '  "error": "A mixed voice blend requires at least two distinct speaker display names."\n'
+        "}"
+    )
+    assert list((tmp_path / "data" / "blends").glob("*.json")) == []
+
+
 def save_profile(profile_id: str, display_name: str) -> None:
     voice_dir = Path("data") / "voices" / profile_id
     voice_dir.mkdir(parents=True)

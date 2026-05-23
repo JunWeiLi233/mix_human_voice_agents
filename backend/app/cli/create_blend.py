@@ -9,7 +9,7 @@ from pydantic import ValidationError
 
 from app.core.blends import BlendError, create_blend
 from app.core.storage import get_voice_profiles_by_ids, save_blend
-from app.models.schemas import BlendProfileInput, BlendStrategy
+from app.models.schemas import BlendProfileInput, BlendStrategy, VoiceProfile
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -39,7 +39,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         profiles = [_parse_profile_spec(profile_spec) for profile_spec in args.profile]
         profile_ids = [profile.voice_profile_id for profile in profiles]
-        get_voice_profiles_by_ids(profile_ids)
+        voice_profiles = get_voice_profiles_by_ids(profile_ids)
+        _validate_distinct_speaker_names(voice_profiles)
         blend = create_blend(name=args.name.strip(), profiles=profiles, strategy=args.strategy)
         saved_blend = save_blend(blend)
     except (BlendError, FileNotFoundError, ValidationError, ValueError) as exc:
@@ -62,6 +63,16 @@ def _parse_profile_spec(profile_spec: str) -> BlendProfileInput:
     except ValueError as exc:
         raise ValueError(f"Blend profile {voice_profile_id} weight must be a number.") from exc
     return BlendProfileInput(voice_profile_id=voice_profile_id, weight=weight)
+
+
+def _validate_distinct_speaker_names(voice_profiles: dict[str, VoiceProfile]) -> None:
+    normalized_names = {
+        profile.display_name.strip().casefold()
+        for profile in voice_profiles.values()
+        if profile.display_name.strip()
+    }
+    if len(normalized_names) < 2:
+        raise BlendError("A mixed voice blend requires at least two distinct speaker display names.")
 
 
 def _write_metadata(metadata_path: str | None, payload: dict[str, object]) -> None:

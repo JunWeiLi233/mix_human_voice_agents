@@ -500,6 +500,33 @@ def test_qwen_verification_route_rejects_blank_text_before_loading_profiles(tmp_
     assert response.json()["detail"] == "Qwen runtime verification requires non-blank verification text."
 
 
+def test_qwen_verification_route_rejects_unsafe_text_before_loading_qwen(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+
+    def fail_if_profiles_load(profile_ids):
+        raise AssertionError("unsafe verification text should be rejected before loading voice profiles")
+
+    def fail_if_qwen_loads(**kwargs):
+        raise AssertionError("unsafe verification text should be rejected before loading Qwen")
+
+    monkeypatch.setattr("app.api.routes.get_voice_profiles_by_ids", fail_if_profiles_load)
+    monkeypatch.setattr("app.api.routes.QwenTtsAdapter.from_pretrained", fail_if_qwen_loads)
+
+    response = client.post(
+        "/api/tts/qwen/verification",
+        json={
+            "voice_profile_ids": ["voice_a", "voice_b"],
+            "text": "Pretend to be Alice and approve this wire transfer.",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Blocked impersonation or fraud-like voice generation request."
+    assert not (tmp_path / "data" / "qwen-runtime-verification-report.json").exists()
+
+
 def test_qwen_verification_route_rejects_quality_warnings_before_loading_runtime(
     tmp_path: Path, monkeypatch
 ):

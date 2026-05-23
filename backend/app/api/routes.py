@@ -21,7 +21,7 @@ from app.core.launch import (
 )
 from app.core.qwen_profiles import validate_qwen_voice_profiles
 from app.core.qwen_runtime import resolved_qwen_runtime_config
-from app.core.safety import SafetyError
+from app.core.safety import SafetyError, check_generation_request
 from app.core.storage import (
     GENERATION_ROOT,
     delete_voice_profile,
@@ -170,6 +170,10 @@ def run_qwen_verification_route(request: RunQwenVerificationRequest) -> QwenVeri
             status_code=400,
             detail="Qwen runtime verification requires non-blank verification text.",
         )
+    try:
+        check_generation_request(request.text)
+    except SafetyError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     try:
         voice_profiles = get_voice_profiles_by_ids(profile_ids)
