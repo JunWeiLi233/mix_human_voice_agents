@@ -56,6 +56,14 @@ def test_launch_artifacts_cli_writes_inventory_with_next_commands(tmp_path: Path
     assert payload["usable_voice_ids"] == ["voice_alice", "voice_bob"]
     assert payload["agent_provider"]["status"] == "missing"
     assert payload["qwen_runtime"]["available"] is True
+    assert payload["agent_provider_commands"]["chatgpt"].startswith(
+        "python -m app.cli.verify_agent_provider --provider openai"
+    )
+    assert "--base-url https://api.openai.com/v1" in payload["agent_provider_commands"]["chatgpt"]
+    assert "--provider anthropic" in payload["agent_provider_commands"]["claude"]
+    assert "--provider xai" in payload["agent_provider_commands"]["grok"]
+    assert "--provider google" in payload["agent_provider_commands"]["gemini"]
+    assert "--provider ollama" in payload["agent_provider_commands"]["local_ollama"]
     assert (
         "python -m app.cli.verify_qwen_runtime --voice-profile-id voice_alice --voice-profile-id voice_bob"
         in payload["next_commands"]
@@ -65,6 +73,10 @@ def test_launch_artifacts_cli_writes_inventory_with_next_commands(tmp_path: Path
     assert "voice_alice: Alice" in output
     assert "voice_bob: Bob" in output
     assert "python -m app.cli.create_blend --name" in output
+    assert "Provider command options:" in output
+    assert "ChatGPT: python -m app.cli.verify_agent_provider --provider openai" in output
+    assert "Claude: python -m app.cli.verify_agent_provider --provider anthropic" in output
+    assert "Grok: python -m app.cli.verify_agent_provider --provider xai" in output
 
 
 def voice_profile(profile_id: str, display_name: str) -> VoiceProfile:

@@ -94,6 +94,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Installed the backend Qwen extra into the local venv so `qwen-tts` is importable for the selected Qwen model.
 - Stabilized the missing-requirements launch readiness route test so it explicitly simulates an unavailable Qwen runtime instead of depending on local optional packages.
 - Added `app.cli.launch_artifacts --summary` so terminal agents can inventory real voice, blend, generation, provider, and Qwen artifacts and get concrete next commands before handoff.
+- Added provider-specific preflight commands to `app.cli.launch_artifacts --summary` for ChatGPT/OpenAI, Claude, Grok/xAI, Gemini, generic OpenAI-compatible APIs, and local Ollama.
 
 ## Verification Already Run
 
@@ -165,6 +166,14 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - `git diff --check` passed.
 - `cd backend; .\.venv\Scripts\python -m app.cli.launch_artifacts --report data\launch-artifacts-report.json --summary` passed and reported 1 voice, 245 blends, 0 generations, and the launch manifest template command as the next step.
 - `cd backend; .\.venv\Scripts\python -m app.cli.launch_readiness --report data\launch-readiness-report.json --tasks ..\TASKS.md --summary` refreshed readiness tasks, reported `[x] Qwen runtime`, and still exits 1 until real launch artifacts are present.
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_launch_artifacts_cli.py -q` passed: 1 test.
+- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 269 tests.
+- `cd frontend; npm test -- --run` passed: 7 tests.
+- `cd frontend; npx tsc --noEmit` passed.
+- `cd frontend; npm run build` passed.
+- `git diff --check` passed with line-ending normalization warnings only.
+- `cd backend; .\.venv\Scripts\python -m app.cli.launch_artifacts --report data\launch-artifacts-report.json --summary` passed and printed provider preflight options for ChatGPT, Claude, Grok, Gemini, generic API, and local Ollama. It reported 1 voice, 246 blends, 0 generations, and the launch manifest template command as the next step.
+- `cd backend; .\.venv\Scripts\python -m app.cli.launch_readiness --report data\launch-readiness-report.json --tasks ..\TASKS.md --summary` refreshed readiness tasks, reported `[x] Qwen runtime`, and still exits 1 until real launch artifacts are present.
 
 ## Next Tasks
 
@@ -188,7 +197,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T14:59:49.294643+00:00`
+- Checked at: `2026-05-23T15:03:20.206014+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Generate a launch manifest with `python -m app.cli.run_launch_sequence --write-template launch-manifest.template.json`, then fill in two consented WAV voice samples with matching transcripts.

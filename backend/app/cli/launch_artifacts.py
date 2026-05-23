@@ -52,6 +52,7 @@ def collect_launch_artifacts() -> dict[str, object]:
         "blends": [_blend_payload(blend) for blend in blends],
         "generations": [_generation_payload(generation) for generation in generations],
         "agent_provider": agent_provider.model_dump(mode="json"),
+        "agent_provider_commands": _agent_provider_commands(),
         "qwen_verification": qwen_verification.model_dump(mode="json"),
         "qwen_runtime": qwen_runtime.model_dump(mode="json"),
         "next_commands": _next_commands(
@@ -123,10 +124,7 @@ def _next_commands(
             f"--strategy multi_reference_prompt {profiles}"
         )
     if agent_provider_status != "passed":
-        commands.append(
-            "python -m app.cli.verify_agent_provider "
-            "--provider openai_compatible --model <model> --base-url <base-url> --api-key <api-key>"
-        )
+        commands.append(_agent_provider_commands()["openai_compatible_api"])
     if qwen_runtime_available and qwen_verification_status != "passed":
         profile_args = " ".join(f"--voice-profile-id {voice_id}" for voice_id in selected_voice_ids)
         commands.append(f"python -m app.cli.verify_qwen_runtime {profile_args}")
@@ -137,6 +135,36 @@ def _next_commands(
             "--provider openai_compatible --model <model> --base-url <base-url> --api-key <api-key>"
         )
     return commands
+
+
+def _agent_provider_commands() -> dict[str, str]:
+    return {
+        "chatgpt": (
+            "python -m app.cli.verify_agent_provider --provider openai "
+            "--model gpt-4.1-mini --base-url https://api.openai.com/v1 --api-key <openai-api-key>"
+        ),
+        "claude": (
+            "python -m app.cli.verify_agent_provider --provider anthropic "
+            "--model claude-sonnet-4-5 --base-url https://api.anthropic.com --api-key <anthropic-api-key>"
+        ),
+        "grok": (
+            "python -m app.cli.verify_agent_provider --provider xai "
+            "--model grok-4 --base-url https://api.x.ai/v1 --api-key <xai-api-key>"
+        ),
+        "gemini": (
+            "python -m app.cli.verify_agent_provider --provider google "
+            "--model gemini-2.5-flash --base-url https://generativelanguage.googleapis.com/v1beta "
+            "--api-key <google-api-key>"
+        ),
+        "openai_compatible_api": (
+            "python -m app.cli.verify_agent_provider --provider openai_compatible "
+            "--model <model> --base-url <base-url> --api-key <api-key>"
+        ),
+        "local_ollama": (
+            "python -m app.cli.verify_agent_provider --provider ollama "
+            "--model llama3.1 --base-url http://127.0.0.1:11434"
+        ),
+    }
 
 
 def _has_blend_for_voices(blends: list[VoiceBlend], voice_ids: list[str]) -> bool:
@@ -167,6 +195,17 @@ def _print_summary(report: dict[str, object]) -> None:
     )
     for voice in report["voices"]:
         print(f"{voice['id']}: {voice['display_name']}")
+    print("Provider command options:")
+    provider_commands = report["agent_provider_commands"]
+    for label, key in (
+        ("ChatGPT", "chatgpt"),
+        ("Claude", "claude"),
+        ("Grok", "grok"),
+        ("Gemini", "gemini"),
+        ("API", "openai_compatible_api"),
+        ("Local", "local_ollama"),
+    ):
+        print(f"{label}: {provider_commands[key]}")
     print("Next commands:")
     for command in report["next_commands"]:
         print(f"- {command}")
