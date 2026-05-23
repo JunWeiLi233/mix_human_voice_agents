@@ -274,14 +274,29 @@ def _write_agent_provider_verification_report(payload: dict[str, object]) -> Age
 @router.post("/blends", response_model=VoiceBlend)
 def create_blend_route(request: CreateBlendRequest) -> VoiceBlend:
     try:
+        if request.strategy == "multi_reference_prompt":
+            voice_profiles = get_voice_profiles_by_ids(
+                [profile.voice_profile_id for profile in request.profiles]
+            )
+            _validate_distinct_blend_speaker_names(voice_profiles)
         blend = create_blend(
             name=request.name,
             profiles=request.profiles,
             strategy=request.strategy,
         )
         return save_blend(blend)
-    except BlendError as exc:
+    except (BlendError, FileNotFoundError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+def _validate_distinct_blend_speaker_names(voice_profiles: dict[str, VoiceProfile]) -> None:
+    normalized_names = {
+        profile.display_name.strip().casefold()
+        for profile in voice_profiles.values()
+        if profile.display_name.strip()
+    }
+    if len(normalized_names) < 2:
+        raise BlendError("A mixed voice blend requires at least two distinct speaker display names.")
 
 
 @router.get("/blends", response_model=list[VoiceBlend])

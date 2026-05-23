@@ -70,6 +70,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Hardened the `/api/voices` UI import path so clipped reference audio is rejected before a voice profile is saved.
 - Hardened `app.cli.create_blend` so terminal blends require at least two distinct speaker display names before saving.
 - Hardened `/api/tts/qwen/verification` so unsafe verification text fails before loading voice profiles or Qwen.
+- Hardened `/api/blends` so Qwen mixed-voice blends require saved imported profiles from at least two distinct speaker display names before saving.
 
 ## Verification Already Run
 
@@ -78,7 +79,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - `cd frontend; npm run build` passed.
 - Chrome headless desktop screenshot was captured from `http://127.0.0.1:5174/`.
 - Chrome headless mobile screenshot was captured and mobile clipping was fixed.
-- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 245 tests.
+- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 247 tests.
 
 ## Next Tasks
 
@@ -102,7 +103,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T08:15:54.077396+00:00`
+- Checked at: `2026-05-23T08:21:22.426125+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Import two consented WAV voice samples with matching transcripts.

@@ -987,6 +987,66 @@ def test_create_blend_endpoint_normalizes_weights():
     assert payload["synthetic_label"] == "synthetic mixed voice"
 
 
+def test_create_qwen_blend_endpoint_rejects_missing_imported_voice(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    response = client.post(
+        "/api/blends",
+        json={
+            "name": "Missing Imported Pair",
+            "profiles": [
+                {"voice_profile_id": "voice_missing_a", "weight": 1},
+                {"voice_profile_id": "voice_missing_b", "weight": 1},
+            ],
+            "strategy": "multi_reference_prompt",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Missing voice profiles: voice_missing_a, voice_missing_b"
+    assert list((tmp_path / "data" / "blends").glob("*.json")) == []
+
+
+def test_create_qwen_blend_endpoint_rejects_same_speaker_profiles(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    sample_path = tmp_path / "sample.wav"
+    write_reference_wav(sample_path)
+    voices = []
+
+    for name in ("Alice", " alice "):
+        with sample_path.open("rb") as sample:
+            response = client.post(
+                "/api/voices",
+                data={
+                    "speaker_display_name": name,
+                    "consent_type": "self_or_written_permission",
+                    "allowed_uses": "private_agent_voice,local_audio_export",
+                    "confirmed_by": "local_user",
+                    "notes": "Written permission captured.",
+                    "reference_text": f"{name.strip()} reads a clean reference sentence for Qwen cloning.",
+                },
+                files={"file": ("sample.wav", sample, "audio/wav")},
+            )
+        assert response.status_code == 200
+        voices.append(response.json())
+
+    response = client.post(
+        "/api/blends",
+        json={
+            "name": "Same Speaker Pair",
+            "profiles": [
+                {"voice_profile_id": voices[0]["id"], "weight": 1},
+                {"voice_profile_id": voices[1]["id"], "weight": 1},
+            ],
+            "strategy": "multi_reference_prompt",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "A mixed voice blend requires at least two distinct speaker display names."
+    assert list((tmp_path / "data" / "blends").glob("*.json")) == []
+
+
 def test_list_blends_returns_persisted_blends(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     created = client.post(
@@ -997,7 +1057,7 @@ def test_list_blends_returns_persisted_blends(tmp_path: Path, monkeypatch):
                 {"voice_profile_id": "voice_a", "weight": 2},
                 {"voice_profile_id": "voice_b", "weight": 1},
             ],
-            "strategy": "multi_reference_prompt",
+            "strategy": "local_development_wav",
         },
     ).json()
 
@@ -1007,7 +1067,7 @@ def test_list_blends_returns_persisted_blends(tmp_path: Path, monkeypatch):
     payload = response.json()
     assert [blend["id"] for blend in payload] == [created["id"]]
     assert payload[0]["name"] == "Persisted Pair"
-    assert payload[0]["strategy"] == "multi_reference_prompt"
+    assert payload[0]["strategy"] == "local_development_wav"
 
 
 def test_generate_endpoint_returns_audio_metadata(tmp_path: Path, monkeypatch):

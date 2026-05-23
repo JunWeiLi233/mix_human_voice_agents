@@ -17,8 +17,9 @@
 - Import rejects blank reference transcripts so every profile has usable Qwen cloning text.
 - Import rejects public-figure, celebrity, politician, and explicit no-permission consent claims.
 - Malformed, non-WAV, silent, shorter-than-5-second, and longer-than-30-second samples are rejected.
-- Clipped reference samples import with a quality warning so users can re-record cleaner audio.
+- Clipped reference samples are rejected before import so users can re-record cleaner audio.
 - Blend creation with two distinct profiles succeeds and weights normalize to 100%.
+- Qwen blend creation through the UI/API requires saved imported profiles from at least two distinct speaker display names.
 - Blend creation and Qwen verification reject duplicate voice profile IDs.
 - Agent provider settings accept ChatGPT/OpenAI, Claude/Anthropic, Gemini/Google, Grok/xAI, custom OpenAI-compatible API, and Ollama-compatible local endpoints.
 - The selected agent provider passes the in-app `Test provider` preflight and persists `data/agent-provider-verification-report.json` with `report_path` and `checked_at` before using it for voice generation.
