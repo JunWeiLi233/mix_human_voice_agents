@@ -448,17 +448,25 @@ async def import_voice_route(
     reference_text: str = Form(""),
     file: UploadFile = File(...),
 ) -> VoiceProfile:
+    cleaned_speaker_display_name = speaker_display_name.strip()
+    if not cleaned_speaker_display_name:
+        raise HTTPException(status_code=400, detail="A speaker display name is required for voice import.")
+
+    cleaned_confirmed_by = confirmed_by.strip()
+    if not cleaned_confirmed_by:
+        raise HTTPException(status_code=400, detail="A consent confirmer is required for voice import.")
+
     cleaned_reference_text = reference_text.strip()
     if not cleaned_reference_text:
         raise HTTPException(status_code=400, detail="A reference transcript is required for voice import.")
 
     voice_id = new_voice_profile_id()
     consent_request = ConsentRequest(
-        speaker_display_name=speaker_display_name,
+        speaker_display_name=cleaned_speaker_display_name,
         consent_type=consent_type,
         allowed_uses=[item.strip() for item in allowed_uses.split(",") if item.strip()],
-        confirmed_by=confirmed_by,
-        notes=notes,
+        confirmed_by=cleaned_confirmed_by,
+        notes=notes.strip(),
     )
     try:
         consent = create_consent_record(voice_id, consent_request)
@@ -478,7 +486,7 @@ async def import_voice_route(
 
     profile = VoiceProfile(
         id=voice_id,
-        display_name=speaker_display_name,
+        display_name=cleaned_speaker_display_name,
         reference_text=cleaned_reference_text,
         consent=consent,
         source_audio_path="",
