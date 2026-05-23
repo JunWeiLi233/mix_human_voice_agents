@@ -6,6 +6,7 @@ import type { VoiceProfile } from "../types";
 const minRecordedSeconds = 5;
 const maxRecordedSeconds = 30;
 const minAudiblePeak = 0.001;
+const clippedPeak = 0.999;
 
 type Props = {
   onImported?: (profile: VoiceProfile) => void;
@@ -147,7 +148,10 @@ export function ImportVoice({ onImported }: Props) {
   const recordedSignalError = recordedPeak === null || recordedPeak >= minAudiblePeak
     ? null
     : "Recording must contain audible speech before importing.";
-  const recordedImportError = recordedDurationError ?? recordedSignalError;
+  const recordedClippingError = recordedPeak !== null && recordedPeak >= clippedPeak
+    ? "Reference audio appears clipped; record a cleaner sample."
+    : null;
+  const recordedImportError = recordedDurationError ?? recordedSignalError ?? recordedClippingError;
 
   return (
     <section className="panel">

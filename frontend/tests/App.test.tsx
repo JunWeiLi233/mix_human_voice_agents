@@ -991,6 +991,70 @@ describe("App", () => {
     }
   });
 
+  it("blocks clipped browser recordings before voice import", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = input.toString();
+      if (url === "/api/voices" && !init) {
+        return jsonResponse([]);
+      }
+      if (url === "/api/generations" && !init) {
+        return jsonResponse([]);
+      }
+      if (url === "/api/blends" && !init) {
+        return jsonResponse([]);
+      }
+      if (url === "/api/tts/qwen/status" && !init) {
+        return jsonResponse({
+          backend: "qwen3_tts",
+          available: false,
+          model_id: "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+          message: "qwen-tts is not installed.",
+        });
+      }
+      if (url === "/api/tts/qwen/verification" && !init) {
+        return jsonResponse({
+          status: "missing",
+          tts_backend: "qwen3_tts",
+          report_path: "data/qwen-runtime-verification-report.json",
+          voice_profile_ids: [],
+        });
+      }
+      if (url === "/api/launch/readiness" && !init) {
+        return jsonResponse({
+          status: "blocked",
+          blocking_reasons: ["Import at least two consented voice profiles."],
+          checks: [],
+        });
+      }
+      if (url === "/api/voices" && init?.method === "POST") {
+        throw new Error("Clipped recordings should not be imported");
+      }
+      return new Response("not found", { status: 404 });
+    });
+    const restoreRecorder = installAudioRecorderMock();
+
+    try {
+      render(<App />);
+      await screen.findByText("No imported voices yet.");
+
+      fireEvent.change(screen.getByLabelText("Reference transcript"), {
+        target: { value: "Alice reads a clean reference sentence for Qwen cloning." },
+      });
+      fireEvent.click(screen.getByLabelText("Confirm voice consent"));
+
+      fireEvent.click(screen.getByRole("button", { name: "Start microphone recording" }));
+      await screen.findByRole("button", { name: "Stop microphone recording" });
+      emitClippedRecordingSeconds(5);
+      fireEvent.click(screen.getByRole("button", { name: "Stop microphone recording" }));
+
+      expect(await screen.findByText("5.0s recorded")).toBeInTheDocument();
+      expect(screen.getByText("Reference audio appears clipped; record a cleaner sample.")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Import recorded sample" })).toBeDisabled();
+    } finally {
+      restoreRecorder();
+    }
+  });
+
   it("lets the user test the selected agent provider before generating voice", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = input.toString();
@@ -1436,6 +1500,10 @@ function emitRecordingSeconds(seconds: number) {
 
 function emitSilentRecordingSeconds(seconds: number) {
   emitRecordingSamples(Array.from({ length: 16000 * seconds }, () => 0));
+}
+
+function emitClippedRecordingSeconds(seconds: number) {
+  emitRecordingSamples(Array.from({ length: 16000 * seconds }, (_, index) => (index % 2 === 0 ? 1 : -1)));
 }
 
 type FetchMock = {

@@ -15,7 +15,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Branch: `main`
 - Remote: `https://github.com/JunWeiLi233/mix_human_voice_agents.git`
 - Recent pushed work includes structured launch-manifest voice diagnostics for browser and CLI dry-runs.
-- Latest work blocks silent browser microphone recordings before import and keeps recorded imports inside the launch voice quality requirements.
+- Latest work blocks clipped browser microphone recordings before import and keeps recorded imports inside the launch voice quality requirements.
 - Latest pushed CI status for the provider research-source gate: passed.
 - Local Vite dev servers for review: `http://127.0.0.1:5173/` and `http://127.0.0.1:5174/`
 - Backend launch readiness is still blocked because the repo does not yet have two real imported voices, a saved real blend, agent-provider preflight, Qwen verification with two profiles, or real Qwen mixed-voice output. The local backend venv now has `qwen-tts` installed and importable.
@@ -117,6 +117,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Added recorded sample duration feedback in the Import Voice panel and disabled importing recordings shorter than 5 seconds or longer than 30 seconds.
 - Added browser recorder auto-stop at 30 seconds so overlong microphone captures are capped to a launch-valid WAV before import.
 - Added a browser recorder audible-signal guard so silent microphone captures are warned and blocked before upload.
+- Added a browser recorder clipping guard so full-scale distorted microphone captures are warned and blocked before upload.
 
 ## Verification Already Run
 
@@ -285,6 +286,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - `cd frontend; npm test -- --run -t "recorded samples|record a consented"` first failed because recorded sample duration was not shown or gated, then passed after adding the 5-30 second recorder gate.
 - `cd frontend; npm test -- --run -t "browser recordings|recorded samples|record a consented"` first failed because browser recordings did not auto-stop at 30 seconds, then passed after capping recorded PCM and finalizing automatically.
 - `cd frontend; npm test -- --run -t "silent browser|browser recordings|recorded samples|record a consented"` first failed because silent browser recordings were importable, then passed after adding a recorded peak-amplitude guard.
+- `cd frontend; npm test -- --run -t "clipped browser|silent browser|browser recordings|recorded samples|record a consented"` first failed because clipped browser recordings were importable, then passed after adding a recorded max-peak guard.
 - `cd frontend; npm test -- --run` passed: 9 tests.
 - `cd frontend; npx tsc --noEmit` passed.
 - `cd frontend; npm run build` passed.
@@ -304,6 +306,13 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 278 tests.
 - `git diff --check` passed with line-ending normalization warnings only.
 - `cd backend; .\.venv\Scripts\python -m app.cli.launch_artifacts --report data\launch-artifacts-report.json --tasks ..\TASKS.md --summary` refreshed the Launch Artifact Inventory and reported 1 voice, 0 usable voices, 264 stale/nonmatching blends, 0 generations, and the launch manifest template command.
+- `cd backend; .\.venv\Scripts\python -m app.cli.launch_readiness --report data\launch-readiness-report.json --tasks ..\TASKS.md --summary` refreshed readiness tasks and still exits 1 until real launch artifacts are present.
+- `cd frontend; npm test -- --run` passed: 12 tests.
+- `cd frontend; npx tsc --noEmit` passed.
+- `cd frontend; npm run build` passed.
+- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 278 tests.
+- `git diff --check` passed with line-ending normalization warnings only.
+- `cd backend; .\.venv\Scripts\python -m app.cli.launch_artifacts --report data\launch-artifacts-report.json --tasks ..\TASKS.md --summary` refreshed the Launch Artifact Inventory and reported 1 voice, 0 usable voices, 265 stale/nonmatching blends, 0 generations, and the launch manifest template command.
 - `cd backend; .\.venv\Scripts\python -m app.cli.launch_readiness --report data\launch-readiness-report.json --tasks ..\TASKS.md --summary` refreshed readiness tasks and still exits 1 until real launch artifacts are present.
 - `cd backend; .\.venv\Scripts\python -m pytest tests\test_run_launch_sequence_cli.py -q -k "invokes_launch_steps"` first failed because `launch_artifacts_main` was not wired into the sequence, then passed after adding the artifact handoff refresh call.
 - `cd backend; .\.venv\Scripts\python -m pytest tests\test_run_launch_sequence_cli.py -q` passed: 29 tests.
@@ -349,7 +358,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T16:15:32.668167+00:00`
+- Checked at: `2026-05-23T16:20:05.178906+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Re-record or replace unusable voice samples, then import at least two clean consented WAV voices with matching transcripts.
@@ -373,7 +382,7 @@ Blocking reasons:
 ## Launch Artifact Inventory
 
 - Voices: `1` total; `0` usable; `1` unusable
-- Blends: `264` total; `0` launch-eligible; `264` stale/nonmatching
+- Blends: `265` total; `0` launch-eligible; `265` stale/nonmatching
 - Generations: `0` total; `0` Qwen; `0` launch-eligible; `0` stale/nonmatching
 - Usable voice IDs: `none`
 - Launch-eligible blend IDs: `none`
