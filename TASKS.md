@@ -26,7 +26,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 
 ## Usage Limit Handoff
 
-- Last refreshed: `2026-05-23T17:36:23.410674+00:00`
+- Last refreshed: `2026-05-23T17:39:55.599501+00:00`
 - Reason: Codex usage/session/context limit handoff.
 - Next agent should start from `## Next Tasks`, `## Launch Readiness Remaining Tasks`, and `## Launch Artifact Inventory`.
 - Preserve commit identity: `JunWeiLi233 <mcpejunwei@gmail.com>`.
@@ -34,7 +34,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T17:36:23.398672+00:00`
+- Checked at: `2026-05-23T17:39:55.587499+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Re-record or replace unusable voice samples, then import at least two clean consented WAV voices with matching transcripts.
@@ -179,6 +179,7 @@ Next artifact commands:
 - Added `/api/launch/artifacts` so the frontend can read the same launch artifact inventory that terminal agents use for handoff.
 - Added a Launch Artifact Inventory panel to the browser Launch page, showing voice/blend/generation counts, provider and Qwen status, unusable voice reasons, and the next manifest command.
 - Added a backend route-test leak guard and isolated the local blend normalization test so pytest no longer creates throwaway blends in the real launch artifact store.
+- Added saved-blend audit details in the Blend Mixer so each preset shows its strategy, source count, and normalized voice weights before Qwen generation.
 - Added frontend and backend regression coverage for the Launch artifact inventory route and panel.
 - Added structured `voice_diagnostics` to launch manifest dry-run reports for clean samples and clipped/warning-blocked samples.
 - Updated `/api/launch/manifest/validate` so browser validation can return a failed dry-run report with per-voice diagnostics instead of only an HTTP error string.

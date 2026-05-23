@@ -43,10 +43,12 @@ export function BlendMixer({ blend, profiles, savedBlends, onCreateBlend, onSele
             <button
               key={savedBlend.id}
               type="button"
+              aria-label={savedBlend.name}
               className={blend?.id === savedBlend.id ? "active" : ""}
               onClick={() => onSelectBlend(savedBlend)}
             >
-              {savedBlend.name}
+              <span>{savedBlend.name}</span>
+              <small>{formatBlendAudit(savedBlend)}</small>
             </button>
           ))}
         </div>
@@ -57,8 +59,23 @@ export function BlendMixer({ blend, profiles, savedBlends, onCreateBlend, onSele
           <dd>{blend.name}</dd>
           <dt>Label</dt>
           <dd>{blend.synthetic_label}</dd>
+          <dt>Strategy</dt>
+          <dd>{blend.strategy}</dd>
+          <dt>Sources</dt>
+          <dd>{formatBlendSources(blend)}</dd>
         </dl>
       ) : null}
     </section>
   );
+}
+
+function formatBlendAudit(blend: VoiceBlend) {
+  const voiceLabel = blend.profiles.length === 1 ? "voice" : "voices";
+  return `${blend.strategy} - ${blend.profiles.length} ${voiceLabel} - ${formatBlendSources(blend)}`;
+}
+
+function formatBlendSources(blend: VoiceBlend) {
+  return blend.profiles
+    .map((profile) => `${profile.voice_profile_id} ${Math.round(profile.weight * 100)}%`)
+    .join(" + ");
 }

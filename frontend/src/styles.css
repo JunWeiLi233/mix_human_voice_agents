@@ -351,6 +351,20 @@ textarea:focus {
   color: #20281b;
 }
 
+.saved-blends button {
+  display: grid;
+  justify-items: start;
+  min-height: 58px;
+  text-align: left;
+}
+
+.saved-blends button small {
+  color: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  opacity: 0.72;
+}
+
 .segmented button.active,
 .saved-blends button.active {
   background: #20281b;

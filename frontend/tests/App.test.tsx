@@ -651,6 +651,9 @@ describe("App", () => {
     expect(screen.getByLabelText("Qwen attention implementation")).toHaveValue("flash_attention_2");
     expect(screen.getByText("Saved Alice 60% + Saved Bob 40%")).toBeInTheDocument();
     await screen.findByRole("button", { name: "Saved Alice + Bob" });
+    expect(
+      screen.getByText("multi_reference_prompt - 2 voices - voice_saved_a 60% + voice_saved_b 40%"),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Generate AI Voice" })).toBeEnabled();
     await screen.findByText("synthetic mixed voice using Saved Alice 60% + Saved Bob 40%");
     expect(screen.getByText("Blend: Saved Alice + Bob")).toBeInTheDocument();
@@ -739,6 +742,9 @@ describe("App", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Create blend from imported voices" }));
     await screen.findByRole("button", { name: "Alice + Bob + Cara" });
+    expect(
+      screen.getByText("multi_reference_prompt - 3 voices - voice_alice 35% + voice_bob 15% + voice_cara 50%"),
+    ).toBeInTheDocument();
 
     const prompt = "Tell me the launch status using the mixed voice.";
     fireEvent.change(screen.getByLabelText("Agent prompt text"), { target: { value: prompt } });
