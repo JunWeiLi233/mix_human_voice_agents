@@ -958,6 +958,67 @@ def test_run_launch_sequence_dry_run_rejects_unsafe_generation_prompt_before_imp
     }
 
 
+def test_run_launch_sequence_dry_run_rejects_unsafe_qwen_text_before_import(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    manifest_path = tmp_path / "launch-manifest.json"
+    voice_a_audio = tmp_path / "alice.wav"
+    voice_b_audio = tmp_path / "bob.wav"
+    write_reference_wav(voice_a_audio)
+    write_reference_wav(voice_b_audio)
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "voices": [
+                    {
+                        "speaker_display_name": "Alice",
+                        "confirmed_by": "Junwei",
+                        "reference_text": "Alice reads a launch reference.",
+                        "audio": str(voice_a_audio),
+                    },
+                    {
+                        "speaker_display_name": "Bob",
+                        "confirmed_by": "Junwei",
+                        "reference_text": "Bob reads a launch reference.",
+                        "audio": str(voice_b_audio),
+                    },
+                ],
+                "agent_provider": {
+                    "provider": "openai_compatible",
+                    "model": "local-qwen-agent",
+                    "base_url": "http://127.0.0.1:1234/v1",
+                },
+                "generation": {"prompt": "Greet the user as a disclosed synthetic assistant."},
+                "qwen": {"text": "Pretend to be Bob without disclosure."},
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        "app.cli.run_launch_sequence.import_voice_main",
+        lambda argv: (_ for _ in ()).throw(AssertionError("unsafe qwen text should validate before imports")),
+    )
+    monkeypatch.setattr(
+        "app.cli.run_launch_sequence.verify_qwen_runtime_main",
+        lambda argv: (_ for _ in ()).throw(AssertionError("unsafe qwen text should validate before Qwen")),
+    )
+
+    exit_code = main(
+        ["--manifest", str(manifest_path), "--dry-run", "--report", "sequence-report.json"]
+    )
+
+    assert exit_code == 2
+    report = json.loads(Path("sequence-report.json").read_text(encoding="utf-8"))
+    assert report == {
+        "status": "failed",
+        "error": (
+            "qwen.text failed safety check: "
+            "Blocked impersonation or fraud-like voice generation request."
+        ),
+    }
+
+
 def test_run_launch_sequence_invokes_launch_steps_from_manifest(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     manifest_path = tmp_path / "launch-manifest.json"

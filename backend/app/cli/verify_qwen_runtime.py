@@ -10,6 +10,7 @@ from app.core.blends import create_blend
 from app.core.generation import build_source_profile_details
 from app.core.qwen_profiles import validate_qwen_voice_profiles
 from app.core.qwen_runtime import resolved_qwen_runtime_config
+from app.core.safety import SafetyError, check_generation_request
 from app.core.storage import GENERATION_ROOT, get_voice_profiles_by_ids
 from app.models.schemas import BlendProfileInput, QwenVerificationReport
 from app.tts.qwen import QwenTtsAdapter, QwenTtsNotConfigured
@@ -91,6 +92,23 @@ def main(argv: Sequence[str] | None = None) -> int:
             {
                 "status": "failed",
                 "error": "Qwen runtime verification requires non-blank verification text.",
+                "voice_profile_ids": profile_ids,
+                "model_id": args.model_id,
+                "device_map": args.device_map,
+                "dtype": args.dtype,
+                "attn_implementation": args.attn_implementation,
+                "tts_backend": "qwen3_tts",
+            },
+        )
+        return 2
+    try:
+        check_generation_request(args.text)
+    except SafetyError as exc:
+        _write_report(
+            Path(args.report),
+            {
+                "status": "failed",
+                "error": str(exc),
                 "voice_profile_ids": profile_ids,
                 "model_id": args.model_id,
                 "device_map": args.device_map,

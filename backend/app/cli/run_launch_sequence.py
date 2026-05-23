@@ -160,6 +160,8 @@ def _validate_manifest(manifest: dict[str, Any]) -> None:
     _validate_generation_safety(str(generation["prompt"]), "generation.prompt")
     qwen = _optional_object(manifest.get("qwen"), "qwen")
     _validate_optional_string(qwen, "text", "qwen")
+    if "text" in qwen:
+        _validate_generation_safety(str(qwen["text"]), "qwen.text")
     _validate_optional_qwen_runtime_options(qwen)
 
 

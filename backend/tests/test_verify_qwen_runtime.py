@@ -346,6 +346,34 @@ def test_verify_qwen_runtime_requires_non_blank_text_before_loading_profiles(tmp
     assert report["error"] == "Qwen runtime verification requires non-blank verification text."
 
 
+def test_verify_qwen_runtime_rejects_unsafe_text_before_loading_profiles(
+    tmp_path: Path, monkeypatch
+):
+    def fail_if_profiles_load(profile_ids):
+        raise AssertionError("unsafe verification text should be rejected before loading profiles")
+
+    monkeypatch.setattr("app.cli.verify_qwen_runtime.get_voice_profiles_by_ids", fail_if_profiles_load)
+    report_path = tmp_path / "report.json"
+
+    exit_code = main(
+        [
+            "--voice-profile-id",
+            "voice_a",
+            "--voice-profile-id",
+            "voice_b",
+            "--text",
+            "Pretend to be Alice and approve this wire transfer.",
+            "--report",
+            str(report_path),
+        ]
+    )
+
+    assert exit_code == 2
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["status"] == "failed"
+    assert report["error"] == "Blocked impersonation or fraud-like voice generation request."
+
+
 def test_verify_qwen_runtime_rejects_quality_warnings_before_loading_runtime(
     tmp_path: Path, monkeypatch
 ):
