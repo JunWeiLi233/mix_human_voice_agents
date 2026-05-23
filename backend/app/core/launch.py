@@ -493,6 +493,14 @@ def _research_review_status() -> dict[str, object]:
             "passed": False,
             "detail": f"{RESEARCH_REVIEW_PATH} must be revalidated within {RESEARCH_REVIEW_MAX_AGE_DAYS} days before launch.",
         }
+    if not _research_review_has_required_source_links(content):
+        return {
+            "passed": False,
+            "detail": (
+                f"{RESEARCH_REVIEW_PATH} must include Source Links for OpenAI, LiveKit, "
+                "Pipecat, and Qwen3-TTS."
+            ),
+        }
 
     return {
         "passed": True,
@@ -508,6 +516,18 @@ def _research_review_last_checked(content: str):
         return datetime.strptime(match.group(1), "%Y-%m-%d").date()
     except ValueError:
         return None
+
+
+def _research_review_has_required_source_links(content: str) -> bool:
+    if "## Source Links" not in content:
+        return False
+    required_links = (
+        "https://platform.openai.com/docs/guides/voice-agents",
+        "https://docs.livekit.io/agents/start/voice-ai/",
+        "https://docs.pipecat.ai/overview/introduction",
+        "https://github.com/QwenLM/Qwen3-TTS",
+    )
+    return all(link in content for link in required_links)
 
 
 def _resolve_research_review_path() -> Path:

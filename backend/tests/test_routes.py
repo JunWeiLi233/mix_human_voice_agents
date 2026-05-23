@@ -585,6 +585,11 @@ def test_launch_readiness_reports_ready_after_full_qwen_verification(tmp_path: P
         "- LiveKit Agents\n"
         "- Pipecat\n"
         "- Qwen3-TTS\n\n"
+        "## Source Links\n\n"
+        "- OpenAI Voice Agents: https://platform.openai.com/docs/guides/voice-agents\n"
+        "- LiveKit Voice AI quickstart: https://docs.livekit.io/agents/start/voice-ai/\n"
+        "- Pipecat introduction: https://docs.pipecat.ai/overview/introduction\n"
+        "- Qwen3-TTS repository: https://github.com/QwenLM/Qwen3-TTS\n\n"
         f"Last checked: {datetime.now().date().isoformat()}.\n",
         encoding="utf-8",
     )

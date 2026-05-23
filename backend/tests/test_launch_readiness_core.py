@@ -66,6 +66,11 @@ def test_core_launch_readiness_accepts_recent_research_review(tmp_path, monkeypa
         "# Mixed Voice Agent Research Review\n\n"
         "## Sources Reviewed\n\n"
         "- Qwen3-TTS\n\n"
+        "## Source Links\n\n"
+        "- OpenAI Voice Agents: https://platform.openai.com/docs/guides/voice-agents\n"
+        "- LiveKit Voice AI quickstart: https://docs.livekit.io/agents/start/voice-ai/\n"
+        "- Pipecat introduction: https://docs.pipecat.ai/overview/introduction\n"
+        "- Qwen3-TTS repository: https://github.com/QwenLM/Qwen3-TTS\n\n"
         f"Last checked: {today}.\n",
         encoding="utf-8",
     )
@@ -76,6 +81,33 @@ def test_core_launch_readiness_accepts_recent_research_review(tmp_path, monkeypa
     assert research_review == {
         "passed": True,
         "detail": f"Reviewed: {research_review_label}",
+    }
+
+
+def test_core_launch_readiness_blocks_recent_research_review_without_source_links(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    research_review_path = tmp_path / "docs" / "research-review.md"
+    research_review_path.parent.mkdir(parents=True)
+    today = datetime.now(timezone.utc).date().isoformat()
+    research_review_path.write_text(
+        "# Mixed Voice Agent Research Review\n\n"
+        "## Sources Reviewed\n\n"
+        "- Qwen3-TTS\n\n"
+        f"Last checked: {today}.\n",
+        encoding="utf-8",
+    )
+
+    research_review = _research_review_status()
+    research_review_label = str(Path("docs") / "research-review.md")
+
+    assert research_review == {
+        "passed": False,
+        "detail": (
+            f"{research_review_label} must include Source Links for OpenAI, LiveKit, "
+            "Pipecat, and Qwen3-TTS."
+        ),
     }
 
 

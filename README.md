@@ -69,6 +69,7 @@ cd backend
 ```
 
 The JSON report includes `next_actions`, a structured list of failed check ids, action text, and evidence for the UI and other agents.
+The research review gate requires a current `Last checked: YYYY-MM-DD` date plus `Source Links` for OpenAI Voice Agents, LiveKit Voice AI, Pipecat, and Qwen3-TTS before launch readiness can pass.
 Passed agent-provider and Qwen verification reports must be no older than 7 days at launch readiness time.
 
 Agent provider preflight report:
