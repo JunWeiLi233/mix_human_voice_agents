@@ -93,7 +93,10 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def _load_manifest(manifest_path: Path) -> dict[str, Any]:
-    return json.loads(manifest_path.read_text(encoding="utf-8"))
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("Launch sequence manifest must be a JSON object.")
+    return payload
 
 
 def _validate_manifest(manifest: dict[str, Any]) -> None:
