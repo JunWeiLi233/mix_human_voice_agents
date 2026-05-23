@@ -96,6 +96,71 @@ describe("App", () => {
     expect(screen.getByLabelText("Import consented voice sample")).toBeEnabled();
   });
 
+  it("switches between the studio, evidence, and launch interface pages", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = input.toString();
+      if (url === "/api/voices") {
+        return jsonResponse([]);
+      }
+      if (url === "/api/generations") {
+        return jsonResponse([]);
+      }
+      if (url === "/api/blends") {
+        return jsonResponse([]);
+      }
+      if (url === "/api/tts/qwen/status") {
+        return jsonResponse({
+          backend: "qwen3_tts",
+          available: false,
+          model_id: "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+          message: "qwen-tts is not installed.",
+        });
+      }
+      if (url === "/api/tts/qwen/verification") {
+        return jsonResponse({
+          status: "missing",
+          tts_backend: "qwen3_tts",
+          report_path: "data/qwen-runtime-verification-report.json",
+          voice_profile_ids: [],
+        });
+      }
+      if (url === "/api/launch/readiness") {
+        return jsonResponse({
+          status: "blocked",
+          blocking_reasons: ["Import at least two consented voice profiles."],
+          checks: [],
+        });
+      }
+      return new Response("not found", { status: 404 });
+    });
+
+    render(<App />);
+    await screen.findByText("No imported voices yet.");
+
+    expect(screen.getByRole("button", { name: "Studio page" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByText("Import Voice")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Evidence page" }));
+
+    expect(screen.getByRole("button", { name: "Evidence page" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByText("Evidence Page")).toBeInTheDocument();
+    expect(screen.getByText("Voice evidence and exports")).toBeInTheDocument();
+    expect(screen.queryByText("Import Voice")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Launch page" }));
+
+    expect(screen.getByRole("button", { name: "Launch page" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByText("Launch Control Page")).toBeInTheDocument();
+    expect(screen.getByText("Launch Readiness")).toBeInTheDocument();
+    expect(screen.getByText("Agent Provider")).toBeInTheDocument();
+    expect(screen.queryByText("Voice evidence and exports")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Studio page" }));
+
+    expect(screen.getByRole("button", { name: "Studio page" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByText("Import Voice")).toBeInTheDocument();
+  });
+
   it("lets the user configure an API model, import voices, blend them, and generate with Qwen", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = input.toString();

@@ -37,7 +37,10 @@ import type {
 } from "./types";
 import "./styles.css";
 
+type WorkspacePage = "studio" | "evidence" | "launch";
+
 export default function App() {
+  const [activePage, setActivePage] = useState<WorkspacePage>("studio");
   const [agentConfig, setAgentConfig] = useState<AgentConfig>({
     provider: "ollama",
     model: "llama3.1",
@@ -297,61 +300,157 @@ export default function App() {
     }
   }
 
+  const pageNav: Array<{ id: WorkspacePage; label: string; description: string }> = [
+    { id: "studio", label: "Studio", description: "Import, blend, and generate" },
+    { id: "evidence", label: "Evidence", description: "Voice records and exports" },
+    { id: "launch", label: "Launch", description: "Provider and runtime checks" },
+  ];
+  const readinessLabel =
+    launchReadiness?.status === "ready" ? "Ready" : launchReadiness?.status === "blocked" ? "Blocked" : "Checking";
+
   return (
-    <main>
-      <header>
-        <p>Local-first prototype</p>
-        <h1>Mixed Voice Agent Studio</h1>
+    <main className="app-shell">
+      <header className="hero">
+        <div className="hero-copy">
+          <p className="eyebrow">Local-first mixed voice agent</p>
+          <h1>Mixed Voice Agent Studio</h1>
+          <p className="hero-text">
+            Build a consent-gated multi-speaker voice blend, connect any API or local LLM, then verify the Qwen
+            runtime before launch.
+          </p>
+        </div>
+        <div className="hero-status" aria-label="Workspace status summary">
+          <span>{readinessLabel}</span>
+          <strong>{voices.length}</strong>
+          <small>imported voices</small>
+          <strong>{generations.length}</strong>
+          <small>generated clips</small>
+        </div>
       </header>
+      <nav className="page-nav" aria-label="Workspace pages">
+        {pageNav.map((page) => (
+          <button
+            key={page.id}
+            type="button"
+            aria-label={`${page.label} page`}
+            aria-current={activePage === page.id ? "page" : undefined}
+            className={activePage === page.id ? "active" : ""}
+            onClick={() => setActivePage(page.id)}
+          >
+            <span>{page.label}</span>
+            <small>{page.description}</small>
+          </button>
+        ))}
+      </nav>
       {error ? (
         <div className="error" role="alert">
           {error}
         </div>
       ) : null}
-      <div className="layout">
-        <AgentProviderSettings
-          value={agentConfig}
-          verification={agentProviderVerification}
-          testReply={agentProviderTestReply}
-          testing={agentProviderTesting}
-          onChange={setAgentConfig}
-          onTestProvider={handleTestAgentProvider}
-        />
-        <VoiceEngineSettings
-          value={ttsBackend}
-          status={qwenStatus}
-          verification={qwenVerification}
-          voices={voices}
-          selectedVerificationVoiceIds={qwenVerificationVoiceIds}
-          verificationText={qwenVerificationText}
-          runtimeConfig={qwenRuntimeConfig}
-          verificationBusy={qwenVerificationBusy}
-          onChange={setTtsBackend}
-          onToggleVerificationVoice={(voiceProfileId) => {
-            setQwenVerificationVoiceIds((currentIds) =>
-              currentIds.includes(voiceProfileId)
-                ? currentIds.filter((id) => id !== voiceProfileId)
-                : [...currentIds, voiceProfileId],
-            );
-          }}
-          onVerificationTextChange={setQwenVerificationText}
-          onRuntimeConfigChange={setQwenRuntimeConfig}
-          onRunVerification={handleRunQwenVerification}
-        />
-        <LaunchReadiness readiness={launchReadiness} />
-        <VoiceLibrary voices={voices} onDeleteVoice={handleDeleteVoice} />
-        <ImportVoice onImported={handleImported} />
-        <BlendMixer
-          blend={blend}
-          profiles={blendProfiles}
-          savedBlends={savedBlends}
-          onCreateBlend={handleCreateBlend}
-          onSelectBlend={setBlend}
-          onWeightChange={handleBlendWeightChange}
-        />
-        <AgentChat blend={blend} onGenerate={handleGenerate} />
-        <GenerationHistory generations={generations} />
-      </div>
+      {activePage === "studio" ? (
+        <>
+          <section className="page-intro" aria-labelledby="studio-page-heading">
+            <p className="eyebrow">Studio Page</p>
+            <h2 id="studio-page-heading">Build the mixed voice workflow</h2>
+          </section>
+          <div className="layout studio-layout">
+            <AgentProviderSettings
+              value={agentConfig}
+              verification={agentProviderVerification}
+              testReply={agentProviderTestReply}
+              testing={agentProviderTesting}
+              onChange={setAgentConfig}
+              onTestProvider={handleTestAgentProvider}
+            />
+            <VoiceEngineSettings
+              value={ttsBackend}
+              status={qwenStatus}
+              verification={qwenVerification}
+              voices={voices}
+              selectedVerificationVoiceIds={qwenVerificationVoiceIds}
+              verificationText={qwenVerificationText}
+              runtimeConfig={qwenRuntimeConfig}
+              verificationBusy={qwenVerificationBusy}
+              onChange={setTtsBackend}
+              onToggleVerificationVoice={(voiceProfileId) => {
+                setQwenVerificationVoiceIds((currentIds) =>
+                  currentIds.includes(voiceProfileId)
+                    ? currentIds.filter((id) => id !== voiceProfileId)
+                    : [...currentIds, voiceProfileId],
+                );
+              }}
+              onVerificationTextChange={setQwenVerificationText}
+              onRuntimeConfigChange={setQwenRuntimeConfig}
+              onRunVerification={handleRunQwenVerification}
+            />
+            <LaunchReadiness readiness={launchReadiness} />
+            <VoiceLibrary voices={voices} onDeleteVoice={handleDeleteVoice} />
+            <ImportVoice onImported={handleImported} />
+            <BlendMixer
+              blend={blend}
+              profiles={blendProfiles}
+              savedBlends={savedBlends}
+              onCreateBlend={handleCreateBlend}
+              onSelectBlend={setBlend}
+              onWeightChange={handleBlendWeightChange}
+            />
+            <AgentChat blend={blend} onGenerate={handleGenerate} />
+            <GenerationHistory generations={generations} />
+          </div>
+        </>
+      ) : null}
+      {activePage === "evidence" ? (
+        <>
+          <section className="page-intro" aria-labelledby="evidence-page-heading">
+            <p className="eyebrow">Evidence Page</p>
+            <h2 id="evidence-page-heading">Voice evidence and exports</h2>
+          </section>
+          <div className="layout evidence-layout">
+            <VoiceLibrary voices={voices} onDeleteVoice={handleDeleteVoice} />
+            <GenerationHistory generations={generations} />
+          </div>
+        </>
+      ) : null}
+      {activePage === "launch" ? (
+        <>
+          <section className="page-intro" aria-labelledby="launch-page-heading">
+            <p className="eyebrow">Launch Control Page</p>
+            <h2 id="launch-page-heading">Verify provider, runtime, and release gates</h2>
+          </section>
+          <div className="layout launch-layout">
+            <LaunchReadiness readiness={launchReadiness} />
+            <AgentProviderSettings
+              value={agentConfig}
+              verification={agentProviderVerification}
+              testReply={agentProviderTestReply}
+              testing={agentProviderTesting}
+              onChange={setAgentConfig}
+              onTestProvider={handleTestAgentProvider}
+            />
+            <VoiceEngineSettings
+              value={ttsBackend}
+              status={qwenStatus}
+              verification={qwenVerification}
+              voices={voices}
+              selectedVerificationVoiceIds={qwenVerificationVoiceIds}
+              verificationText={qwenVerificationText}
+              runtimeConfig={qwenRuntimeConfig}
+              verificationBusy={qwenVerificationBusy}
+              onChange={setTtsBackend}
+              onToggleVerificationVoice={(voiceProfileId) => {
+                setQwenVerificationVoiceIds((currentIds) =>
+                  currentIds.includes(voiceProfileId)
+                    ? currentIds.filter((id) => id !== voiceProfileId)
+                    : [...currentIds, voiceProfileId],
+                );
+              }}
+              onVerificationTextChange={setQwenVerificationText}
+              onRuntimeConfigChange={setQwenRuntimeConfig}
+              onRunVerification={handleRunQwenVerification}
+            />
+          </div>
+        </>
+      ) : null}
     </main>
   );
 }
