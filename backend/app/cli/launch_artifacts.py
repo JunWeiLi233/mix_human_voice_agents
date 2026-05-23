@@ -10,7 +10,13 @@ from pydantic import ValidationError
 from app.core.audio import is_parseable_wav, wav_has_audible_signal
 from app.core.launch import get_agent_provider_verification_report, get_qwen_verification_report
 from app.core.storage import list_blends, list_generation_results, list_voice_profiles
-from app.models.schemas import AgentProviderVerificationReport, GenerationResult, VoiceBlend, VoiceProfile
+from app.models.schemas import (
+    AgentProviderVerificationReport,
+    GenerationResult,
+    QwenVerificationReport,
+    VoiceBlend,
+    VoiceProfile,
+)
 from app.tts.qwen import QwenTtsAdapter
 
 
@@ -64,7 +70,9 @@ def collect_launch_artifacts() -> dict[str, object]:
     stale_blend_ids = [
         blend.id for blend, status in zip(blends, blend_statuses, strict=True) if not status["launch_eligible"]
     ]
-    generation_statuses = [_generation_status(generation, blends, agent_provider) for generation in generations]
+    generation_statuses = [
+        _generation_status(generation, blends, agent_provider, qwen_verification) for generation in generations
+    ]
     launch_eligible_generation_ids = [
         generation.id
         for generation, status in zip(generations, generation_statuses, strict=True)
@@ -322,6 +330,7 @@ def _generation_status(
     generation: GenerationResult,
     blends: list[VoiceBlend],
     agent_provider: AgentProviderVerificationReport,
+    qwen_verification: QwenVerificationReport,
 ) -> dict[str, object]:
     reasons: list[str] = []
     if generation.tts_backend != "qwen3_tts":
@@ -348,6 +357,8 @@ def _generation_status(
     }
     if len(generation.source_profile_details) >= 2 and len(distinct_speakers) < 2:
         reasons.append("Qwen generation must include at least two distinct source speakers.")
+    if not _generation_matches_qwen_verification(generation, qwen_verification):
+        reasons.append("Qwen generation must match each verified Qwen voice id exactly once.")
     if generation.agent_trace is None:
         reasons.append("Qwen generation must include an agent provider trace.")
     elif not _generation_matches_agent_provider(generation, agent_provider):
@@ -376,6 +387,15 @@ def _generation_status(
         "launch_eligible": not reasons,
         "stale_reasons": reasons,
     }
+
+
+def _generation_matches_qwen_verification(
+    generation: GenerationResult,
+    qwen_verification: QwenVerificationReport,
+) -> bool:
+    if qwen_verification.status != "passed":
+        return True
+    return sorted(generation.source_profile_ids) == sorted(qwen_verification.voice_profile_ids)
 
 
 def _generation_matches_agent_provider(
