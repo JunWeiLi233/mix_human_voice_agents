@@ -1230,6 +1230,9 @@ describe("App", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Claude" }));
     fireEvent.change(screen.getByLabelText("API key"), { target: { value: "sk-test" } });
+    fireEvent.change(screen.getByLabelText("Agent system prompt"), {
+      target: { value: "Speak as a concise disclosed mixed-voice assistant." },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Test provider" }));
 
     expect(await screen.findByText("Provider test reply")).toBeInTheDocument();
@@ -1240,6 +1243,7 @@ describe("App", () => {
         base_url: "https://api.anthropic.com",
         model: "claude-sonnet-4-5",
         api_key: "sk-test",
+        system_prompt: "Speak as a concise disclosed mixed-voice assistant.",
       },
     });
   });
@@ -1355,12 +1359,18 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Local" }));
     fireEvent.change(screen.getByLabelText("Base URL"), { target: { value: "http://127.0.0.1:1234" } });
     fireEvent.change(screen.getByLabelText("Model"), { target: { value: "qwen2.5:14b" } });
+    fireEvent.change(screen.getByLabelText("Agent system prompt"), {
+      target: { value: "Use the local model as a disclosed private mixed-voice assistant." },
+    });
     firstRender.unmount();
 
     render(<App />);
 
     expect(await screen.findByLabelText("Base URL")).toHaveValue("http://127.0.0.1:1234");
     expect(screen.getByLabelText("Model")).toHaveValue("qwen2.5:14b");
+    expect(screen.getByLabelText("Agent system prompt")).toHaveValue(
+      "Use the local model as a disclosed private mixed-voice assistant.",
+    );
     expect(screen.queryByLabelText("API key")).not.toBeInTheDocument();
   });
 

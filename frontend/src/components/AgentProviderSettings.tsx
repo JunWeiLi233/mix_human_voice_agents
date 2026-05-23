@@ -89,6 +89,13 @@ export function AgentProviderSettings({
         Model
         <input value={value.model} onChange={(event) => update({ model: event.target.value })} />
       </label>
+      <label>
+        Agent system prompt
+        <textarea
+          value={value.system_prompt}
+          onChange={(event) => update({ system_prompt: event.target.value })}
+        />
+      </label>
       {value.provider !== "ollama" ? (
         <label>
           API key{value.provider === "openai_compatible" ? " (optional)" : ""}
