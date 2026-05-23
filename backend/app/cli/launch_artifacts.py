@@ -42,14 +42,25 @@ def collect_launch_artifacts() -> dict[str, object]:
     qwen_verification = get_qwen_verification_report()
     qwen_runtime = QwenTtsAdapter.runtime_status()
     usable_voice_ids = [voice.id for voice in voices if _voice_is_usable(voice)]
+    blend_statuses = [_blend_status(blend, usable_voice_ids) for blend in blends]
+    launch_eligible_blend_ids = [
+        blend.id for blend, status in zip(blends, blend_statuses, strict=True) if status["launch_eligible"]
+    ]
+    stale_blend_ids = [
+        blend.id for blend, status in zip(blends, blend_statuses, strict=True) if not status["launch_eligible"]
+    ]
 
     return {
         "voice_count": len(voices),
         "blend_count": len(blends),
+        "launch_eligible_blend_count": len(launch_eligible_blend_ids),
+        "stale_blend_count": len(stale_blend_ids),
         "generation_count": len(generations),
         "voices": [_voice_payload(voice) for voice in voices],
         "usable_voice_ids": usable_voice_ids,
-        "blends": [_blend_payload(blend) for blend in blends],
+        "launch_eligible_blend_ids": launch_eligible_blend_ids,
+        "stale_blend_ids": stale_blend_ids,
+        "blends": [_blend_payload(blend, status) for blend, status in zip(blends, blend_statuses, strict=True)],
         "generations": [_generation_payload(generation) for generation in generations],
         "agent_provider": agent_provider.model_dump(mode="json"),
         "agent_provider_commands": _agent_provider_commands(),
@@ -78,13 +89,14 @@ def _voice_payload(voice: VoiceProfile) -> dict[str, object]:
     }
 
 
-def _blend_payload(blend: VoiceBlend) -> dict[str, object]:
+def _blend_payload(blend: VoiceBlend, status: dict[str, object]) -> dict[str, object]:
     return {
         "id": blend.id,
         "name": blend.name,
         "strategy": blend.strategy,
         "voice_profile_ids": [profile.voice_profile_id for profile in blend.profiles],
         "profiles": [profile.model_dump(mode="json") for profile in blend.profiles],
+        **status,
     }
 
 
@@ -176,6 +188,21 @@ def _has_blend_for_voices(blends: list[VoiceBlend], voice_ids: list[str]) -> boo
     return False
 
 
+def _blend_status(blend: VoiceBlend, usable_voice_ids: list[str]) -> dict[str, object]:
+    usable_ids = set(usable_voice_ids)
+    blend_ids = [profile.voice_profile_id for profile in blend.profiles]
+    missing_voice_profile_ids = sorted({voice_id for voice_id in blend_ids if voice_id not in usable_ids})
+    launch_eligible = (
+        blend.strategy == "multi_reference_prompt"
+        and len(set(blend_ids)) >= 2
+        and not missing_voice_profile_ids
+    )
+    return {
+        "launch_eligible": launch_eligible,
+        "missing_voice_profile_ids": missing_voice_profile_ids,
+    }
+
+
 def _voice_is_usable(voice: VoiceProfile) -> bool:
     return (
         _voice_allows_private_agent_voice(voice)
@@ -192,6 +219,10 @@ def _print_summary(report: dict[str, object]) -> None:
     print(
         "Launch artifacts: "
         f"{report['voice_count']} voices, {report['blend_count']} blends, {report['generation_count']} generations"
+    )
+    print(
+        "Launch-eligible blends: "
+        f"{report['launch_eligible_blend_count']}; stale/nonmatching blends: {report['stale_blend_count']}"
     )
     for voice in report["voices"]:
         print(f"{voice['id']}: {voice['display_name']}")

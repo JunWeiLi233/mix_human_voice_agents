@@ -8,6 +8,8 @@ from app.models.schemas import (
     ConsentRecord,
     QwenVerificationReport,
     TtsRuntimeStatus,
+    VoiceBlend,
+    BlendProfile,
     VoiceProfile,
 )
 
@@ -77,6 +79,81 @@ def test_launch_artifacts_cli_writes_inventory_with_next_commands(tmp_path: Path
     assert "ChatGPT: python -m app.cli.verify_agent_provider --provider openai" in output
     assert "Claude: python -m app.cli.verify_agent_provider --provider anthropic" in output
     assert "Grok: python -m app.cli.verify_agent_provider --provider xai" in output
+
+
+def test_launch_artifacts_cli_separates_launch_eligible_and_stale_blends(tmp_path: Path, monkeypatch, capsys):
+    voices = [
+        voice_profile("voice_alice", "Alice"),
+        voice_profile("voice_bob", "Bob"),
+    ]
+    blends = [
+        VoiceBlend(
+            id="blend_launch_ready",
+            name="Alice + Bob",
+            strategy="multi_reference_prompt",
+            profiles=[
+                BlendProfile(voice_profile_id="voice_alice", weight=0.5),
+                BlendProfile(voice_profile_id="voice_bob", weight=0.5),
+            ],
+        ),
+        VoiceBlend(
+            id="blend_stale",
+            name="Old Alice + Missing",
+            strategy="multi_reference_prompt",
+            profiles=[
+                BlendProfile(voice_profile_id="voice_alice", weight=0.5),
+                BlendProfile(voice_profile_id="voice_missing", weight=0.5),
+            ],
+        ),
+    ]
+    monkeypatch.setattr("app.cli.launch_artifacts.list_voice_profiles", lambda: voices)
+    monkeypatch.setattr("app.cli.launch_artifacts.list_blends", lambda: blends)
+    monkeypatch.setattr("app.cli.launch_artifacts.list_generation_results", lambda: [])
+    monkeypatch.setattr(
+        "app.cli.launch_artifacts.get_agent_provider_verification_report",
+        lambda: AgentProviderVerificationReport(
+            status="passed",
+            report_path="data/agent-provider-verification-report.json",
+            provider="openai_compatible",
+            model="local-model",
+            base_url="http://127.0.0.1:1234/v1",
+            reply="Provider connected.",
+        ),
+    )
+    monkeypatch.setattr(
+        "app.cli.launch_artifacts.get_qwen_verification_report",
+        lambda: QwenVerificationReport(
+            status="missing",
+            report_path="data/qwen-runtime-verification-report.json",
+            error="Run python -m app.cli.verify_qwen_runtime with two consented voice profile ids.",
+        ),
+    )
+    monkeypatch.setattr(
+        "app.cli.launch_artifacts.QwenTtsAdapter.runtime_status",
+        lambda: TtsRuntimeStatus(
+            backend="qwen3_tts",
+            available=True,
+            model_id="Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+            message="qwen-tts package is importable.",
+        ),
+    )
+    report_path = tmp_path / "launch-artifacts.json"
+
+    exit_code = main(["--report", str(report_path), "--summary"])
+
+    assert exit_code == 0
+    payload = json.loads(report_path.read_text(encoding="utf-8"))
+    assert payload["blend_count"] == 2
+    assert payload["launch_eligible_blend_count"] == 1
+    assert payload["stale_blend_count"] == 1
+    assert payload["launch_eligible_blend_ids"] == ["blend_launch_ready"]
+    assert payload["stale_blend_ids"] == ["blend_stale"]
+    assert payload["blends"][0]["launch_eligible"] is True
+    assert payload["blends"][1]["launch_eligible"] is False
+    assert payload["blends"][1]["missing_voice_profile_ids"] == ["voice_missing"]
+    assert 'python -m app.cli.create_blend --name "Launch mixed voice"' not in payload["next_commands"]
+    output = capsys.readouterr().out
+    assert "Launch-eligible blends: 1; stale/nonmatching blends: 1" in output
 
 
 def voice_profile(profile_id: str, display_name: str) -> VoiceProfile:
