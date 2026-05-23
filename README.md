@@ -98,6 +98,52 @@ cd backend
 .\.venv\Scripts\python -m app.cli.generate_voice --blend-id blend_launch --prompt "Greet the user as a disclosed synthetic assistant." --provider openai_compatible --model local-qwen-agent --base-url http://127.0.0.1:1234/v1 --metadata data\generations\last-generated-mixed-voice.json
 ```
 
+Single-command launch sequence from a JSON manifest:
+
+```powershell
+cd backend
+.\.venv\Scripts\python -m app.cli.run_launch_sequence --manifest launch-manifest.json --tasks ..\TASKS.md
+```
+
+Manifest shape:
+
+```json
+{
+  "voices": [
+    {
+      "speaker_display_name": "Alice",
+      "confirmed_by": "Junwei",
+      "notes": "Written permission captured for private local mixed voice testing.",
+      "reference_text": "Alice reads a clean reference sentence for Qwen cloning.",
+      "audio": "C:\\path\\to\\alice.wav",
+      "weight": 1
+    },
+    {
+      "speaker_display_name": "Bob",
+      "confirmed_by": "Junwei",
+      "reference_text": "Bob reads a clean reference sentence for Qwen cloning.",
+      "audio": "C:\\path\\to\\bob.wav",
+      "weight": 1
+    }
+  ],
+  "blend": { "name": "Launch blend" },
+  "agent_provider": {
+    "provider": "openai_compatible",
+    "model": "local-qwen-agent",
+    "base_url": "http://127.0.0.1:1234/v1",
+    "api_key": ""
+  },
+  "qwen": {
+    "text": "This is a disclosed synthetic mixed voice runtime verification.",
+    "model_id": "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+    "device_map": "auto"
+  },
+  "generation": {
+    "prompt": "Greet the user as a disclosed synthetic assistant."
+  }
+}
+```
+
 Refresh the handoff tasks from the same launch-readiness evidence:
 
 ```powershell

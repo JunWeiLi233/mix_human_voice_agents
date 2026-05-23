@@ -1,0 +1,228 @@
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+from typing import Any, Sequence
+
+from app.cli.create_blend import main as create_blend_main
+from app.cli.generate_voice import main as generate_voice_main
+from app.cli.import_voice import main as import_voice_main
+from app.cli.launch_readiness import main as launch_readiness_main
+from app.cli.verify_agent_provider import main as verify_agent_provider_main
+from app.cli.verify_qwen_runtime import main as verify_qwen_runtime_main
+
+
+DEFAULT_OUTPUT_DIR = Path("data") / "launch-sequence"
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Run the full terminal launch sequence from a JSON manifest.")
+    parser.add_argument("--manifest", required=True, help="Path to the launch sequence JSON manifest.")
+    parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR), help="Directory for intermediate reports.")
+    parser.add_argument("--report", default=str(DEFAULT_OUTPUT_DIR / "sequence-report.json"))
+    parser.add_argument("--tasks", default="../TASKS.md", help="TASKS.md path to refresh at the end.")
+    args = parser.parse_args(argv)
+
+    report_path = Path(args.report)
+    try:
+        manifest = _load_manifest(Path(args.manifest))
+        _validate_manifest(manifest)
+        output_dir = Path(args.output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        imported_voice_ids = _run_voice_imports(manifest["voices"], output_dir)
+        blend_id = _run_blend_creation(manifest, imported_voice_ids, output_dir)
+        _run_agent_provider_verification(manifest["agent_provider"])
+        _run_qwen_verification(manifest, imported_voice_ids)
+        _run_generation(manifest, blend_id, output_dir)
+        launch_readiness_main(
+            [
+                "--report",
+                str(Path("data") / "launch-readiness-report.json"),
+                "--tasks",
+                str(args.tasks),
+            ]
+        )
+    except (KeyError, OSError, ValueError, json.JSONDecodeError) as exc:
+        _write_report(report_path, {"status": "failed", "error": str(exc)})
+        return 2
+
+    _write_report(
+        report_path,
+        {
+            "status": "passed",
+            "voice_profile_ids": imported_voice_ids,
+            "blend_id": blend_id,
+            "launch_readiness_report": str(Path("data") / "launch-readiness-report.json"),
+        },
+    )
+    return 0
+
+
+def _load_manifest(manifest_path: Path) -> dict[str, Any]:
+    return json.loads(manifest_path.read_text(encoding="utf-8"))
+
+
+def _validate_manifest(manifest: dict[str, Any]) -> None:
+    voices = manifest.get("voices", [])
+    if len(voices) < 2:
+        raise ValueError("Launch sequence manifest requires at least two voices.")
+    for index, voice in enumerate(voices, start=1):
+        _require(voice, "speaker_display_name", f"voices[{index}]")
+        _require(voice, "confirmed_by", f"voices[{index}]")
+        _require(voice, "reference_text", f"voices[{index}]")
+        _require(voice, "audio", f"voices[{index}]")
+    provider = manifest.get("agent_provider") or {}
+    _require(provider, "provider", "agent_provider")
+    _require(provider, "model", "agent_provider")
+    _require(provider, "base_url", "agent_provider")
+    generation = manifest.get("generation") or {}
+    _require(generation, "prompt", "generation")
+
+
+def _require(payload: dict[str, Any], key: str, label: str) -> None:
+    if not str(payload.get(key, "")).strip():
+        raise ValueError(f"{label}.{key} is required.")
+
+
+def _run_voice_imports(voices: list[dict[str, Any]], output_dir: Path) -> list[str]:
+    imported_voice_ids: list[str] = []
+    for index, voice in enumerate(voices, start=1):
+        metadata_path = output_dir / f"voice-{index}.json"
+        exit_code = import_voice_main(
+            [
+                "--speaker-display-name",
+                str(voice["speaker_display_name"]),
+                "--confirmed-by",
+                str(voice["confirmed_by"]),
+                "--notes",
+                str(voice.get("notes", "")),
+                "--reference-text",
+                str(voice["reference_text"]),
+                "--audio",
+                str(voice["audio"]),
+                "--metadata",
+                str(metadata_path),
+            ]
+        )
+        if exit_code != 0:
+            raise ValueError(f"Voice import failed for {voice['speaker_display_name']}.")
+        payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+        imported_voice_ids.append(str(payload["id"]))
+    return imported_voice_ids
+
+
+def _run_blend_creation(manifest: dict[str, Any], voice_ids: list[str], output_dir: Path) -> str:
+    blend = manifest.get("blend") or {}
+    metadata_path = output_dir / "blend.json"
+    args = [
+        "--name",
+        str(blend.get("name", "Launch blend")),
+        "--strategy",
+        str(blend.get("strategy", "multi_reference_prompt")),
+        "--metadata",
+        str(metadata_path),
+    ]
+    for voice_id, voice in zip(voice_ids, manifest["voices"]):
+        args.extend(["--profile", f"{voice_id}={voice.get('weight', 1)}"])
+    exit_code = create_blend_main(args)
+    if exit_code != 0:
+        raise ValueError("Blend creation failed.")
+    return str(json.loads(metadata_path.read_text(encoding="utf-8"))["id"])
+
+
+def _run_agent_provider_verification(provider: dict[str, Any]) -> None:
+    args = [
+        "--provider",
+        str(provider["provider"]),
+        "--model",
+        str(provider["model"]),
+        "--base-url",
+        str(provider["base_url"]),
+        "--api-key",
+        str(provider.get("api_key", "")),
+        "--system-prompt",
+        str(provider.get("system_prompt", "You are a disclosed synthetic mixed-voice assistant.")),
+        "--report",
+        str(Path("data") / "agent-provider-verification-report.json"),
+    ]
+    if provider.get("prompt"):
+        args.extend(["--prompt", str(provider["prompt"])])
+    if verify_agent_provider_main(args) != 0:
+        raise ValueError("Agent provider verification failed.")
+
+
+def _run_qwen_verification(manifest: dict[str, Any], voice_ids: list[str]) -> None:
+    qwen = manifest.get("qwen") or {}
+    args = [
+        "--text",
+        str(qwen.get("text", "This is a disclosed synthetic mixed voice runtime verification.")),
+        "--report",
+        str(Path("data") / "qwen-runtime-verification-report.json"),
+    ]
+    for voice_id in voice_ids:
+        args.extend(["--voice-profile-id", voice_id])
+    _append_optional_qwen_args(args, qwen)
+    if verify_qwen_runtime_main(args) != 0:
+        raise ValueError("Qwen runtime verification failed.")
+
+
+def _run_generation(manifest: dict[str, Any], blend_id: str, output_dir: Path) -> None:
+    provider = manifest["agent_provider"]
+    qwen = manifest.get("qwen") or {}
+    generation = manifest["generation"]
+    args = [
+        "--blend-id",
+        blend_id,
+        "--prompt",
+        str(generation["prompt"]),
+        "--provider",
+        str(provider["provider"]),
+        "--model",
+        str(provider["model"]),
+        "--base-url",
+        str(provider["base_url"]),
+        "--api-key",
+        str(provider.get("api_key", "")),
+        "--system-prompt",
+        str(provider.get("system_prompt", "You are a disclosed synthetic mixed-voice assistant.")),
+        "--metadata",
+        str(output_dir / "generation.json"),
+    ]
+    _append_optional_qwen_generation_args(args, qwen)
+    if generate_voice_main(args) != 0:
+        raise ValueError("Qwen mixed voice generation failed.")
+
+
+def _append_optional_qwen_args(args: list[str], qwen: dict[str, Any]) -> None:
+    mapping = {
+        "model_id": "--model-id",
+        "device_map": "--device-map",
+        "dtype": "--dtype",
+        "attn_implementation": "--attn-implementation",
+    }
+    for key, option in mapping.items():
+        if qwen.get(key) is not None:
+            args.extend([option, str(qwen[key])])
+
+
+def _append_optional_qwen_generation_args(args: list[str], qwen: dict[str, Any]) -> None:
+    mapping = {
+        "model_id": "--qwen-model-id",
+        "device_map": "--qwen-device-map",
+        "dtype": "--qwen-dtype",
+        "attn_implementation": "--qwen-attn-implementation",
+    }
+    for key, option in mapping.items():
+        if qwen.get(key) is not None:
+            args.extend([option, str(qwen[key])])
+
+
+def _write_report(report_path: Path, payload: dict[str, object]) -> None:
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
