@@ -93,7 +93,8 @@ def generate_agent_reply(
     if config.provider in {"openai", "xai", "openai_compatible"}:
         if not config.api_key.strip():
             raise AgentProviderError("API key is required for OpenAI-compatible providers.")
-        response = client.post(
+        response = _post_provider_request(
+            client,
             f"{base_url}/chat/completions",
             headers={
                 "Authorization": f"Bearer {config.api_key}",
@@ -108,7 +109,8 @@ def generate_agent_reply(
     elif config.provider == "anthropic":
         if not config.api_key.strip():
             raise AgentProviderError("API key is required for Anthropic providers.")
-        response = client.post(
+        response = _post_provider_request(
+            client,
             f"{base_url}/v1/messages",
             headers={
                 "x-api-key": config.api_key,
@@ -124,7 +126,8 @@ def generate_agent_reply(
     elif config.provider == "google":
         if not config.api_key.strip():
             raise AgentProviderError("API key is required for Google Gemini providers.")
-        response = client.post(
+        response = _post_provider_request(
+            client,
             f"{base_url}/{_google_model_path(config.model)}:generateContent",
             headers={
                 "x-goog-api-key": config.api_key,
@@ -137,7 +140,8 @@ def generate_agent_reply(
         data = response.json()
         reply = _extract_google_reply(data)
     elif config.provider == "ollama":
-        response = client.post(
+        response = _post_provider_request(
+            client,
             f"{base_url}/api/chat",
             headers={"Content-Type": "application/json"},
             json={**build_agent_payload(config, prompt), "stream": False},
@@ -162,6 +166,19 @@ def generate_agent_reply_record(prompt: str, config: AgentConfig) -> AgentReply:
 def _validate_agent_reply_text(reply: str) -> None:
     if not reply.strip():
         raise AgentProviderError("Agent provider response must include non-empty text.")
+
+
+def _post_provider_request(
+    client: HttpClient,
+    url: str,
+    headers: dict[str, str],
+    json: dict[str, Any],
+    timeout: float,
+) -> Any:
+    try:
+        return client.post(url, headers=headers, json=json, timeout=timeout)
+    except httpx.HTTPError as exc:
+        raise AgentProviderError(f"Agent provider request failed: {exc}") from exc
 
 
 def _raise_for_provider_status(response: Any) -> None:

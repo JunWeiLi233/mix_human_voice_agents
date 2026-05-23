@@ -39,6 +39,13 @@ class FailingHttpClient(FakeHttpClient):
         return FailingHttpResponse(self.payload)
 
 
+class NetworkFailingHttpClient(FakeHttpClient):
+    def post(self, url, headers=None, json=None, timeout=None):
+        self.requests.append({"url": url, "headers": headers, "json": json, "timeout": timeout})
+        request = httpx.Request("POST", url)
+        raise httpx.ConnectError("connection refused", request=request)
+
+
 def config(provider: AgentProviderKind) -> AgentConfig:
     base_urls = {
         "openai": "https://api.openai.com/v1",
@@ -233,6 +240,17 @@ def test_openai_compatible_provider_wraps_http_status_errors():
     client = FailingHttpClient({})
 
     with pytest.raises(AgentProviderError, match="Agent provider request failed: 401 Unauthorized"):
+        generate_agent_reply(
+            prompt="Say hello.",
+            config=config("openai_compatible"),
+            http_client=client,
+        )
+
+
+def test_openai_compatible_provider_wraps_request_errors():
+    client = NetworkFailingHttpClient({})
+
+    with pytest.raises(AgentProviderError, match="Agent provider request failed: connection refused"):
         generate_agent_reply(
             prompt="Say hello.",
             config=config("openai_compatible"),
