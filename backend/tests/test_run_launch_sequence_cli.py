@@ -1,5 +1,8 @@
 import json
+import math
 from pathlib import Path
+import struct
+import wave
 
 from app.cli.run_launch_sequence import main
 
@@ -9,8 +12,8 @@ def test_run_launch_sequence_invokes_launch_steps_from_manifest(tmp_path: Path, 
     manifest_path = tmp_path / "launch-manifest.json"
     voice_a_audio = tmp_path / "alice.wav"
     voice_b_audio = tmp_path / "bob.wav"
-    voice_a_audio.write_bytes(b"fake-audio-a")
-    voice_b_audio.write_bytes(b"fake-audio-b")
+    write_reference_wav(voice_a_audio)
+    write_reference_wav(voice_b_audio)
     manifest_path.write_text(
         json.dumps(
             {
@@ -194,13 +197,62 @@ def test_run_launch_sequence_rejects_missing_audio_file_before_import(tmp_path: 
     }
 
 
+def test_run_launch_sequence_rejects_invalid_wav_before_import(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    manifest_path = tmp_path / "launch-manifest.json"
+    invalid_audio = tmp_path / "alice.wav"
+    bob_audio = tmp_path / "bob.wav"
+    invalid_audio.write_bytes(b"not-a-wav")
+    bob_audio.write_bytes(b"also-not-used")
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "voices": [
+                    {
+                        "speaker_display_name": "Alice",
+                        "confirmed_by": "Junwei",
+                        "reference_text": "Alice reads a launch reference.",
+                        "audio": str(invalid_audio),
+                    },
+                    {
+                        "speaker_display_name": "Bob",
+                        "confirmed_by": "Junwei",
+                        "reference_text": "Bob reads a launch reference.",
+                        "audio": str(bob_audio),
+                    },
+                ],
+                "agent_provider": {
+                    "provider": "openai_compatible",
+                    "model": "local-qwen-agent",
+                    "base_url": "http://127.0.0.1:1234/v1",
+                },
+                "generation": {"prompt": "Greet the user as a disclosed synthetic assistant."},
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        "app.cli.run_launch_sequence.import_voice_main",
+        lambda argv: (_ for _ in ()).throw(AssertionError("invalid wav should validate before imports")),
+    )
+
+    exit_code = main(["--manifest", str(manifest_path), "--report", "sequence-report.json"])
+
+    assert exit_code == 2
+    report = json.loads(Path("sequence-report.json").read_text(encoding="utf-8"))
+    assert report == {
+        "status": "failed",
+        "error": f"voices[1].audio must be a parseable WAV file: {invalid_audio}",
+    }
+
+
 def test_run_launch_sequence_fails_when_final_readiness_is_blocked(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     manifest_path = tmp_path / "launch-manifest.json"
     voice_a_audio = tmp_path / "alice.wav"
     voice_b_audio = tmp_path / "bob.wav"
-    voice_a_audio.write_bytes(b"fake-audio-a")
-    voice_b_audio.write_bytes(b"fake-audio-b")
+    write_reference_wav(voice_a_audio)
+    write_reference_wav(voice_b_audio)
     manifest_path.write_text(
         json.dumps(
             {
@@ -258,3 +310,19 @@ def test_run_launch_sequence_fails_when_final_readiness_is_blocked(tmp_path: Pat
         "status": "failed",
         "error": "Launch readiness remained blocked after the sequence.",
     }
+
+
+def write_reference_wav(path: Path) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    sample_rate = 16000
+    duration_seconds = 5
+    with wave.open(str(path), "wb") as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(sample_rate)
+        frames = b"".join(
+            struct.pack("<h", int(12000 * math.sin(2 * math.pi * 440 * index / sample_rate)))
+            for index in range(sample_rate * duration_seconds)
+        )
+        wav_file.writeframes(frames)
+    return path

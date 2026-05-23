@@ -11,6 +11,7 @@ from app.cli.import_voice import main as import_voice_main
 from app.cli.launch_readiness import main as launch_readiness_main
 from app.cli.verify_agent_provider import main as verify_agent_provider_main
 from app.cli.verify_qwen_runtime import main as verify_qwen_runtime_main
+from app.core.audio import is_parseable_wav, wav_has_audible_signal
 
 
 DEFAULT_OUTPUT_DIR = Path("data") / "launch-sequence"
@@ -88,6 +89,10 @@ def _validate_manifest(manifest: dict[str, Any]) -> None:
             raise ValueError(f"voices[{index}].audio does not exist: {audio_path}")
         if not audio_path.is_file():
             raise ValueError(f"voices[{index}].audio must be a file: {audio_path}")
+        if not is_parseable_wav(audio_path):
+            raise ValueError(f"voices[{index}].audio must be a parseable WAV file: {audio_path}")
+        if not wav_has_audible_signal(audio_path):
+            raise ValueError(f"voices[{index}].audio must contain audible signal: {audio_path}")
     provider = manifest.get("agent_provider") or {}
     _require(provider, "provider", "agent_provider")
     _require(provider, "model", "agent_provider")

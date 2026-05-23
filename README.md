@@ -105,7 +105,7 @@ cd backend
 .\.venv\Scripts\python -m app.cli.run_launch_sequence --manifest launch-manifest.json --tasks ..\TASKS.md
 ```
 
-The sequence validates each listed audio file before importing anything, then exits successfully only if the final launch-readiness audit is ready.
+The sequence validates each listed audio file exists, is a parseable WAV, and contains audible signal before importing anything, then exits successfully only if the final launch-readiness audit is ready.
 
 Manifest shape:
 
