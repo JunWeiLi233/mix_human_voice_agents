@@ -2,7 +2,7 @@ from typing import Any, Protocol
 
 import httpx
 
-from app.core.safety import check_generation_request
+from app.core.safety import SafetyError, check_generation_request
 from app.models.schemas import AgentConfig, AgentReply
 
 
@@ -22,10 +22,7 @@ class HttpClient(Protocol):
 
 
 def build_agent_payload(config: AgentConfig, prompt: str) -> dict[str, Any]:
-    if not config.model.strip():
-        raise AgentProviderError("Agent model is required.")
-    if not config.base_url.strip():
-        raise AgentProviderError("Agent base_url is required.")
+    _validate_agent_config(config)
     check_generation_request(prompt)
 
     return {
@@ -44,10 +41,7 @@ def build_agent_payload(config: AgentConfig, prompt: str) -> dict[str, Any]:
 
 
 def build_anthropic_payload(config: AgentConfig, prompt: str) -> dict[str, Any]:
-    if not config.model.strip():
-        raise AgentProviderError("Agent model is required.")
-    if not config.base_url.strip():
-        raise AgentProviderError("Agent base_url is required.")
+    _validate_agent_config(config)
     check_generation_request(prompt)
 
     return {
@@ -59,10 +53,7 @@ def build_anthropic_payload(config: AgentConfig, prompt: str) -> dict[str, Any]:
 
 
 def build_google_payload(config: AgentConfig, prompt: str) -> dict[str, Any]:
-    if not config.model.strip():
-        raise AgentProviderError("Agent model is required.")
-    if not config.base_url.strip():
-        raise AgentProviderError("Agent base_url is required.")
+    _validate_agent_config(config)
     check_generation_request(prompt)
 
     return {
@@ -161,6 +152,17 @@ def generate_agent_reply(
 def generate_agent_reply_record(prompt: str, config: AgentConfig) -> AgentReply:
     reply = generate_agent_reply(prompt=prompt, config=config)
     return AgentReply(reply=reply, provider=config.provider, model=config.model, base_url=config.base_url.rstrip("/"))
+
+
+def _validate_agent_config(config: AgentConfig) -> None:
+    if not config.model.strip():
+        raise AgentProviderError("Agent model is required.")
+    if not config.base_url.strip():
+        raise AgentProviderError("Agent base_url is required.")
+    try:
+        check_generation_request(config.system_prompt)
+    except SafetyError as exc:
+        raise AgentProviderError(f"Agent system prompt failed safety check: {exc}") from exc
 
 
 def _validate_agent_reply_text(reply: str) -> None:

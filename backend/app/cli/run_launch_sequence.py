@@ -229,6 +229,8 @@ def _validate_manifest(manifest: dict[str, Any]) -> list[dict[str, object]]:
         )
     _validate_optional_string(provider, "api_key", "agent_provider", allow_blank=True)
     _validate_optional_string(provider, "system_prompt", "agent_provider")
+    if "system_prompt" in provider:
+        _validate_generation_safety(str(provider["system_prompt"]), "agent_provider.system_prompt")
     _validate_optional_string(provider, "prompt", "agent_provider")
     if "prompt" in provider:
         _validate_generation_safety(str(provider["prompt"]), "agent_provider.prompt")

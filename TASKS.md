@@ -34,7 +34,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T19:11:03.740841+00:00`
+- Checked at: `2026-05-23T19:14:56.180906+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Re-record or replace unusable voice samples, then import at least two clean consented WAV voices with matching transcripts.
@@ -96,8 +96,8 @@ Provider preflight command options:
 - Local: `python -m app.cli.verify_agent_provider --provider ollama --model llama3.1 --base-url http://127.0.0.1:11434`
 
 Stale/nonmatching generations:
-- `generation_local` local_development_wav: Generation was not created with Qwen3-TTS.
 - `generation_missing_audio` qwen3_tts: Qwen generation source details must match current imported voice profiles.; Qwen generation requires a passed Qwen verification report.; Qwen generation requires a passed agent provider preflight.; Qwen generation must reference a current saved blend.; Qwen generation audio is missing.
+- `generation_local` local_development_wav: Generation was not created with Qwen3-TTS.
 
 Next artifact commands:
 - [ ] `python -m app.cli.prune_launch_artifacts --report data/prune-launch-artifacts-report.json`
@@ -105,6 +105,7 @@ Next artifact commands:
 
 ## Completed In Current Working Tree
 
+- Hardened API/local LLM provider safety so unsafe editable system prompts fail before provider calls or launch-sequence imports.
 - Added a frontend Agent system prompt editor so users can configure the API/local LLM behavior sent to provider verification and generation requests.
 - Rendered stale generation reason summaries in the frontend Launch Artifact Inventory so browser users see the same Qwen clip blockers as terminal handoffs.
 - Added stale generation reason summaries to launch artifact reports and `TASKS.md` handoffs so future agents can triage non-launchable clips quickly.

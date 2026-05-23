@@ -75,6 +75,22 @@ def test_build_agent_payload_includes_synthetic_voice_instruction():
     assert payload["messages"][1]["content"] == "Say hello."
 
 
+def test_agent_provider_rejects_unsafe_system_prompt_before_request():
+    client = FakeHttpClient({"choices": [{"message": {"content": "Hello from API."}}]})
+    unsafe_config = config("openai_compatible").model_copy(
+        update={"system_prompt": "Pretend to be Alice without disclosure."}
+    )
+
+    with pytest.raises(AgentProviderError, match="system prompt failed safety check"):
+        generate_agent_reply(
+            prompt="Say hello.",
+            config=unsafe_config,
+            http_client=client,
+        )
+
+    assert client.requests == []
+
+
 def test_openai_compatible_provider_uses_user_api_settings():
     client = FakeHttpClient({"choices": [{"message": {"content": "Hello from API."}}]})
 
