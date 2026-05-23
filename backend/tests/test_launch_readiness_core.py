@@ -1012,6 +1012,93 @@ def test_core_launch_readiness_blocks_qwen_generation_without_synthetic_disclosu
     }
 
 
+def test_core_launch_readiness_blocks_qwen_generation_without_matching_saved_blend(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    generation_audio = Path("data") / "generations" / "mixed.wav"
+    verification_audio = Path("data") / "generations" / "qwen_verify.wav"
+    generation_audio.parent.mkdir(parents=True)
+    write_silent_wav(generation_audio)
+    write_silent_wav(verification_audio)
+    monkeypatch.setattr("app.core.launch.is_parseable_wav", lambda path: True)
+    monkeypatch.setattr("app.core.launch.wav_has_audible_signal", lambda path: True)
+    source_details = [
+        SourceProfileDetail(
+            voice_profile_id="voice_a",
+            display_name="Alice",
+            weight=0.5,
+            consent_confirmed_by="local_user",
+            allowed_uses=["private_agent_voice", "local_audio_export"],
+            reference_text_present=True,
+        ),
+        SourceProfileDetail(
+            voice_profile_id="voice_b",
+            display_name="Bob",
+            weight=0.5,
+            consent_confirmed_by="local_user",
+            allowed_uses=["private_agent_voice", "local_audio_export"],
+            reference_text_present=True,
+        ),
+    ]
+    generation = GenerationResult(
+        audio_path=str(generation_audio),
+        metadata_path=str(Path("data") / "generations" / "mixed.json"),
+        blend_id="blend_deleted",
+        blend_name="Deleted launch blend",
+        prompt="Say hello as a disclosed synthetic assistant.",
+        agent_reply="Hello from a launch-ready mixed voice.",
+        synthetic_label="synthetic mixed voice",
+        source_profile_ids=["voice_a", "voice_b"],
+        source_profiles=[
+            BlendProfile(voice_profile_id="voice_a", weight=0.5),
+            BlendProfile(voice_profile_id="voice_b", weight=0.5),
+        ],
+        source_profile_details=source_details,
+        blend_strategy="multi_reference_prompt",
+        tts_backend="qwen3_tts",
+        agent_trace=AgentTrace(provider="openai", model="gpt-4.1-mini"),
+    )
+    Path(generation.metadata_path).write_text(generation.model_dump_json(), encoding="utf-8")
+
+    status = _qwen_mixed_generation_status(
+        [generation],
+        AgentProviderVerificationReport(
+            status="passed",
+            report_path="data/agent-provider-verification-report.json",
+            provider="openai",
+            model="gpt-4.1-mini",
+            reply="Provider ready.",
+        ),
+        QwenVerificationReport(
+            status="passed",
+            report_path="data/qwen-runtime-verification-report.json",
+            voice_profile_ids=["voice_a", "voice_b"],
+            source_profile_details=source_details,
+            tts_backend="qwen3_tts",
+            blend_strategy="multi_reference_prompt",
+            output_audio_path=str(verification_audio),
+            text="This is a disclosed synthetic mixed voice runtime verification.",
+        ),
+        saved_blends=[
+            VoiceBlend(
+                id="blend_other",
+                name="Other saved blend",
+                profiles=[
+                    BlendProfile(voice_profile_id="voice_a", weight=0.5),
+                    BlendProfile(voice_profile_id="voice_b", weight=0.5),
+                ],
+                strategy="multi_reference_prompt",
+            )
+        ],
+    )
+
+    assert status == {
+        "passed": False,
+        "detail": "Qwen mixed voice generation must reference a current saved blend.",
+    }
+
+
 def test_core_launch_readiness_blocks_qwen_generation_audio_outside_generation_storage(
     tmp_path, monkeypatch
 ):

@@ -163,6 +163,7 @@ def evaluate_launch_readiness() -> LaunchReadinessReport:
         generations,
         agent_provider_verification,
         qwen_verification,
+        saved_blends=blends,
     )
     agent_provider = _agent_provider_verification_status(agent_provider_verification)
 
@@ -592,6 +593,7 @@ def _qwen_mixed_generation_status(
     generations: list[GenerationResult],
     agent_provider_verification: AgentProviderVerificationReport,
     qwen_verification: QwenVerificationReport,
+    saved_blends: list[object] | None = None,
 ) -> dict[str, object]:
     for generation in generations:
         if generation.tts_backend != "qwen3_tts":
@@ -699,6 +701,9 @@ def _qwen_mixed_generation_status(
                 "passed": False,
                 "detail": "Qwen mixed voice clips must include synthetic disclosure metadata.",
             }
+        saved_blend_status = _generation_saved_blend_status(generation, saved_blends)
+        if not saved_blend_status["passed"]:
+            return saved_blend_status
         if not _path_is_under(Path(generation.audio_path), GENERATION_ROOT):
             return {
                 "passed": False,
@@ -750,6 +755,38 @@ def _qwen_mixed_generation_status(
         "passed": False,
         "detail": f"{qwen_count} Qwen mixed voice clips with imported source details",
     }
+
+
+def _generation_saved_blend_status(
+    generation: GenerationResult,
+    saved_blends: list[object] | None,
+) -> dict[str, object]:
+    if saved_blends is None:
+        return {"passed": True, "detail": "Saved blend check skipped."}
+    if not generation.blend_id:
+        return {
+            "passed": False,
+            "detail": "Qwen mixed voice generation must reference a current saved blend.",
+        }
+    matching_blend = next(
+        (blend for blend in saved_blends if getattr(blend, "id", None) == generation.blend_id),
+        None,
+    )
+    if matching_blend is None:
+        return {
+            "passed": False,
+            "detail": "Qwen mixed voice generation must reference a current saved blend.",
+        }
+    if (
+        getattr(matching_blend, "name", None) != generation.blend_name
+        or getattr(matching_blend, "strategy", None) != generation.blend_strategy
+        or getattr(matching_blend, "profiles", None) != generation.source_profiles
+    ):
+        return {
+            "passed": False,
+            "detail": "Qwen mixed voice generation must match its current saved blend.",
+        }
+    return {"passed": True, "detail": "Qwen mixed voice generation references a current saved blend."}
 
 
 def _qwen_verification_runtime_config(report: QwenVerificationReport) -> dict[str, str]:
