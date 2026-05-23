@@ -36,6 +36,12 @@ def get_qwen_verification_report() -> QwenVerificationReport:
         )
     try:
         payload = json.loads(report_path.read_text(encoding="utf-8"))
+        if payload.get("report_path") and not _same_audio_path(str(payload["report_path"]), str(report_path)):
+            return QwenVerificationReport(
+                status="failed",
+                report_path=str(report_path),
+                error="Qwen runtime verification report path does not match the persisted report file.",
+            )
         payload.setdefault("report_path", str(report_path))
         return QwenVerificationReport.model_validate(payload)
     except (json.JSONDecodeError, ValidationError):

@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 from pathlib import Path
+import json
 import wave
 
 from app.core.launch import _qwen_mixed_generation_status, _qwen_verification_status, evaluate_launch_readiness
@@ -123,6 +124,56 @@ def test_core_launch_readiness_blocks_invalid_qwen_verification_report(tmp_path,
     qwen_verification_check = next(check for check in report.checks if check.id == "qwen_verification")
     assert qwen_verification_check.passed is False
     assert qwen_verification_check.detail == "Qwen runtime verification report is invalid."
+
+
+def test_core_launch_readiness_blocks_qwen_verification_report_with_mismatched_report_path(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    output_path = tmp_path / "data" / "generations" / "qwen_verify.wav"
+    output_path.parent.mkdir(parents=True)
+    output_path.write_bytes(b"fake-qwen-wav")
+    report_path = tmp_path / "data" / "qwen-runtime-verification-report.json"
+    report_path.write_text(
+        json.dumps(
+            {
+                "status": "passed",
+                "voice_profile_ids": ["voice_a", "voice_b"],
+                "report_path": "data/other-qwen-runtime-verification-report.json",
+                "tts_backend": "qwen3_tts",
+                "blend_strategy": "multi_reference_prompt",
+                "source_profile_details": [
+                    {
+                        "voice_profile_id": "voice_a",
+                        "display_name": "Alice",
+                        "weight": 0.5,
+                        "consent_confirmed_by": "local_user",
+                        "allowed_uses": ["private_agent_voice", "local_audio_export"],
+                        "reference_text_present": True,
+                    },
+                    {
+                        "voice_profile_id": "voice_b",
+                        "display_name": "Bob",
+                        "weight": 0.5,
+                        "consent_confirmed_by": "local_user",
+                        "allowed_uses": ["private_agent_voice", "local_audio_export"],
+                        "reference_text_present": True,
+                    },
+                ],
+                "output_audio_path": str(output_path),
+                "text": "This is a disclosed synthetic mixed voice runtime verification.",
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr("app.core.launch.is_parseable_wav", lambda path: True)
+    monkeypatch.setattr("app.core.launch.wav_has_audible_signal", lambda path: True)
+
+    report = evaluate_launch_readiness()
+
+    qwen_verification_check = next(check for check in report.checks if check.id == "qwen_verification")
+    assert qwen_verification_check.passed is False
+    assert qwen_verification_check.detail == "Qwen runtime verification report path does not match the persisted report file."
 
 
 def test_core_launch_readiness_blocks_saved_blend_without_current_imported_voices(
