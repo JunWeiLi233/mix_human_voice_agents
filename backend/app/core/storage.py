@@ -58,7 +58,10 @@ def list_voice_profiles() -> list[VoiceProfile]:
     ensure_storage()
     profiles: list[VoiceProfile] = []
     for profile_path in sorted(VOICE_ROOT.glob("*/profile.json")):
-        profiles.append(VoiceProfile.model_validate_json(profile_path.read_text(encoding="utf-8")))
+        try:
+            profiles.append(VoiceProfile.model_validate_json(profile_path.read_text(encoding="utf-8")))
+        except ValidationError:
+            continue
     return profiles
 
 
