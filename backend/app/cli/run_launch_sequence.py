@@ -83,6 +83,11 @@ def _validate_manifest(manifest: dict[str, Any]) -> None:
         _require(voice, "confirmed_by", f"voices[{index}]")
         _require(voice, "reference_text", f"voices[{index}]")
         _require(voice, "audio", f"voices[{index}]")
+        audio_path = Path(str(voice["audio"]))
+        if not audio_path.exists():
+            raise ValueError(f"voices[{index}].audio does not exist: {audio_path}")
+        if not audio_path.is_file():
+            raise ValueError(f"voices[{index}].audio must be a file: {audio_path}")
     provider = manifest.get("agent_provider") or {}
     _require(provider, "provider", "agent_provider")
     _require(provider, "model", "agent_provider")
