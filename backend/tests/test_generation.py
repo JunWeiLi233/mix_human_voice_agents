@@ -103,6 +103,37 @@ def test_qwen_generation_requires_agent_trace_before_synthesis(tmp_path: Path):
         )
 
 
+def test_qwen_generation_requires_multi_reference_strategy_before_synthesis(tmp_path: Path):
+    class FailIfCalledAdapter:
+        name = "qwen3_tts"
+
+        def synthesize(self, text, blend, voice_profiles=None):
+            raise AssertionError("Qwen generation should reject non-Qwen blend strategy before synthesis")
+
+    blend = create_blend(
+        name="Wrong Strategy Pair",
+        profiles=[
+            BlendProfileInput(voice_profile_id="voice_a", weight=1),
+            BlendProfileInput(voice_profile_id="voice_b", weight=1),
+        ],
+        strategy="local_development_wav",
+    )
+
+    with pytest.raises(SafetyError, match="multi-reference"):
+        generate_agent_clip(
+            prompt="Greet the user as a synthetic assistant.",
+            agent_reply="Hello from a traceable mixed voice.",
+            blend=blend,
+            adapter=FailIfCalledAdapter(),
+            voice_profiles={
+                "voice_a": voice_profile("voice_a", "Alice", "Alice reads a consented reference transcript."),
+                "voice_b": voice_profile("voice_b", "Bob", "Bob reads a consented reference transcript."),
+            },
+            agent_trace=AgentTrace(provider="openai", model="gpt-4.1-mini"),
+            tts_backend="qwen3_tts",
+        )
+
+
 def test_generation_writes_wav_and_metadata(tmp_path: Path):
     blend = create_blend(
         name="Pair",

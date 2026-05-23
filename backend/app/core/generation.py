@@ -68,6 +68,8 @@ def _validate_qwen_generation_inputs(
 ) -> None:
     if agent_trace is None:
         raise SafetyError("Qwen generation requires an agent provider trace.")
+    if blend.strategy != "multi_reference_prompt":
+        raise SafetyError("Qwen generation requires the multi-reference mixed voice strategy.")
     source_ids = [profile.voice_profile_id for profile in blend.profiles]
     if not voice_profiles:
         raise SafetyError("Qwen generation requires imported voice profiles for each blend source.")
