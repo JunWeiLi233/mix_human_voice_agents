@@ -173,6 +173,7 @@ export type LaunchArtifactsReport = {
   voice_count: number;
   usable_voice_count: number;
   unusable_voice_count: number;
+  distinct_usable_speaker_count: number;
   blend_count: number;
   launch_eligible_blend_count: number;
   stale_blend_count: number;
@@ -181,6 +182,7 @@ export type LaunchArtifactsReport = {
   launch_eligible_generation_count: number;
   stale_generation_count: number;
   usable_voice_ids: string[];
+  usable_distinct_voice_ids: string[];
   launch_eligible_blend_ids: string[];
   launch_eligible_generation_ids: string[];
   agent_provider: { status: "missing" | "passed" | "failed" };

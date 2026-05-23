@@ -215,6 +215,7 @@ describe("App", () => {
           voice_count: 1,
           usable_voice_count: 0,
           unusable_voice_count: 1,
+          distinct_usable_speaker_count: 1,
           blend_count: 4,
           launch_eligible_blend_count: 0,
           stale_blend_count: 4,
@@ -222,7 +223,8 @@ describe("App", () => {
           qwen_generation_count: 0,
           launch_eligible_generation_count: 0,
           stale_generation_count: 0,
-          usable_voice_ids: [],
+          usable_voice_ids: ["voice_alice"],
+          usable_distinct_voice_ids: ["voice_alice"],
           launch_eligible_blend_ids: [],
           launch_eligible_generation_ids: [],
           agent_provider: { status: "missing" },
@@ -266,6 +268,10 @@ describe("App", () => {
     expect(screen.getByText("Launch Readiness")).toBeInTheDocument();
     expect(await screen.findByText("Launch Artifact Inventory")).toBeInTheDocument();
     expect(screen.getByText("1 total / 0 usable / 1 unusable")).toBeInTheDocument();
+    expect(screen.getByText("Distinct usable speakers")).toBeInTheDocument();
+    expect(screen.getByText("1 distinct launch speaker")).toBeInTheDocument();
+    expect(screen.getByText("Distinct-speaker voice IDs")).toBeInTheDocument();
+    expect(screen.getAllByText("voice_alice").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("4 total / 0 eligible / 4 stale")).toBeInTheDocument();
     expect(
       screen.getByText((_content, element) =>

@@ -19,6 +19,13 @@ export function LaunchArtifactInventory({ artifacts }: Props) {
               </dd>
             </div>
             <div>
+              <dt>Distinct usable speakers</dt>
+              <dd>
+                {artifacts.distinct_usable_speaker_count} distinct launch{" "}
+                {artifacts.distinct_usable_speaker_count === 1 ? "speaker" : "speakers"}
+              </dd>
+            </div>
+            <div>
               <dt>Blends</dt>
               <dd>
                 {artifacts.blend_count} total / {artifacts.launch_eligible_blend_count} eligible /{" "}
@@ -56,6 +63,18 @@ export function LaunchArtifactInventory({ artifacts }: Props) {
                       <code>{voice.id}</code> {voice.display_name}: {voice.unusable_reasons.join("; ")}
                     </li>
                   ))}
+              </ul>
+            </div>
+          ) : null}
+          {artifacts.usable_distinct_voice_ids.length > 0 ? (
+            <div className="artifact-list">
+              <h3>Distinct-speaker voice IDs</h3>
+              <ul>
+                {artifacts.usable_distinct_voice_ids.map((voiceId) => (
+                  <li key={voiceId}>
+                    <code>{voiceId}</code>
+                  </li>
+                ))}
               </ul>
             </div>
           ) : null}

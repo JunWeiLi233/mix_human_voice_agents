@@ -25,7 +25,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 
 ## Usage Limit Handoff
 
-- Last refreshed: `2026-05-23T16:49:52.464600+00:00`
+- Last refreshed: `2026-05-23T16:54:12.871247+00:00`
 - Reason: Codex usage/session/context limit handoff.
 - Next agent should start from `## Next Tasks`, `## Launch Readiness Remaining Tasks`, and `## Launch Artifact Inventory`.
 - Preserve commit identity: `JunWeiLi233 <mcpejunwei@gmail.com>`.
@@ -33,7 +33,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T16:49:52.455596+00:00`
+- Checked at: `2026-05-23T16:54:12.860246+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Re-record or replace unusable voice samples, then import at least two clean consented WAV voices with matching transcripts.
@@ -177,6 +177,7 @@ Next artifact commands:
 - Added stale-blend cleanup as a launch artifact next command whenever inventory detects nonmatching blends.
 - Added shared reference transcript validation requiring at least 5 words for Qwen voice cloning imports and launch manifests.
 - Hardened launch artifact inventory and stale-blend pruning so launch-eligible blends and next commands require at least two distinct usable speaker display names.
+- Updated the frontend Launch Artifact Inventory panel to show distinct usable speaker counts and distinct-speaker voice IDs.
 
 ## Verification Already Run
 
