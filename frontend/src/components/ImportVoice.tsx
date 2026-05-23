@@ -81,8 +81,21 @@ export function ImportVoice({ onImported }: Props) {
       const source = context.createMediaStreamSource(stream);
       const processor = context.createScriptProcessor(4096, 1, 1);
       const chunks: Float32Array[] = [];
+      const maxRecordedSamples = maxRecordedSeconds * context.sampleRate;
       processor.onaudioprocess = (event) => {
-        chunks.push(new Float32Array(event.inputBuffer.getChannelData(0)));
+        const input = event.inputBuffer.getChannelData(0);
+        const remainingSamples = maxRecordedSamples - sampleCount(chunks);
+        if (remainingSamples <= 0) {
+          void stopActiveRecording(true);
+          return;
+        }
+
+        const captured = input.length > remainingSamples ? input.slice(0, remainingSamples) : input;
+        chunks.push(new Float32Array(captured));
+
+        if (sampleCount(chunks) >= maxRecordedSamples) {
+          void stopActiveRecording(true);
+        }
       };
       source.connect(processor);
       processor.connect(context.destination);
