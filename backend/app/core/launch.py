@@ -464,6 +464,11 @@ def _imported_voices_status(voices: list[object], verification: QwenVerification
             "passed": False,
             "detail": "Imported verified voices must not have audio quality warnings.",
         }
+    if not _details_have_distinct_speakers([imported_by_id[voice_id] for voice_id in verification.voice_profile_ids]):
+        return {
+            "passed": False,
+            "detail": "Imported verified voices must still come from at least two distinct speakers.",
+        }
     return {
         "passed": True,
         "detail": f"{len(voices)} imported voices",
