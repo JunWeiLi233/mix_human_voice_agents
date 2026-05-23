@@ -7,6 +7,7 @@ import httpx
 from pydantic import BaseModel
 
 from app.cli.run_launch_sequence import validate_launch_manifest
+from app.cli.launch_artifacts import collect_launch_artifacts
 from app.core.agent import AgentProviderError, generate_agent_reply_record
 from app.core.audio import AudioQualityError, analyze_audio_sample, is_parseable_wav, wav_has_audible_signal
 from app.core.blends import BlendError, create_blend, validate_blend
@@ -155,6 +156,11 @@ def launch_readiness_report_route() -> FileResponse:
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(json.dumps(report.model_dump(mode="json"), indent=2), encoding="utf-8")
     return FileResponse(report_path, media_type="application/json", filename="launch-readiness-report.json")
+
+
+@router.get("/launch/artifacts")
+def launch_artifacts_route() -> dict[str, object]:
+    return collect_launch_artifacts()
 
 
 @router.get("/launch/manifest-template")

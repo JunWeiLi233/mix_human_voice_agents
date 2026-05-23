@@ -180,6 +180,39 @@ describe("App", () => {
           checks: [],
         });
       }
+      if (url === "/api/launch/artifacts") {
+        return jsonResponse({
+          voice_count: 1,
+          usable_voice_count: 0,
+          unusable_voice_count: 1,
+          blend_count: 4,
+          launch_eligible_blend_count: 0,
+          stale_blend_count: 4,
+          generation_count: 0,
+          qwen_generation_count: 0,
+          launch_eligible_generation_count: 0,
+          stale_generation_count: 0,
+          usable_voice_ids: [],
+          launch_eligible_blend_ids: [],
+          launch_eligible_generation_ids: [],
+          agent_provider: { status: "missing" },
+          qwen_verification: { status: "missing" },
+          qwen_runtime: { available: true, model_id: "Qwen/Qwen3-TTS-12Hz-0.6B-Base" },
+          voices: [
+            {
+              id: "voice_alice",
+              display_name: "Alice",
+              launch_usable: false,
+              unusable_reasons: ["Audio quality warnings must be resolved before launch."],
+            },
+          ],
+          blends: [],
+          generations: [],
+          next_commands: [
+            "python -m app.cli.run_launch_sequence --write-template data/launch-sequence/launch-manifest.template.json",
+          ],
+        });
+      }
       return new Response("not found", { status: 404 });
     });
 
@@ -201,6 +234,20 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Launch page" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByText("Launch Control Page")).toBeInTheDocument();
     expect(screen.getByText("Launch Readiness")).toBeInTheDocument();
+    expect(await screen.findByText("Launch Artifact Inventory")).toBeInTheDocument();
+    expect(screen.getByText("1 total / 0 usable / 1 unusable")).toBeInTheDocument();
+    expect(screen.getByText("4 total / 0 eligible / 4 stale")).toBeInTheDocument();
+    expect(
+      screen.getByText((_content, element) =>
+        element?.tagName.toLowerCase() === "li" &&
+        element.textContent === "voice_alice Alice: Audio quality warnings must be resolved before launch.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "python -m app.cli.run_launch_sequence --write-template data/launch-sequence/launch-manifest.template.json",
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByText("Agent Provider")).toBeInTheDocument();
     expect(screen.queryByText("Voice evidence and exports")).not.toBeInTheDocument();
 

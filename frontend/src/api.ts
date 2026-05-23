@@ -5,6 +5,7 @@ import type {
   BlendDraftProfile,
   DeleteVoiceResult,
   GenerationResult,
+  LaunchArtifactsReport,
   LaunchManifestValidationReport,
   LaunchReadinessReport,
   QwenRuntimeConfig,
@@ -89,6 +90,14 @@ export async function listBlends(): Promise<VoiceBlend[]> {
 
 export async function getLaunchReadiness(): Promise<LaunchReadinessReport> {
   const response = await fetch("/api/launch/readiness");
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  return response.json();
+}
+
+export async function getLaunchArtifacts(): Promise<LaunchArtifactsReport> {
+  const response = await fetch("/api/launch/artifacts");
   if (!response.ok) {
     throw new Error(await response.text());
   }

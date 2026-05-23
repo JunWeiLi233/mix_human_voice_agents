@@ -661,6 +661,46 @@ def test_launch_readiness_report_download_writes_current_audit(tmp_path: Path, m
     assert "Import at least two consented voice profiles." in payload["blocking_reasons"]
 
 
+def test_launch_artifacts_route_returns_current_inventory(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        "app.api.routes.collect_launch_artifacts",
+        lambda: {
+            "voice_count": 2,
+            "usable_voice_count": 2,
+            "unusable_voice_count": 0,
+            "blend_count": 1,
+            "launch_eligible_blend_count": 1,
+            "stale_blend_count": 0,
+            "generation_count": 1,
+            "qwen_generation_count": 1,
+            "launch_eligible_generation_count": 1,
+            "stale_generation_count": 0,
+            "usable_voice_ids": ["voice_alice", "voice_bob"],
+            "launch_eligible_blend_ids": ["blend_launch"],
+            "launch_eligible_generation_ids": ["generation_launch"],
+            "agent_provider": {"status": "passed"},
+            "qwen_verification": {"status": "passed"},
+            "qwen_runtime": {"available": True, "model_id": "Qwen/Qwen3-TTS-12Hz-0.6B-Base"},
+            "voices": [],
+            "blends": [],
+            "generations": [],
+            "next_commands": [],
+        },
+        raising=False,
+    )
+
+    response = client.get("/api/launch/artifacts")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["usable_voice_ids"] == ["voice_alice", "voice_bob"]
+    assert payload["launch_eligible_blend_ids"] == ["blend_launch"]
+    assert payload["launch_eligible_generation_ids"] == ["generation_launch"]
+    assert payload["agent_provider"]["status"] == "passed"
+    assert payload["qwen_verification"]["status"] == "passed"
+
+
 def test_launch_manifest_template_download_returns_starter_manifest(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
 

@@ -491,6 +491,56 @@ audio {
   color: #8b2f1d;
 }
 
+.artifact-stats {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+}
+
+.artifact-stats div {
+  display: grid;
+  gap: 2px;
+  border-bottom: 1px solid rgba(39, 54, 41, 0.1);
+  padding-bottom: 8px;
+}
+
+.artifact-stats dt,
+.artifact-list h3 {
+  color: #273629;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.artifact-stats dd {
+  margin: 0;
+  color: #5b6655;
+}
+
+.artifact-list {
+  margin-top: 14px;
+}
+
+.artifact-list h3 {
+  margin: 0 0 8px;
+}
+
+.artifact-list ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.artifact-list li {
+  color: #5b6655;
+  line-height: 1.45;
+}
+
+.artifact-list code {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
 .readiness-reasons,
 .readiness-checks {
   display: grid;

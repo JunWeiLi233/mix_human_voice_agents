@@ -14,7 +14,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 
 - Branch: `main`
 - Remote: `https://github.com/JunWeiLi233/mix_human_voice_agents.git`
-- Frontend UI page work has been committed and pushed.
+- Frontend UI page work has been committed and pushed; the current working tree adds the browser Launch Artifact Inventory panel backed by `/api/launch/artifacts`.
 - Local Vite dev server for review: `http://127.0.0.1:5174/`
 - Backend launch readiness is still blocked because the repo does not yet have two real imported voices, a saved real blend, agent-provider preflight, Qwen verification with two profiles, or real Qwen mixed-voice output. The local backend venv now has `qwen-tts` installed and importable.
 
@@ -103,6 +103,9 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Added `app.cli.launch_artifacts --tasks ..\TASKS.md` so limit-session handoffs can refresh a concrete Launch Artifact Inventory section with usable voice ids, eligible blend/generation ids, provider/Qwen status, stale reasons, and next commands.
 - Added a launch checklist to the generated launch manifest template so agents filling it in see the required real clean WAV files, consent, transcript matching, provider selection, and dry-run validation steps.
 - Updated `app.cli.run_launch_sequence` so a real manifest run refreshes both launch readiness and launch artifact inventory in `TASKS.md`.
+- Added `/api/launch/artifacts` so the frontend can read the same launch artifact inventory that terminal agents use for handoff.
+- Added a Launch Artifact Inventory panel to the browser Launch page, showing voice/blend/generation counts, provider and Qwen status, unusable voice reasons, and the next manifest command.
+- Added frontend and backend regression coverage for the Launch artifact inventory route and panel.
 
 ## Verification Already Run
 
@@ -230,6 +233,15 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - `cd frontend; npm test -- --run` passed: 7 tests.
 - `cd frontend; npx tsc --noEmit` passed.
 - `cd frontend; npm run build` passed.
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_routes.py -q -k "launch_artifacts_route"` passed: 1 test.
+- `cd frontend; npm test -- --run -t "switches between"` first failed because the Launch Artifact Inventory was not rendered, then passed after adding the API route, frontend fetch, component, and Launch page wiring.
+- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 276 tests.
+- `cd frontend; npm test -- --run` passed: 7 tests.
+- `cd frontend; npx tsc --noEmit` passed.
+- `cd frontend; npm run build` passed.
+- `git diff --check` passed with line-ending normalization warnings only.
+- `cd backend; .\.venv\Scripts\python -m app.cli.launch_artifacts --report data\launch-artifacts-report.json --tasks ..\TASKS.md --summary` refreshed the Launch Artifact Inventory and reported 1 voice, 0 usable voices, 255 stale/nonmatching blends, 0 generations, and the launch manifest template command.
+- `cd backend; .\.venv\Scripts\python -m app.cli.launch_readiness --report data\launch-readiness-report.json --tasks ..\TASKS.md --summary` refreshed readiness tasks and still exits 1 until real launch artifacts are present.
 - `cd backend; .\.venv\Scripts\python -m pytest tests\test_run_launch_sequence_cli.py -q -k "invokes_launch_steps"` first failed because `launch_artifacts_main` was not wired into the sequence, then passed after adding the artifact handoff refresh call.
 - `cd backend; .\.venv\Scripts\python -m pytest tests\test_run_launch_sequence_cli.py -q` passed: 29 tests.
 - `cd backend; .\.venv\Scripts\python -m app.cli.launch_artifacts --report data\launch-artifacts-report.json --tasks ..\TASKS.md --summary` refreshed the Launch Artifact Inventory and reported 1 voice, 0 usable voices, 253 stale/nonmatching blends, 0 generations, and the launch manifest template command.
@@ -270,7 +282,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T15:34:31.386750+00:00`
+- Checked at: `2026-05-23T15:42:50.534817+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Re-record or replace unusable voice samples, then import at least two clean consented WAV voices with matching transcripts.
@@ -294,7 +306,7 @@ Blocking reasons:
 ## Launch Artifact Inventory
 
 - Voices: `1` total; `0` usable; `1` unusable
-- Blends: `253` total; `0` launch-eligible; `253` stale/nonmatching
+- Blends: `255` total; `0` launch-eligible; `255` stale/nonmatching
 - Generations: `0` total; `0` Qwen; `0` launch-eligible; `0` stale/nonmatching
 - Usable voice IDs: `none`
 - Launch-eligible blend IDs: `none`

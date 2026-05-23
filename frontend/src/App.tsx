@@ -4,6 +4,7 @@ import {
   deleteVoice,
   generateClip,
   getAgentProviderVerification,
+  getLaunchArtifacts,
   getLaunchReadiness,
   getQwenRuntimeStatus,
   getQwenVerificationReport,
@@ -19,6 +20,7 @@ import { AgentProviderSettings } from "./components/AgentProviderSettings";
 import { BlendMixer } from "./components/BlendMixer";
 import { GenerationHistory } from "./components/GenerationHistory";
 import { ImportVoice } from "./components/ImportVoice";
+import { LaunchArtifactInventory } from "./components/LaunchArtifactInventory";
 import { LaunchReadiness } from "./components/LaunchReadiness";
 import { VoiceLibrary } from "./components/VoiceLibrary";
 import { VoiceEngineSettings } from "./components/VoiceEngineSettings";
@@ -27,6 +29,7 @@ import type {
   AgentProviderVerificationReport,
   BlendDraftProfile,
   GenerationResult,
+  LaunchArtifactsReport,
   LaunchReadinessReport,
   QwenRuntimeConfig,
   QwenVerificationReport,
@@ -58,6 +61,7 @@ export default function App() {
   const [savedBlends, setSavedBlends] = useState<VoiceBlend[]>([]);
   const [blend, setBlend] = useState<VoiceBlend | null>(null);
   const [generations, setGenerations] = useState<GenerationResult[]>([]);
+  const [launchArtifacts, setLaunchArtifacts] = useState<LaunchArtifactsReport | null>(null);
   const [launchReadiness, setLaunchReadiness] = useState<LaunchReadinessReport | null>(null);
   const [qwenStatus, setQwenStatus] = useState<TtsRuntimeStatus | null>(null);
   const [qwenVerification, setQwenVerification] = useState<QwenVerificationReport | null>(null);
@@ -182,6 +186,7 @@ export default function App() {
 
   useEffect(() => {
     void refreshLaunchReadiness();
+    void refreshLaunchArtifacts();
   }, []);
 
   async function refreshLaunchReadiness() {
@@ -199,6 +204,7 @@ export default function App() {
       setBlend(created);
       setSavedBlends((current) => [created, ...current.filter((item) => item.id !== created.id)]);
       void refreshLaunchReadiness();
+      void refreshLaunchArtifacts();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Blend creation failed");
     }
@@ -214,6 +220,7 @@ export default function App() {
     });
     setBlend(null);
     void refreshLaunchReadiness();
+    void refreshLaunchArtifacts();
   }
 
   async function handleDeleteVoice(voiceProfileId: string) {
@@ -240,6 +247,7 @@ export default function App() {
         return deletedActiveBlend || referencesDeletedVoice ? null : current;
       });
       void refreshLaunchReadiness();
+      void refreshLaunchArtifacts();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Voice deletion failed");
     }
@@ -262,8 +270,17 @@ export default function App() {
       const result = await generateClip(blend, agentReply, ttsBackend, prompt, qwenRuntimeConfig);
       setGenerations((current) => [result, ...current]);
       void refreshLaunchReadiness();
+      void refreshLaunchArtifacts();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed");
+    }
+  }
+
+  async function refreshLaunchArtifacts() {
+    try {
+      setLaunchArtifacts(await getLaunchArtifacts());
+    } catch {
+      setLaunchArtifacts(null);
     }
   }
 
@@ -280,6 +297,7 @@ export default function App() {
       if (report.status === "passed" && report.reply) {
         setAgentProviderTestReply(report.reply);
         void refreshLaunchReadiness();
+        void refreshLaunchArtifacts();
       } else {
         throw new Error(report.error ?? "Agent provider test failed");
       }
@@ -301,6 +319,7 @@ export default function App() {
       );
       setQwenVerification(report);
       void refreshLaunchReadiness();
+      void refreshLaunchArtifacts();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Qwen verification failed");
     } finally {
@@ -427,6 +446,7 @@ export default function App() {
           </section>
           <div className="layout launch-layout">
             <LaunchReadiness readiness={launchReadiness} />
+            <LaunchArtifactInventory artifacts={launchArtifacts} />
             <AgentProviderSettings
               value={agentConfig}
               verification={agentProviderVerification}

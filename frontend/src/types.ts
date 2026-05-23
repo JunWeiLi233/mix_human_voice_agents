@@ -142,6 +142,42 @@ export type LaunchManifestValidationReport = {
   error?: string;
 };
 
+export type LaunchArtifactVoice = {
+  id: string;
+  display_name: string;
+  launch_usable: boolean;
+  unusable_reasons: string[];
+};
+
+export type LaunchArtifactGeneration = {
+  id: string;
+  tts_backend: TtsBackend;
+  launch_eligible: boolean;
+  stale_reasons: string[];
+};
+
+export type LaunchArtifactsReport = {
+  voice_count: number;
+  usable_voice_count: number;
+  unusable_voice_count: number;
+  blend_count: number;
+  launch_eligible_blend_count: number;
+  stale_blend_count: number;
+  generation_count: number;
+  qwen_generation_count: number;
+  launch_eligible_generation_count: number;
+  stale_generation_count: number;
+  usable_voice_ids: string[];
+  launch_eligible_blend_ids: string[];
+  launch_eligible_generation_ids: string[];
+  agent_provider: { status: "missing" | "passed" | "failed" };
+  qwen_verification: { status: "missing" | "passed" | "failed" };
+  qwen_runtime: { available: boolean; model_id?: string | null };
+  voices: LaunchArtifactVoice[];
+  generations: LaunchArtifactGeneration[];
+  next_commands: string[];
+};
+
 export type VoiceProfile = {
   id: string;
   display_name: string;
