@@ -615,6 +615,15 @@ def test_qwen_verification_route_rejects_quality_warnings_before_loading_runtime
 
 def test_launch_readiness_reports_blockers_when_requirements_are_missing(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        "app.core.launch.QwenTtsAdapter.runtime_status",
+        lambda: {
+            "backend": "qwen3_tts",
+            "available": False,
+            "model_id": "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+            "message": 'qwen-tts is not installed. Run: python -m pip install -e ".[qwen]"',
+        },
+    )
 
     response = client.get("/api/launch/readiness")
 

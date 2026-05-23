@@ -16,7 +16,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Remote: `https://github.com/JunWeiLi233/mix_human_voice_agents.git`
 - Frontend UI page work has been committed and pushed.
 - Local Vite dev server for review: `http://127.0.0.1:5174/`
-- Backend launch readiness is still blocked because the repo does not yet have real imported voices, a saved real blend, installed/loadable Qwen runtime verification, or real Qwen mixed-voice output.
+- Backend launch readiness is still blocked because the repo does not yet have two real imported voices, a saved real blend, agent-provider preflight, Qwen verification with two profiles, or real Qwen mixed-voice output. The local backend venv now has `qwen-tts` installed and importable.
 
 ## Completed In Current Working Tree
 
@@ -91,6 +91,8 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Added `/api/launch/manifest-template` and a Launch page download link so browser users can get the same launch manifest template as terminal agents.
 - Added `/api/launch/manifest/validate` and a Launch page JSON file validator so browser users can dry-run a filled launch manifest without importing voices or calling providers.
 - Added `app.cli.launch_readiness --summary` so terminal agents can print the current launch status, failed checks, evidence, and next actions while refreshing the JSON report and `TASKS.md`.
+- Installed the backend Qwen extra into the local venv so `qwen-tts` is importable for the selected Qwen model.
+- Stabilized the missing-requirements launch readiness route test so it explicitly simulates an unavailable Qwen runtime instead of depending on local optional packages.
 
 ## Verification Already Run
 
@@ -120,6 +122,15 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - `cd backend; .\.venv\Scripts\python -m pytest tests\test_launch_readiness_cli.py -q -k "actionable_summary"` passed: 1 test.
 - `cd backend; .\.venv\Scripts\python -m app.cli.launch_readiness --report data\launch-readiness-report.json --tasks ..\TASKS.md --summary` printed the actionable launch summary, refreshed readiness tasks, and still exits 1 until real launch artifacts are present.
 - `cd backend; .\.venv\Scripts\python -m pytest tests\test_launch_readiness_cli.py -q` passed: 4 tests.
+- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 268 tests.
+- `cd frontend; npm test -- --run` passed: 7 tests.
+- `cd frontend; npx tsc --noEmit` passed.
+- `cd frontend; npm run build` passed.
+- `git diff --check` passed with line-ending normalization warnings only.
+- `cd backend; .\.venv\Scripts\python -m pip install -e ".[qwen]"` installed `qwen-tts==0.1.1`, `torch==2.12.0`, and `torchaudio==2.11.0` into the local backend venv.
+- `cd backend; .\.venv\Scripts\python -c "from app.tts.qwen import QwenTtsAdapter; print(QwenTtsAdapter.runtime_status().model_dump())"` reported `available: True` for `Qwen/Qwen3-TTS-12Hz-0.6B-Base`.
+- `cd backend; .\.venv\Scripts\python -m app.cli.launch_readiness --report data\launch-readiness-report.json --tasks ..\TASKS.md --summary` now reports `[x] Qwen runtime`, refreshes readiness tasks, and still exits 1 until the remaining real launch artifacts are present.
+- `cd backend; .\.venv\Scripts\python -m pytest tests\test_routes.py -q -k "launch_readiness_reports_blockers_when_requirements_are_missing"` passed: 1 test.
 - `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 268 tests.
 - `cd frontend; npm test -- --run` passed: 7 tests.
 - `cd frontend; npx tsc --noEmit` passed.
@@ -168,7 +179,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T14:47:19.557311+00:00`
+- Checked at: `2026-05-23T14:54:12.900890+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Generate a launch manifest with `python -m app.cli.run_launch_sequence --write-template launch-manifest.template.json`, then fill in two consented WAV voice samples with matching transcripts.
@@ -179,8 +190,6 @@ The following tasks are generated from failed launch-readiness checks:
   Evidence: 0 Qwen mixed voice clips with imported source details
 - [ ] agent_provider: Run Test provider and keep the passed provider verification report.
   Evidence: Run the Agent Provider Test provider preflight before launch.
-- [ ] qwen_runtime: Install and load qwen-tts with the selected Qwen model.
-  Evidence: qwen-tts is not installed. Run: python -m pip install -e ".[qwen]"
 - [ ] qwen_verification: Run Qwen verification with two imported voices and keep the passed report.
   Evidence: Run python -m app.cli.verify_qwen_runtime with two consented voice profile ids.
 
@@ -189,5 +198,4 @@ Blocking reasons:
 - Create and save a mixed voice blend.
 - Generate at least one Qwen3-TTS mixed voice clip from imported profiles.
 - Test the selected agent provider successfully before launch.
-- Install and load the Qwen3-TTS runtime before launch.
 - Run Qwen runtime verification successfully before launch.
