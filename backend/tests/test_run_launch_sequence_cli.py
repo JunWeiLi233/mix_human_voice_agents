@@ -1224,6 +1224,111 @@ def test_run_launch_sequence_rejects_short_reference_audio_before_import(
     }
 
 
+def test_run_launch_sequence_rejects_long_reference_audio_before_import(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    manifest_path = tmp_path / "launch-manifest.json"
+    long_audio = tmp_path / "alice.wav"
+    bob_audio = tmp_path / "bob.wav"
+    write_reference_wav(long_audio, duration_seconds=31)
+    write_reference_wav(bob_audio)
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "voices": [
+                    {
+                        "speaker_display_name": "Alice",
+                        "confirmed_by": "Junwei",
+                        "reference_text": "Alice reads a launch reference.",
+                        "audio": str(long_audio),
+                    },
+                    {
+                        "speaker_display_name": "Bob",
+                        "confirmed_by": "Junwei",
+                        "reference_text": "Bob reads a launch reference.",
+                        "audio": str(bob_audio),
+                    },
+                ],
+                "agent_provider": {
+                    "provider": "openai_compatible",
+                    "model": "local-qwen-agent",
+                    "base_url": "http://127.0.0.1:1234/v1",
+                },
+                "generation": {"prompt": "Greet the user as a disclosed synthetic assistant."},
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        "app.cli.run_launch_sequence.import_voice_main",
+        lambda argv: (_ for _ in ()).throw(AssertionError("long audio should validate before imports")),
+    )
+
+    exit_code = main(["--manifest", str(manifest_path), "--report", "sequence-report.json"])
+
+    assert exit_code == 2
+    report = json.loads(Path("sequence-report.json").read_text(encoding="utf-8"))
+    assert report == {
+        "status": "failed",
+        "error": "voices[1].audio failed quality check: Reference audio must be 30 seconds or shorter.",
+    }
+
+
+def test_run_launch_sequence_rejects_clipped_reference_audio_before_import(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    manifest_path = tmp_path / "launch-manifest.json"
+    clipped_audio = tmp_path / "alice.wav"
+    bob_audio = tmp_path / "bob.wav"
+    write_clipped_wav(clipped_audio)
+    write_reference_wav(bob_audio)
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "voices": [
+                    {
+                        "speaker_display_name": "Alice",
+                        "confirmed_by": "Junwei",
+                        "reference_text": "Alice reads a launch reference.",
+                        "audio": str(clipped_audio),
+                    },
+                    {
+                        "speaker_display_name": "Bob",
+                        "confirmed_by": "Junwei",
+                        "reference_text": "Bob reads a launch reference.",
+                        "audio": str(bob_audio),
+                    },
+                ],
+                "agent_provider": {
+                    "provider": "openai_compatible",
+                    "model": "local-qwen-agent",
+                    "base_url": "http://127.0.0.1:1234/v1",
+                },
+                "generation": {"prompt": "Greet the user as a disclosed synthetic assistant."},
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        "app.cli.run_launch_sequence.import_voice_main",
+        lambda argv: (_ for _ in ()).throw(AssertionError("clipped audio should validate before imports")),
+    )
+
+    exit_code = main(["--manifest", str(manifest_path), "--report", "sequence-report.json"])
+
+    assert exit_code == 2
+    report = json.loads(Path("sequence-report.json").read_text(encoding="utf-8"))
+    assert report == {
+        "status": "failed",
+        "error": (
+            "voices[1].audio failed quality check: "
+            "Reference audio appears clipped; record a cleaner sample."
+        ),
+    }
+
+
 def test_run_launch_sequence_fails_when_final_readiness_is_blocked(tmp_path: Path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     manifest_path = tmp_path / "launch-manifest.json"
@@ -1301,5 +1406,17 @@ def write_reference_wav(path: Path, duration_seconds: int = 5) -> Path:
             struct.pack("<h", int(12000 * math.sin(2 * math.pi * 440 * index / sample_rate)))
             for index in range(sample_rate * duration_seconds)
         )
+        wav_file.writeframes(frames)
+    return path
+
+
+def write_clipped_wav(path: Path, duration_seconds: int = 5) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    sample_rate = 16000
+    with wave.open(str(path), "wb") as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(sample_rate)
+        frames = b"".join(struct.pack("<h", 32767) for _ in range(sample_rate * duration_seconds))
         wav_file.writeframes(frames)
     return path

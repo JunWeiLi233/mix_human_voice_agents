@@ -126,9 +126,11 @@ def _validate_manifest(manifest: dict[str, Any]) -> None:
         if not wav_has_audible_signal(audio_path):
             raise ValueError(f"voices[{index}].audio must contain audible signal: {audio_path}")
         try:
-            analyze_audio_sample(audio_path)
+            quality = analyze_audio_sample(audio_path)
         except AudioQualityError as exc:
             raise ValueError(f"voices[{index}].audio failed quality check: {exc}") from exc
+        if quality.warnings:
+            raise ValueError(f"voices[{index}].audio failed quality check: {'; '.join(quality.warnings)}")
     if len(normalized_speakers) < 2:
         raise ValueError("Launch sequence manifest requires at least two distinct speaker display names.")
     blend = _optional_object(manifest.get("blend"), "blend")
