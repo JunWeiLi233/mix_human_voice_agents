@@ -26,7 +26,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 
 ## Usage Limit Handoff
 
-- Last refreshed: `2026-05-23T17:39:55.599501+00:00`
+- Last refreshed: `2026-05-23T17:43:29.189679+00:00`
 - Reason: Codex usage/session/context limit handoff.
 - Next agent should start from `## Next Tasks`, `## Launch Readiness Remaining Tasks`, and `## Launch Artifact Inventory`.
 - Preserve commit identity: `JunWeiLi233 <mcpejunwei@gmail.com>`.
@@ -34,7 +34,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T17:39:55.587499+00:00`
+- Checked at: `2026-05-23T17:43:29.180677+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Re-record or replace unusable voice samples, then import at least two clean consented WAV voices with matching transcripts.
@@ -101,6 +101,7 @@ Next artifact commands:
 - Added a frontend test that first failed, then passed, for switching between Studio, Evidence, and Launch pages.
 - Added a stricter launch-readiness research gate: `docs/research-review.md` must include `Last checked: YYYY-MM-DD` and that date must be within 45 days before launch.
 - Added actionable `Next launch actions` in the launch-readiness panel so agents can convert failed readiness checks into concrete next steps.
+- Hardened the launch research gate so a recent source list is not enough; `docs/research-review.md` must also include adopted practices, avoided practices, the architecture decision, and launch requirements from research.
 - Added `app.cli.launch_readiness --tasks ..\TASKS.md` so readiness failures can refresh this handoff file automatically before a usage/session limit.
 - Hardened provider URL handling so Claude accepts `https://api.anthropic.com` or `https://api.anthropic.com/v1`, and Local accepts `http://127.0.0.1:11434` or `http://127.0.0.1:11434/api`.
 - Added structured `next_actions` to launch-readiness reports and made the UI render those backend-provided actions.

@@ -79,6 +79,14 @@ def test_core_launch_readiness_accepts_recent_research_review(tmp_path, monkeypa
         "# Mixed Voice Agent Research Review\n\n"
         "## Sources Reviewed\n\n"
         "- Qwen3-TTS\n\n"
+        "## Practices To Adopt\n\n"
+        "- Keep a chained local-first voice pipeline.\n\n"
+        "## Practices To Avoid\n\n"
+        "- Do not claim unverified acoustic identity blending.\n\n"
+        "## Architecture Decision\n\n"
+        "- Use imported voice profiles, saved blends, provider preflight, and Qwen verification.\n\n"
+        "## Launch Requirements From Research\n\n"
+        "- Launch needs consented voices, saved blend metadata, provider preflight, and Qwen evidence.\n\n"
         "## Source Links\n\n"
         "- OpenAI Voice Agents: https://platform.openai.com/docs/guides/voice-agents\n"
         "- Anthropic Messages API examples: https://docs.anthropic.com/en/api/messages-examples\n"
@@ -98,6 +106,42 @@ def test_core_launch_readiness_accepts_recent_research_review(tmp_path, monkeypa
     assert research_review == {
         "passed": True,
         "detail": f"Reviewed: {research_review_label}",
+    }
+
+
+def test_core_launch_readiness_blocks_research_review_without_decision_sections(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    research_review_path = tmp_path / "docs" / "research-review.md"
+    research_review_path.parent.mkdir(parents=True)
+    today = datetime.now(timezone.utc).date().isoformat()
+    research_review_path.write_text(
+        "# Mixed Voice Agent Research Review\n\n"
+        "## Sources Reviewed\n\n"
+        "- Qwen3-TTS\n\n"
+        "## Source Links\n\n"
+        "- OpenAI Voice Agents: https://platform.openai.com/docs/guides/voice-agents\n"
+        "- Anthropic Messages API examples: https://docs.anthropic.com/en/api/messages-examples\n"
+        "- Google Gemini OpenAI compatibility: https://ai.google.dev/gemini-api/docs/openai\n"
+        "- xAI Chat Completions: https://docs.x.ai/docs/guides/chat-completions\n"
+        "- Ollama OpenAI compatibility: https://docs.ollama.com/api/openai-compatibility\n"
+        "- LiveKit Voice AI quickstart: https://docs.livekit.io/agents/start/voice-ai/\n"
+        "- Pipecat introduction: https://docs.pipecat.ai/overview/introduction\n"
+        "- Qwen3-TTS repository: https://github.com/QwenLM/Qwen3-TTS\n\n"
+        f"Last checked: {today}.\n",
+        encoding="utf-8",
+    )
+
+    research_review = _research_review_status()
+    research_review_label = str(Path("docs") / "research-review.md")
+
+    assert research_review == {
+        "passed": False,
+        "detail": (
+            f"{research_review_label} is missing required section markers: "
+            "Practices To Adopt, Practices To Avoid, Architecture Decision, Launch Requirements From Research."
+        ),
     }
 
 

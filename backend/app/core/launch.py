@@ -588,6 +588,21 @@ def _research_review_status() -> dict[str, object]:
                 "Anthropic Claude, Google Gemini, xAI Grok, Ollama/local, LiveKit, Pipecat, and Qwen3-TTS."
             ),
         }
+    decision_markers = (
+        "Practices To Adopt",
+        "Practices To Avoid",
+        "Architecture Decision",
+        "Launch Requirements From Research",
+    )
+    missing_decision_markers = [marker for marker in decision_markers if marker not in content]
+    if missing_decision_markers:
+        return {
+            "passed": False,
+            "detail": (
+                f"{RESEARCH_REVIEW_PATH} is missing required section markers: "
+                f"{', '.join(missing_decision_markers)}."
+            ),
+        }
 
     return {
         "passed": True,
