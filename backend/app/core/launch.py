@@ -314,6 +314,13 @@ def qwen_verification_status(report: QwenVerificationReport, output_exists: bool
             "passed": False,
             "detail": "Qwen verification report must include the synthesized verification text.",
         }
+    try:
+        check_generation_request(report.text or "")
+    except SafetyError:
+        return {
+            "passed": False,
+            "detail": "Qwen verification text must pass voice safety checks.",
+        }
     if len(report.source_profile_details) < 2:
         return {
             "passed": False,

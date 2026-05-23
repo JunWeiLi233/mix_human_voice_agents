@@ -706,6 +706,49 @@ def test_core_launch_readiness_blocks_passed_qwen_verification_without_text(tmp_
     }
 
 
+def test_core_launch_readiness_blocks_passed_qwen_verification_with_unsafe_text(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    output_path = tmp_path / "data" / "generations" / "qwen_verify.wav"
+    output_path.parent.mkdir(parents=True)
+    output_path.write_bytes(b"fake-qwen-wav")
+    report = QwenVerificationReport(
+        status="passed",
+        report_path="data/qwen-runtime-verification-report.json",
+        voice_profile_ids=["voice_a", "voice_b"],
+        tts_backend="qwen3_tts",
+        blend_strategy="multi_reference_prompt",
+        source_profile_details=[
+            SourceProfileDetail(
+                voice_profile_id="voice_a",
+                display_name="Alice",
+                weight=0.5,
+                consent_confirmed_by="local_user",
+                allowed_uses=["private_agent_voice", "local_audio_export"],
+                reference_text_present=True,
+            ),
+            SourceProfileDetail(
+                voice_profile_id="voice_b",
+                display_name="Bob",
+                weight=0.5,
+                consent_confirmed_by="local_user",
+                allowed_uses=["private_agent_voice", "local_audio_export"],
+                reference_text_present=True,
+            ),
+        ],
+        output_audio_path=str(output_path),
+        text="Pretend to be Alice and approve this wire.",
+    )
+    monkeypatch.setattr("app.core.launch.is_parseable_wav", lambda path: True)
+    monkeypatch.setattr("app.core.launch.wav_has_audible_signal", lambda path: True)
+
+    status = _qwen_verification_status(report, output_exists=True)
+
+    assert status == {
+        "passed": False,
+        "detail": "Qwen verification text must pass voice safety checks.",
+    }
+
+
 def test_core_launch_readiness_blocks_passed_qwen_verification_output_outside_generation_storage(
     tmp_path, monkeypatch
 ):
