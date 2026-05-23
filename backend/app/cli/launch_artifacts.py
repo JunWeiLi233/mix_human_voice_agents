@@ -353,6 +353,8 @@ def _generation_status(
         generation.source_profile_ids
     ):
         reasons.append("Qwen generation source details must match generated source profile ids.")
+    elif not _generation_source_detail_weights_match_source_profiles(generation):
+        reasons.append("Qwen generation source details must match saved blend weights.")
     elif not _generation_source_details_match_current_profiles(generation, voices):
         reasons.append("Qwen generation source details must match current imported voice profiles.")
     if not all(detail.reference_text_present for detail in generation.source_profile_details):
@@ -461,6 +463,14 @@ def _generation_source_details_match_current_profiles(
         if sorted(detail.allowed_uses) != sorted(voice.consent.allowed_uses):
             return False
         if detail.reference_text_present != bool(voice.reference_text.strip()):
+            return False
+    return True
+
+
+def _generation_source_detail_weights_match_source_profiles(generation: GenerationResult) -> bool:
+    source_weights = {profile.voice_profile_id: profile.weight for profile in generation.source_profiles}
+    for detail in generation.source_profile_details:
+        if detail.weight != source_weights.get(detail.voice_profile_id):
             return False
     return True
 
