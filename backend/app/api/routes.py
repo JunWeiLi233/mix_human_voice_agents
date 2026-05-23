@@ -152,6 +152,11 @@ def run_qwen_verification_route(request: RunQwenVerificationRequest) -> QwenVeri
             status_code=400,
             detail="Qwen runtime verification requires at least two distinct voice profile ids.",
         )
+    if not request.text.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Qwen runtime verification requires non-blank verification text.",
+        )
 
     try:
         voice_profiles = get_voice_profiles_by_ids(profile_ids)

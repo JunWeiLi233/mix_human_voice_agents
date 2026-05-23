@@ -84,6 +84,21 @@ def main(argv: Sequence[str] | None = None) -> int:
             },
         )
         return 2
+    if not args.text.strip():
+        _write_report(
+            Path(args.report),
+            {
+                "status": "failed",
+                "error": "Qwen runtime verification requires non-blank verification text.",
+                "voice_profile_ids": profile_ids,
+                "model_id": args.model_id,
+                "device_map": args.device_map,
+                "dtype": args.dtype,
+                "attn_implementation": args.attn_implementation,
+                "tts_backend": "qwen3_tts",
+            },
+        )
+        return 2
 
     try:
         voice_profiles = get_voice_profiles_by_ids(profile_ids)
