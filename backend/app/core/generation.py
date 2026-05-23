@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 from app.core.blends import validate_blend
-from app.core.safety import check_generation_request
+from app.core.safety import SafetyError, check_generation_request
 from app.models.schemas import (
     AgentTrace,
     BlendProfile,
@@ -31,6 +31,8 @@ def generate_agent_clip(
     validate_blend(blend)
     check_generation_request(prompt)
     check_generation_request(agent_reply)
+    if tts_backend == "qwen3_tts":
+        _validate_qwen_generation_inputs(blend, voice_profiles, agent_trace)
 
     audio_path = adapter.synthesize(agent_reply, blend, voice_profiles=voice_profiles)
     metadata_path = Path(audio_path).with_suffix(".json")
@@ -57,6 +59,24 @@ def generate_agent_clip(
         encoding="utf-8",
     )
     return result
+
+
+def _validate_qwen_generation_inputs(
+    blend: VoiceBlend,
+    voice_profiles: dict[str, VoiceProfile] | None,
+    agent_trace: AgentTrace | None,
+) -> None:
+    if agent_trace is None:
+        raise SafetyError("Qwen generation requires an agent provider trace.")
+    source_ids = [profile.voice_profile_id for profile in blend.profiles]
+    if not voice_profiles:
+        raise SafetyError("Qwen generation requires imported voice profiles for each blend source.")
+    missing_ids = [voice_id for voice_id in source_ids if voice_id not in voice_profiles]
+    if missing_ids:
+        raise SafetyError(
+            "Qwen generation requires imported voice profiles for each blend source: "
+            + ", ".join(missing_ids)
+        )
 
 
 def build_source_profile_details(

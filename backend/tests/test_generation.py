@@ -46,6 +46,63 @@ def test_generation_rejects_blank_agent_reply_before_synthesis(tmp_path: Path):
         )
 
 
+def test_qwen_generation_requires_imported_voice_profiles_before_synthesis(tmp_path: Path):
+    class FailIfCalledAdapter:
+        name = "qwen3_tts"
+
+        def synthesize(self, text, blend, voice_profiles=None):
+            raise AssertionError("Qwen generation should reject missing imported voices before synthesis")
+
+    blend = create_blend(
+        name="Imported Pair",
+        profiles=[
+            BlendProfileInput(voice_profile_id="voice_a", weight=1),
+            BlendProfileInput(voice_profile_id="voice_b", weight=1),
+        ],
+        strategy="multi_reference_prompt",
+    )
+
+    with pytest.raises(SafetyError, match="imported voice profiles"):
+        generate_agent_clip(
+            prompt="Greet the user as a synthetic assistant.",
+            agent_reply="Hello from a traceable mixed voice.",
+            blend=blend,
+            adapter=FailIfCalledAdapter(),
+            agent_trace=AgentTrace(provider="openai", model="gpt-4.1-mini"),
+            tts_backend="qwen3_tts",
+        )
+
+
+def test_qwen_generation_requires_agent_trace_before_synthesis(tmp_path: Path):
+    class FailIfCalledAdapter:
+        name = "qwen3_tts"
+
+        def synthesize(self, text, blend, voice_profiles=None):
+            raise AssertionError("Qwen generation should reject missing agent trace before synthesis")
+
+    blend = create_blend(
+        name="Imported Pair",
+        profiles=[
+            BlendProfileInput(voice_profile_id="voice_a", weight=1),
+            BlendProfileInput(voice_profile_id="voice_b", weight=1),
+        ],
+        strategy="multi_reference_prompt",
+    )
+
+    with pytest.raises(SafetyError, match="agent provider trace"):
+        generate_agent_clip(
+            prompt="Greet the user as a synthetic assistant.",
+            agent_reply="Hello from a traceable mixed voice.",
+            blend=blend,
+            adapter=FailIfCalledAdapter(),
+            voice_profiles={
+                "voice_a": voice_profile("voice_a", "Alice", "Alice reads a consented reference transcript."),
+                "voice_b": voice_profile("voice_b", "Bob", "Bob reads a consented reference transcript."),
+            },
+            tts_backend="qwen3_tts",
+        )
+
+
 def test_generation_writes_wav_and_metadata(tmp_path: Path):
     blend = create_blend(
         name="Pair",
@@ -115,6 +172,7 @@ def test_generation_metadata_records_imported_voice_source_details(tmp_path: Pat
             "voice_b": voice_profile("voice_b", "Bob", "Bob reads a consented reference transcript."),
         },
         tts_backend="qwen3_tts",
+        agent_trace=AgentTrace(provider="openai", model="gpt-4.1-mini"),
     )
 
     assert [detail.model_dump() for detail in result.source_profile_details] == [
@@ -139,6 +197,7 @@ def test_generation_metadata_records_imported_voice_source_details(tmp_path: Pat
     metadata = json.loads(Path(result.metadata_path).read_text(encoding="utf-8"))
     assert metadata["source_profile_details"][0]["display_name"] == "Alice"
     assert metadata["source_profile_details"][1]["display_name"] == "Bob"
+    assert metadata["agent_trace"] == {"provider": "openai", "model": "gpt-4.1-mini"}
 
 
 def test_generation_metadata_records_qwen_runtime_config(tmp_path: Path):
@@ -157,7 +216,12 @@ def test_generation_metadata_records_qwen_runtime_config(tmp_path: Path):
         agent_reply="Hello from a traceable mixed voice.",
         blend=blend,
         adapter=adapter,
+        voice_profiles={
+            "voice_a": voice_profile("voice_a", "Alice", "Alice reads a consented reference transcript."),
+            "voice_b": voice_profile("voice_b", "Bob", "Bob reads a consented reference transcript."),
+        },
         tts_backend="qwen3_tts",
+        agent_trace=AgentTrace(provider="openai", model="gpt-4.1-mini"),
         qwen_runtime_config={
             "model_id": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
             "device_map": "cuda:0",
