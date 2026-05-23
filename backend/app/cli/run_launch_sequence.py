@@ -109,10 +109,10 @@ def _validate_manifest(manifest: dict[str, Any]) -> None:
     for index, voice in enumerate(voices, start=1):
         if not isinstance(voice, dict):
             raise ValueError(f"voices[{index}] must be an object.")
-        _require(voice, "speaker_display_name", f"voices[{index}]")
-        _require(voice, "confirmed_by", f"voices[{index}]")
-        _require(voice, "reference_text", f"voices[{index}]")
-        _require(voice, "audio", f"voices[{index}]")
+        _require_string(voice, "speaker_display_name", f"voices[{index}]")
+        _require_string(voice, "confirmed_by", f"voices[{index}]")
+        _require_string(voice, "reference_text", f"voices[{index}]")
+        _require_string(voice, "audio", f"voices[{index}]")
         _validate_voice_weight(voice, index)
         normalized_speakers.add(str(voice["speaker_display_name"]).strip().casefold())
         audio_path = Path(str(voice["audio"]))
@@ -127,8 +127,7 @@ def _validate_manifest(manifest: dict[str, Any]) -> None:
     if len(normalized_speakers) < 2:
         raise ValueError("Launch sequence manifest requires at least two distinct speaker display names.")
     blend = _optional_object(manifest.get("blend"), "blend")
-    if "name" in blend and not str(blend["name"]).strip():
-        raise ValueError("blend.name must not be blank when provided.")
+    _validate_optional_string(blend, "name", "blend")
     if str(blend.get("strategy", LAUNCH_BLEND_STRATEGY)) != LAUNCH_BLEND_STRATEGY:
         raise ValueError("blend.strategy must be multi_reference_prompt for Qwen launch generation.")
     provider = _optional_object(manifest.get("agent_provider"), "agent_provider")
@@ -140,13 +139,11 @@ def _validate_manifest(manifest: dict[str, Any]) -> None:
             "agent_provider.provider must be one of: "
             f"{', '.join(SUPPORTED_AGENT_PROVIDERS)}."
         )
-    if "prompt" in provider and not str(provider["prompt"]).strip():
-        raise ValueError("agent_provider.prompt must not be blank when provided.")
+    _validate_optional_string(provider, "prompt", "agent_provider")
     generation = _optional_object(manifest.get("generation"), "generation")
-    _require(generation, "prompt", "generation")
+    _require_string(generation, "prompt", "generation")
     qwen = _optional_object(manifest.get("qwen"), "qwen")
-    if "text" in qwen and not str(qwen["text"]).strip():
-        raise ValueError("qwen.text must not be blank when provided.")
+    _validate_optional_string(qwen, "text", "qwen")
     _validate_optional_qwen_runtime_options(qwen)
 
 
@@ -162,6 +159,15 @@ def _require_string(payload: dict[str, Any], key: str, label: str) -> None:
         raise ValueError(f"{label}.{key} must be a string.")
     if not payload[key].strip():
         raise ValueError(f"{label}.{key} is required.")
+
+
+def _validate_optional_string(payload: dict[str, Any], key: str, label: str) -> None:
+    if key not in payload:
+        return
+    if not isinstance(payload[key], str):
+        raise ValueError(f"{label}.{key} must be a string.")
+    if not payload[key].strip():
+        raise ValueError(f"{label}.{key} must not be blank when provided.")
 
 
 def _optional_object(payload: Any, label: str) -> dict[str, Any]:
@@ -185,8 +191,7 @@ def _validate_voice_weight(voice: dict[str, Any], index: int) -> None:
 
 def _validate_optional_qwen_runtime_options(qwen: dict[str, Any]) -> None:
     for key in ("model_id", "device_map", "dtype", "attn_implementation"):
-        if key in qwen and not str(qwen[key]).strip():
-            raise ValueError(f"qwen.{key} must not be blank when provided.")
+        _validate_optional_string(qwen, key, "qwen")
 
 
 def _run_voice_imports(voices: list[dict[str, Any]], output_dir: Path) -> list[str]:

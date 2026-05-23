@@ -248,6 +248,75 @@ def test_run_launch_sequence_dry_run_rejects_non_string_agent_provider_model(
     }
 
 
+def test_run_launch_sequence_dry_run_rejects_non_string_launch_text_fields(
+    tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    voice_a_audio = tmp_path / "alice.wav"
+    voice_b_audio = tmp_path / "bob.wav"
+    write_reference_wav(voice_a_audio)
+    write_reference_wav(voice_b_audio)
+
+    def fail_if_called(argv):
+        raise AssertionError("launch text field types should validate before launch subcommands")
+
+    monkeypatch.setattr("app.cli.run_launch_sequence.import_voice_main", fail_if_called)
+    monkeypatch.setattr("app.cli.run_launch_sequence.verify_qwen_runtime_main", fail_if_called)
+    monkeypatch.setattr("app.cli.run_launch_sequence.generate_voice_main", fail_if_called)
+
+    def base_manifest():
+        return {
+            "voices": [
+                {
+                    "speaker_display_name": "Alice",
+                    "confirmed_by": "Junwei",
+                    "reference_text": "Alice reads a launch reference.",
+                    "audio": str(voice_a_audio),
+                },
+                {
+                    "speaker_display_name": "Bob",
+                    "confirmed_by": "Junwei",
+                    "reference_text": "Bob reads a launch reference.",
+                    "audio": str(voice_b_audio),
+                },
+            ],
+            "agent_provider": {
+                "provider": "openai_compatible",
+                "model": "local-qwen-agent",
+                "base_url": "http://127.0.0.1:1234/v1",
+            },
+            "qwen": {"text": "Verify this disclosed synthetic voice."},
+            "generation": {"prompt": "Greet the user as a disclosed synthetic assistant."},
+        }
+
+    cases = [
+        ("voice-reference-text", ["voices", 0, "reference_text"], "voices[1].reference_text must be a string."),
+        ("qwen-text", ["qwen", "text"], "qwen.text must be a string."),
+        ("generation-prompt", ["generation", "prompt"], "generation.prompt must be a string."),
+    ]
+
+    for name, path, expected_error in cases:
+        manifest = base_manifest()
+        target = manifest
+        for key in path[:-1]:
+            target = target[key]
+        target[path[-1]] = {"text": "not a scalar"}
+        manifest_path = tmp_path / f"{name}-manifest.json"
+        report_path = tmp_path / f"{name}-report.json"
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+        exit_code = main(
+            ["--manifest", str(manifest_path), "--dry-run", "--report", str(report_path)]
+        )
+
+        assert exit_code == 2
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        assert report == {
+            "status": "failed",
+            "error": expected_error,
+        }
+
+
 def test_run_launch_sequence_dry_run_rejects_non_object_manifest_sections(
     tmp_path: Path, monkeypatch
 ):
