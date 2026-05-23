@@ -371,7 +371,7 @@ def _validate_qwen_runtime_verification(request: GenerateRequest) -> None:
         )
     verified_runtime_config = _qwen_runtime_config_from_report(report)
     requested_runtime_config = _compact_qwen_runtime_config(_qwen_runtime_config_from_request(request) or {})
-    if verified_runtime_config and requested_runtime_config != verified_runtime_config:
+    if verified_runtime_config and requested_runtime_config and requested_runtime_config != verified_runtime_config:
         raise HTTPException(
             status_code=400,
             detail="Qwen generation runtime config must match the passed Qwen verification.",
