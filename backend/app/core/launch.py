@@ -429,7 +429,8 @@ def _qwen_mixed_generation_status(
         if (
             qwen_verification.status == "passed"
             and _qwen_verification_runtime_config(qwen_verification)
-            and generation.qwen_runtime_config != _qwen_verification_runtime_config(qwen_verification)
+            and _compact_qwen_runtime_config(generation.qwen_runtime_config)
+            != _qwen_verification_runtime_config(qwen_verification)
         ):
             return {
                 "passed": False,
@@ -551,17 +552,19 @@ def _qwen_mixed_generation_status(
     }
 
 
-def _qwen_verification_runtime_config(report: QwenVerificationReport) -> dict[str, str | None]:
-    return {
-        key: value
-        for key, value in {
+def _qwen_verification_runtime_config(report: QwenVerificationReport) -> dict[str, str]:
+    return _compact_qwen_runtime_config(
+        {
             "model_id": report.model_id,
             "device_map": report.device_map,
             "dtype": report.dtype,
             "attn_implementation": report.attn_implementation,
-        }.items()
-        if value is not None
-    }
+        }
+    )
+
+
+def _compact_qwen_runtime_config(config: dict[str, str | None] | None) -> dict[str, str]:
+    return {key: value for key, value in (config or {}).items() if value is not None}
 
 
 def _same_audio_path(left: str, right: str) -> bool:
