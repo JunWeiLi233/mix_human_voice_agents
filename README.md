@@ -77,6 +77,13 @@ cd backend
 .\.venv\Scripts\python -m app.cli.verify_agent_provider --provider openai_compatible --model local-qwen-agent --base-url http://127.0.0.1:1234/v1 --report data/agent-provider-verification-report.json
 ```
 
+Terminal voice import:
+
+```powershell
+cd backend
+.\.venv\Scripts\python -m app.cli.import_voice --speaker-display-name Alice --confirmed-by Junwei --notes "Written permission captured for private local mixed voice testing." --reference-text "Alice reads a clean reference sentence for Qwen cloning." --audio C:\path\to\alice.wav --metadata data\voices\last-imported-alice.json
+```
+
 Refresh the handoff tasks from the same launch-readiness evidence:
 
 ```powershell

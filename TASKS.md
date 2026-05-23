@@ -32,6 +32,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Hardened provider URL handling so Claude accepts `https://api.anthropic.com` or `https://api.anthropic.com/v1`, and Local accepts `http://127.0.0.1:11434` or `http://127.0.0.1:11434/api`.
 - Added structured `next_actions` to launch-readiness reports and made the UI render those backend-provided actions.
 - Added `app.cli.verify_agent_provider` so terminal agents can create the persisted provider preflight report required by launch readiness.
+- Added `app.cli.import_voice` so terminal agents can import consented WAV voice profiles with matching transcripts into the same local storage as the UI.
 
 ## Verification Already Run
 
