@@ -15,7 +15,8 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Branch: `main`
 - Remote: `https://github.com/JunWeiLi233/mix_human_voice_agents.git`
 - Recent pushed work includes structured launch-manifest voice diagnostics for browser and CLI dry-runs.
-- This handoff includes a stricter research readiness gate requiring primary source links for every supported provider family: OpenAI/ChatGPT, Anthropic/Claude, Google/Gemini, xAI/Grok, Ollama/local, LiveKit, Pipecat, and Qwen3-TTS.
+- Latest work hardens the research readiness gate so launch requires primary source links for every supported provider family: OpenAI/ChatGPT, Anthropic/Claude, Google/Gemini, xAI/Grok, Ollama/local, LiveKit, Pipecat, and Qwen3-TTS.
+- Latest pushed CI status for the provider research-source gate: passed.
 - Local Vite dev server for review: `http://127.0.0.1:5174/`
 - Backend launch readiness is still blocked because the repo does not yet have two real imported voices, a saved real blend, agent-provider preflight, Qwen verification with two profiles, or real Qwen mixed-voice output. The local backend venv now has `qwen-tts` installed and importable.
 
@@ -258,6 +259,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - `git diff --check` passed with line-ending normalization warnings only.
 - `cd backend; .\.venv\Scripts\python -m app.cli.launch_artifacts --report data\launch-artifacts-report.json --tasks ..\TASKS.md --summary` refreshed the Launch Artifact Inventory and reported 1 voice, 0 usable voices, 256 stale/nonmatching blends, 0 generations, and the launch manifest template command.
 - `cd backend; .\.venv\Scripts\python -m app.cli.launch_readiness --report data\launch-readiness-report.json --tasks ..\TASKS.md --summary` refreshed readiness tasks and still exits 1 until real launch artifacts are present.
+- GitHub Actions CI for `feat: require provider research sources` passed: backend tests and frontend tests/build.
 - Verified current primary source links in browser: OpenAI Voice Agents, Anthropic Messages, Google Gemini OpenAI compatibility, xAI Chat Completions, Ollama OpenAI compatibility, LiveKit Voice AI quickstart, Pipecat introduction, and Qwen3-TTS.
 - `cd backend; .\.venv\Scripts\python -m pytest tests\test_launch_readiness_core.py -q -k "provider_source_links"` first failed because provider source links were not required, then passed after hardening the gate.
 - `cd backend; .\.venv\Scripts\python -m pytest tests\test_launch_readiness_core.py -q -k "research_review"` passed: 4 tests.
@@ -289,22 +291,26 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 
 ## Next Tasks
 
-1. Re-run frontend verification after any further edits:
+1. Start by checking the current branch and working tree:
+   `git status --short --branch`
+2. Refresh launch artifact inventory and readiness before further launch work:
+   `cd backend; .\.venv\Scripts\python -m app.cli.launch_artifacts --report data\launch-artifacts-report.json --tasks ..\TASKS.md --summary`
+   `cd backend; .\.venv\Scripts\python -m app.cli.launch_readiness --report data\launch-readiness-report.json --tasks ..\TASKS.md --summary`
+3. Re-run frontend verification after any frontend edits:
    `cd frontend; npm test -- --run`
-2. Re-run TypeScript and production build:
    `cd frontend; npx tsc --noEmit`
    `cd frontend; npm run build`
-3. Re-run backend tests after any backend edits:
+4. Re-run backend tests after any backend edits:
    `cd backend; .\.venv\Scripts\python -m pytest -q`
-4. Audit Git identity before commit:
+5. Before future commits, audit Git identity:
    `git config user.name`
    `git config user.email`
    `git var GIT_AUTHOR_IDENT`
    `git var GIT_COMMITTER_IDENT`
-5. Commit as `JunWeiLi233 <mcpejunwei@gmail.com>` and push to `main`.
-6. Audit the latest commit identity after commit:
+6. Commit future work as `JunWeiLi233 <mcpejunwei@gmail.com>` and push to `main`.
+7. Audit the latest commit identity after commit:
    `git show -s --format="%h %an <%ae> | %cn <%ce> | %s" HEAD`
-7. Watch GitHub Actions for the pushed commit until it finishes.
+8. Watch GitHub Actions for any pushed commit until it finishes.
 
 ## Launch Readiness Remaining Tasks
 
