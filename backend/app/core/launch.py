@@ -671,6 +671,14 @@ def _qwen_mixed_generation_status(
                 "passed": False,
                 "detail": "Qwen mixed voice clips must include the agent prompt and spoken reply transcript.",
             }
+        try:
+            check_generation_request(generation.prompt)
+            check_generation_request(generation.agent_reply)
+        except SafetyError:
+            return {
+                "passed": False,
+                "detail": "Qwen mixed voice clips must pass voice safety checks.",
+            }
         if not _generation_has_synthetic_disclosure(generation):
             return {
                 "passed": False,
