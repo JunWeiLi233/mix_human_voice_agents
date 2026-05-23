@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from app.core.blends import validate_blend
+from app.core.qwen_profiles import validate_qwen_voice_profiles
 from app.core.safety import SafetyError, check_generation_request
 from app.models.schemas import (
     AgentTrace,
@@ -79,6 +80,10 @@ def _validate_qwen_generation_inputs(
             "Qwen generation requires imported voice profiles for each blend source: "
             + ", ".join(missing_ids)
         )
+    try:
+        validate_qwen_voice_profiles({voice_id: voice_profiles[voice_id] for voice_id in source_ids})
+    except ValueError as exc:
+        raise SafetyError(str(exc)) from exc
 
 
 def build_source_profile_details(
