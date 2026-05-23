@@ -68,6 +68,13 @@ cd backend
 .\.venv\Scripts\python -m app.cli.launch_readiness --report data/launch-readiness-report.json
 ```
 
+Refresh the handoff tasks from the same launch-readiness evidence:
+
+```powershell
+cd backend
+.\.venv\Scripts\python -m app.cli.launch_readiness --report data/launch-readiness-report.json --tasks ..\TASKS.md
+```
+
 ## Frontend Setup
 
 In a second terminal:

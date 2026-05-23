@@ -28,6 +28,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Added a frontend test that first failed, then passed, for switching between Studio, Evidence, and Launch pages.
 - Added a stricter launch-readiness research gate: `docs/research-review.md` must include `Last checked: YYYY-MM-DD` and that date must be within 45 days before launch.
 - Added actionable `Next launch actions` in the launch-readiness panel so agents can convert failed readiness checks into concrete next steps.
+- Added `app.cli.launch_readiness --tasks ..\TASKS.md` so readiness failures can refresh this handoff file automatically before a usage/session limit.
 
 ## Verification Already Run
 
@@ -56,3 +57,31 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 6. Audit the latest commit identity after commit:
    `git show -s --format="%h %an <%ae> | %cn <%ce> | %s" HEAD`
 7. Watch GitHub Actions for the pushed commit until it finishes.
+
+
+## Launch Readiness Remaining Tasks
+
+- Status: `blocked`
+- Checked at: `2026-05-23T05:45:18.486194+00:00`
+
+The following tasks are generated from failed launch-readiness checks:
+- [ ] imported_voices: Import two consented WAV voice samples with matching transcripts.
+  Evidence: 0 imported voices
+- [ ] saved_blend: Create and save a multi-reference blend from imported voices.
+  Evidence: No saved blend references at least two currently imported voices.
+- [ ] generated_audio: Generate a Qwen mixed voice clip with imported source details.
+  Evidence: 0 Qwen mixed voice clips with imported source details
+- [ ] agent_provider: Run Test provider and keep the passed provider verification report.
+  Evidence: Run the Agent Provider Test provider preflight before launch.
+- [ ] qwen_runtime: Install and load qwen-tts with the selected Qwen model.
+  Evidence: qwen-tts is not installed. Run: python -m pip install -e ".[qwen]"
+- [ ] qwen_verification: Run Qwen verification with two imported voices and keep the passed report.
+  Evidence: Run python -m app.cli.verify_qwen_runtime with two consented voice profile ids.
+
+Blocking reasons:
+- Import at least two consented voice profiles.
+- Create and save a mixed voice blend.
+- Generate at least one Qwen3-TTS mixed voice clip from imported profiles.
+- Test the selected agent provider successfully before launch.
+- Install and load the Qwen3-TTS runtime before launch.
+- Run Qwen runtime verification successfully before launch.
