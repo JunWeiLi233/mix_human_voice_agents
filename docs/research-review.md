@@ -70,7 +70,7 @@ Primary-source documentation still supports the current launch direction:
 - OpenAI, Anthropic, Google Gemini, xAI, Ollama, and OpenAI-compatible endpoints expose different request surfaces and model capabilities. The provider layer should therefore stay independent from voice storage and TTS synthesis, with per-provider preflight reports proving the selected ChatGPT/OpenAI, Claude/Anthropic, Gemini/Google, Grok/xAI, custom OpenAI-compatible, or Ollama/local model before generation.
 - Qwen3-TTS primary docs still frame cloning around reference audio plus reference transcript, with reusable clone prompts for repeat synthesis. That keeps the current import requirement correct: every voice profile must persist source audio, transcript, consent metadata, and quality metadata before it can participate in Qwen verification or a saved blend.
 - Qwen's Base model workflow clones one reference voice at a time. Until a true multi-speaker blend model is proven locally, this project should continue to label the implemented Qwen blend strategy as per-profile synthesis followed by weighted waveform mixing, not as a native Qwen acoustic identity interpolation.
-- Launch readiness should continue rejecting stale or unverifiable evidence. Passed provider and Qwen reports need persisted `report_path`, non-future `checked_at`, source-profile details, and existing generated audio paths where applicable.
+- Launch readiness should continue rejecting stale or unverifiable evidence. Passed provider and Qwen reports need persisted `report_path`, non-future `checked_at` values no older than 7 days, source-profile details, and existing generated audio paths where applicable.
 
 ## Source Links
 

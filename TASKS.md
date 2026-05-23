@@ -41,6 +41,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - Hardened `app.cli.run_launch_sequence` so manifest audio must be parseable WAV with audible signal before any import starts.
 - Hardened `app.cli.run_launch_sequence` so the launch manifest must name at least two distinct speakers before any import starts.
 - Added `app.cli.run_launch_sequence --dry-run` so agents can validate manifest voices, WAV files, provider fields, and prompts without importing voices or calling providers.
+- Hardened launch readiness so passed agent-provider and Qwen verification reports expire after 7 days.
 
 ## Verification Already Run
 
@@ -49,7 +50,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 - `cd frontend; npm run build` passed.
 - Chrome headless desktop screenshot was captured from `http://127.0.0.1:5174/`.
 - Chrome headless mobile screenshot was captured and mobile clipping was fixed.
-- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 214 tests.
+- `cd backend; .\.venv\Scripts\python -m pytest -q` passed: 216 tests.
 
 ## Next Tasks
 
@@ -73,7 +74,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T06:29:45.712724+00:00`
+- Checked at: `2026-05-23T06:33:57.913485+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Import two consented WAV voice samples with matching transcripts.

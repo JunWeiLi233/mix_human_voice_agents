@@ -69,6 +69,7 @@ cd backend
 ```
 
 The JSON report includes `next_actions`, a structured list of failed check ids, action text, and evidence for the UI and other agents.
+Passed agent-provider and Qwen verification reports must be no older than 7 days at launch readiness time.
 
 Agent provider preflight report:
 

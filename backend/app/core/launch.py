@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import re
 
@@ -26,6 +26,7 @@ QWEN_VERIFICATION_REPORT_PATH = Path("data") / "qwen-runtime-verification-report
 AGENT_PROVIDER_VERIFICATION_REPORT_PATH = Path("data") / "agent-provider-verification-report.json"
 RESEARCH_REVIEW_PATH = Path("docs") / "research-review.md"
 RESEARCH_REVIEW_MAX_AGE_DAYS = 45
+LAUNCH_PREFLIGHT_MAX_AGE_DAYS = 7
 REQUIRED_VOICE_USE = "private_agent_voice"
 REQUIRED_SYNTHETIC_LABEL = "synthetic mixed voice"
 LAUNCH_ACTIONS = {
@@ -75,6 +76,12 @@ def get_qwen_verification_report() -> QwenVerificationReport:
                 report_path=str(report_path),
                 error="Qwen runtime verification report checked_at is in the future.",
             )
+        if report.status == "passed" and _is_stale_launch_preflight_timestamp(report.checked_at):
+            return QwenVerificationReport(
+                status="failed",
+                report_path=str(report_path),
+                error=f"Qwen runtime verification report is older than {LAUNCH_PREFLIGHT_MAX_AGE_DAYS} days.",
+            )
         return report
     except (json.JSONDecodeError, ValidationError):
         return QwenVerificationReport(
@@ -119,6 +126,12 @@ def get_agent_provider_verification_report() -> AgentProviderVerificationReport:
                 status="failed",
                 report_path=str(report_path),
                 error="Agent provider verification report checked_at is in the future.",
+            )
+        if report.status == "passed" and _is_stale_launch_preflight_timestamp(report.checked_at):
+            return AgentProviderVerificationReport(
+                status="failed",
+                report_path=str(report_path),
+                error=f"Agent provider verification report is older than {LAUNCH_PREFLIGHT_MAX_AGE_DAYS} days.",
             )
         return report
     except (json.JSONDecodeError, ValidationError):
@@ -210,6 +223,12 @@ def _is_future_timestamp(value: datetime) -> bool:
     if value.tzinfo is None:
         value = value.replace(tzinfo=timezone.utc)
     return value > datetime.now(timezone.utc)
+
+
+def _is_stale_launch_preflight_timestamp(value: datetime) -> bool:
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc) - value > timedelta(days=LAUNCH_PREFLIGHT_MAX_AGE_DAYS)
 
 
 def _agent_provider_verification_detail(report: AgentProviderVerificationReport) -> str:
