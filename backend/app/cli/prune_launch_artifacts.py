@@ -25,15 +25,22 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    report = collect_prune_plan(apply=args.apply)
     report_path = Path(args.report)
+    report = collect_prune_plan(
+        apply=args.apply,
+        reviewed_apply_command=(
+            None
+            if args.apply
+            else f"python -m app.cli.prune_launch_artifacts --apply --report {report_path}"
+        ),
+    )
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
-    _print_summary(report)
+    _print_summary(report, report_path)
     return 0
 
 
-def collect_prune_plan(*, apply: bool) -> dict[str, object]:
+def collect_prune_plan(*, apply: bool, reviewed_apply_command: str | None = None) -> dict[str, object]:
     ensure_storage()
     voices = list_voice_profiles()
     blends = list_blends()
@@ -46,7 +53,7 @@ def collect_prune_plan(*, apply: bool) -> dict[str, object]:
     ]
     kept_blend_ids = [blend.id for blend in blends if blend.id not in set(stale_blend_ids)]
     deleted_blend_ids = _delete_blends(stale_blend_ids) if apply else []
-    return {
+    report: dict[str, object] = {
         "mode": "apply" if apply else "dry_run",
         "stale_blend_ids": stale_blend_ids,
         "stale_blends": [
@@ -62,6 +69,9 @@ def collect_prune_plan(*, apply: bool) -> dict[str, object]:
         "deleted_blend_ids": deleted_blend_ids,
         "kept_blend_ids": kept_blend_ids,
     }
+    if reviewed_apply_command is not None:
+        report["reviewed_apply_command"] = reviewed_apply_command
+    return report
 
 
 def _delete_blends(blend_ids: list[str]) -> list[str]:
@@ -78,12 +88,14 @@ def _delete_blends(blend_ids: list[str]) -> list[str]:
     return deleted
 
 
-def _print_summary(report: dict[str, object]) -> None:
+def _print_summary(report: dict[str, object], report_path: Path) -> None:
     stale_blend_ids = report["stale_blend_ids"]
     if report["mode"] == "apply":
         print(f"Deleted {len(report['deleted_blend_ids'])} stale blends.")
     else:
         print(f"Dry run: {len(stale_blend_ids)} stale blends would be deleted.")
+        if report.get("reviewed_apply_command"):
+            print(f"Review {report_path}, then run: {report['reviewed_apply_command']}")
     for blend_id in stale_blend_ids:
         print(f"- {blend_id}")
 

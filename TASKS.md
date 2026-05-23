@@ -25,7 +25,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 
 ## Usage Limit Handoff
 
-- Last refreshed: `2026-05-23T17:14:50.643970+00:00`
+- Last refreshed: `2026-05-23T17:17:50.638199+00:00`
 - Reason: Codex usage/session/context limit handoff.
 - Next agent should start from `## Next Tasks`, `## Launch Readiness Remaining Tasks`, and `## Launch Artifact Inventory`.
 - Preserve commit identity: `JunWeiLi233 <mcpejunwei@gmail.com>`.
@@ -33,7 +33,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T17:14:50.633971+00:00`
+- Checked at: `2026-05-23T17:17:50.629198+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Re-record or replace unusable voice samples, then import at least two clean consented WAV voices with matching transcripts.
@@ -57,7 +57,7 @@ Blocking reasons:
 ## Launch Artifact Inventory
 
 - Voices: `2` total; `1` usable; `1` unusable; `1` distinct usable speakers
-- Blends: `276` total; `0` launch-eligible; `276` stale/nonmatching
+- Blends: `277` total; `0` launch-eligible; `277` stale/nonmatching
 - Generations: `0` total; `0` Qwen; `0` launch-eligible; `0` stale/nonmatching
 - Usable voice IDs: `voice_93f62f27a5b4`
 - Usable distinct-speaker voice IDs: `voice_93f62f27a5b4`
@@ -71,9 +71,9 @@ Unusable voices:
 - `voice_93dc1ef39402` Alice: Audio quality warnings must be resolved before launch.
 
 Stale blend reason summary:
-- `276` Blend must reference at least two distinct speaker display names.
-- `276` Blend must use the multi_reference_prompt strategy for Qwen launch.
-- `276` Blend references voices that are missing or not launch-usable: voice_a, voice_b.
+- `277` Blend must reference at least two distinct speaker display names.
+- `277` Blend must use the multi_reference_prompt strategy for Qwen launch.
+- `277` Blend references voices that are missing or not launch-usable: voice_a, voice_b.
 
 Provider preflight command options:
 - ChatGPT: `python -m app.cli.verify_agent_provider --provider openai --model gpt-4.1-mini --base-url https://api.openai.com/v1 --api-key <openai-api-key>`
@@ -197,6 +197,7 @@ Next artifact commands:
 - Updated the frontend Launch Artifact Inventory panel to show aggregate stale blend reason counts before detailed stale blend rows.
 - Updated the frontend Launch Artifact Inventory panel to show ChatGPT, Claude, Grok, Gemini, API, and local provider preflight commands from the artifact report.
 - Updated the generated `TASKS.md` Launch Artifact Inventory handoff to include ChatGPT, Claude, Grok, Gemini, API, and local provider preflight command options.
+- Added a reviewed apply command to stale blend prune dry-run reports so agents can inspect the report before deleting stale blends.
 
 ## Verification Already Run
 

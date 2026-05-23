@@ -39,9 +39,11 @@ def test_prune_launch_artifacts_dry_run_reports_stale_blends_without_deleting(tm
         ],
         "deleted_blend_ids": [],
         "kept_blend_ids": ["blend_ready"],
+        "reviewed_apply_command": f"python -m app.cli.prune_launch_artifacts --apply --report {report_path}",
     }
     output = capsys.readouterr().out
     assert "Dry run: 1 stale blends would be deleted." in output
+    assert f"Review {report_path}, then run: python -m app.cli.prune_launch_artifacts --apply --report {report_path}" in output
     assert "blend_stale" in output
 
 
