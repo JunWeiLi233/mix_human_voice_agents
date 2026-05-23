@@ -152,7 +152,10 @@ def list_blends() -> list[VoiceBlend]:
         key=lambda path: path.stat().st_mtime,
         reverse=True,
     ):
-        blends.append(VoiceBlend.model_validate_json(blend_path.read_text(encoding="utf-8")))
+        try:
+            blends.append(VoiceBlend.model_validate_json(blend_path.read_text(encoding="utf-8")))
+        except ValidationError:
+            continue
     return blends
 
 

@@ -5,13 +5,16 @@ import pytest
 from app.core.storage import (
     get_generation_audio_path,
     get_generation_metadata_path,
+    list_blends,
     list_generation_results,
     list_voice_profiles,
 )
 from app.models.schemas import (
     AudioQuality,
+    BlendProfile,
     ConsentRecord,
     GenerationResult,
+    VoiceBlend,
     VoiceProfile,
 )
 
@@ -205,3 +208,24 @@ def test_list_voice_profiles_skips_invalid_profile_metadata(tmp_path, monkeypatc
     profiles = list_voice_profiles()
 
     assert [profile.id for profile in profiles] == ["voice_valid"]
+
+
+def test_list_blends_skips_invalid_blend_metadata(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    blend_root = tmp_path / "data" / "blends"
+    blend_root.mkdir(parents=True)
+    valid = VoiceBlend(
+        id="blend_valid",
+        name="Valid launch blend",
+        profiles=[
+            BlendProfile(voice_profile_id="voice_a", weight=0.5),
+            BlendProfile(voice_profile_id="voice_b", weight=0.5),
+        ],
+        strategy="multi_reference_prompt",
+    )
+    (blend_root / "valid.json").write_text(valid.model_dump_json(), encoding="utf-8")
+    (blend_root / "invalid.json").write_text("{invalid-json", encoding="utf-8")
+
+    blends = list_blends()
+
+    assert [blend.id for blend in blends] == ["blend_valid"]
