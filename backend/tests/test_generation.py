@@ -361,6 +361,7 @@ def test_qwen_generation_rejects_invalid_output_before_metadata_is_written(tmp_p
         strategy="multi_reference_prompt",
     )
     output_metadata = generation_root / "invalid_qwen.json"
+    output_audio = generation_root / "invalid_qwen.wav"
 
     with pytest.raises(SafetyError, match="parseable WAV"):
         generate_agent_clip(
@@ -387,6 +388,7 @@ def test_qwen_generation_rejects_invalid_output_before_metadata_is_written(tmp_p
         )
 
     assert not output_metadata.exists()
+    assert not output_audio.exists()
 
 
 def test_qwen_generation_rejects_output_outside_generation_storage(tmp_path: Path, monkeypatch):

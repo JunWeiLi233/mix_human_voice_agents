@@ -39,7 +39,12 @@ def generate_agent_clip(
 
     audio_path = adapter.synthesize(agent_reply, blend, voice_profiles=voice_profiles)
     if tts_backend == "qwen3_tts":
-        _validate_qwen_output_audio(Path(audio_path))
+        qwen_audio_path = Path(audio_path)
+        try:
+            _validate_qwen_output_audio(qwen_audio_path)
+        except SafetyError:
+            _remove_managed_qwen_output(qwen_audio_path)
+            raise
     metadata_path = Path(audio_path).with_suffix(".json")
     result = GenerationResult(
         audio_path=str(audio_path),
@@ -103,6 +108,17 @@ def _validate_qwen_output_audio(audio_path: Path) -> None:
         raise SafetyError("Qwen generation output audio must be a parseable WAV file.")
     if not wav_has_audible_signal(audio_path):
         raise SafetyError("Qwen generation output audio must contain audible signal.")
+
+
+def _remove_managed_qwen_output(audio_path: Path) -> None:
+    generation_root = GENERATION_ROOT.resolve(strict=False)
+    resolved_audio_path = audio_path.resolve(strict=False)
+    if generation_root not in (resolved_audio_path, *resolved_audio_path.parents):
+        return
+    try:
+        audio_path.unlink()
+    except OSError:
+        return
 
 
 def build_source_profile_details(
