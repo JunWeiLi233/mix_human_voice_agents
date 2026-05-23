@@ -1092,6 +1092,72 @@ def test_core_launch_readiness_blocks_qwen_generation_with_missing_metadata_arti
     }
 
 
+def test_core_launch_readiness_blocks_qwen_generation_with_missing_audio_artifact(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    audio_path = tmp_path / "data" / "generations" / "mixed.wav"
+    metadata_path = tmp_path / "data" / "generations" / "mixed.json"
+    verification_path = tmp_path / "data" / "generations" / "qwen_verify.wav"
+    metadata_path.parent.mkdir(parents=True)
+    verification_path.write_bytes(b"fake-qwen-verification-wav")
+    source_details = [
+        SourceProfileDetail(
+            voice_profile_id="voice_a",
+            display_name="Alice",
+            weight=0.5,
+            consent_confirmed_by="local_user",
+            allowed_uses=["private_agent_voice", "local_audio_export"],
+            reference_text_present=True,
+        ),
+        SourceProfileDetail(
+            voice_profile_id="voice_b",
+            display_name="Bob",
+            weight=0.5,
+            consent_confirmed_by="local_user",
+            allowed_uses=["private_agent_voice", "local_audio_export"],
+            reference_text_present=True,
+        ),
+    ]
+    generation = GenerationResult(
+        audio_path=str(audio_path),
+        metadata_path=str(metadata_path),
+        prompt="Say hello as a disclosed synthetic assistant.",
+        agent_reply="Hello from a launch-ready mixed voice.",
+        synthetic_label="synthetic mixed voice",
+        source_profile_ids=["voice_a", "voice_b"],
+        source_profile_details=source_details,
+        blend_strategy="multi_reference_prompt",
+        tts_backend="qwen3_tts",
+        agent_trace=AgentTrace(provider="openai", model="gpt-4.1-mini"),
+    )
+    metadata_path.write_text(generation.model_dump_json(), encoding="utf-8")
+    provider_report = AgentProviderVerificationReport(
+        status="passed",
+        provider="openai",
+        model="gpt-4.1-mini",
+        reply="Provider ready.",
+        report_path="data/agent-provider-verification-report.json",
+    )
+    qwen_report = QwenVerificationReport(
+        status="passed",
+        report_path="data/qwen-runtime-verification-report.json",
+        voice_profile_ids=["voice_a", "voice_b"],
+        tts_backend="qwen3_tts",
+        blend_strategy="multi_reference_prompt",
+        source_profile_details=source_details,
+        output_audio_path=str(verification_path),
+        text="This is a disclosed synthetic mixed voice runtime verification.",
+    )
+
+    status = _qwen_mixed_generation_status([generation], provider_report, qwen_report)
+
+    assert status == {
+        "passed": False,
+        "detail": "Qwen mixed voice audio is missing.",
+    }
+
+
 def test_core_launch_readiness_blocks_qwen_generation_with_mismatched_metadata_artifact(
     tmp_path, monkeypatch
 ):

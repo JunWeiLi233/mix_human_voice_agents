@@ -665,7 +665,10 @@ def _qwen_mixed_generation_status(
                 "detail": metadata_status["detail"],
             }
         if not Path(generation.audio_path).exists():
-            continue
+            return {
+                "passed": False,
+                "detail": "Qwen mixed voice audio is missing.",
+            }
         if not _path_is_non_empty(generation.audio_path):
             return {
                 "passed": False,
