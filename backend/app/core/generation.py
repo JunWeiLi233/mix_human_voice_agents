@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from app.core.blends import validate_blend
+from app.core.audio import is_parseable_wav, wav_has_audible_signal
 from app.core.qwen_profiles import validate_qwen_voice_profiles
 from app.core.safety import SafetyError, check_generation_request
 from app.models.schemas import (
@@ -36,6 +37,8 @@ def generate_agent_clip(
         _validate_qwen_generation_inputs(blend, voice_profiles, agent_trace)
 
     audio_path = adapter.synthesize(agent_reply, blend, voice_profiles=voice_profiles)
+    if tts_backend == "qwen3_tts":
+        _validate_qwen_output_audio(Path(audio_path))
     metadata_path = Path(audio_path).with_suffix(".json")
     result = GenerationResult(
         audio_path=str(audio_path),
@@ -84,6 +87,17 @@ def _validate_qwen_generation_inputs(
         validate_qwen_voice_profiles({voice_id: voice_profiles[voice_id] for voice_id in source_ids})
     except ValueError as exc:
         raise SafetyError(str(exc)) from exc
+
+
+def _validate_qwen_output_audio(audio_path: Path) -> None:
+    if not audio_path.exists():
+        raise SafetyError("Qwen generation output audio is missing.")
+    if audio_path.stat().st_size == 0:
+        raise SafetyError("Qwen generation output audio must be non-empty.")
+    if not is_parseable_wav(audio_path):
+        raise SafetyError("Qwen generation output audio must be a parseable WAV file.")
+    if not wav_has_audible_signal(audio_path):
+        raise SafetyError("Qwen generation output audio must contain audible signal.")
 
 
 def build_source_profile_details(

@@ -335,6 +335,52 @@ def test_generation_metadata_records_qwen_runtime_config(tmp_path: Path):
     }
 
 
+def test_qwen_generation_rejects_invalid_output_before_metadata_is_written(tmp_path: Path):
+    class InvalidQwenAdapter:
+        name = "qwen3_tts"
+
+        def synthesize(self, text, blend, voice_profiles=None):
+            output = tmp_path / "invalid_qwen.wav"
+            output.write_bytes(b"not-a-wav")
+            return output
+
+    blend = create_blend(
+        name="Imported Pair",
+        profiles=[
+            BlendProfileInput(voice_profile_id="voice_a", weight=1),
+            BlendProfileInput(voice_profile_id="voice_b", weight=1),
+        ],
+        strategy="multi_reference_prompt",
+    )
+    output_metadata = tmp_path / "invalid_qwen.json"
+
+    with pytest.raises(SafetyError, match="parseable WAV"):
+        generate_agent_clip(
+            prompt="Greet the user as a synthetic assistant.",
+            agent_reply="Hello from a traceable mixed voice.",
+            blend=blend,
+            adapter=InvalidQwenAdapter(),
+            voice_profiles={
+                "voice_a": voice_profile(
+                    "voice_a",
+                    "Alice",
+                    "Alice reads a consented reference transcript.",
+                    cleaned_audio_root=tmp_path,
+                ),
+                "voice_b": voice_profile(
+                    "voice_b",
+                    "Bob",
+                    "Bob reads a consented reference transcript.",
+                    cleaned_audio_root=tmp_path,
+                ),
+            },
+            tts_backend="qwen3_tts",
+            agent_trace=AgentTrace(provider="openai", model="gpt-4.1-mini"),
+        )
+
+    assert not output_metadata.exists()
+
+
 def test_generation_keeps_repeated_clips_as_distinct_history_files(tmp_path: Path):
     blend = create_blend(
         name="Repeatable Pair",

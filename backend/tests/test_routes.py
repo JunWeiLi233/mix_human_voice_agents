@@ -637,7 +637,7 @@ def test_launch_readiness_blocks_when_qwen_verification_lacks_source_details(tmp
 
         def synthesize(self, text, blend, voice_profiles=None):
             output = self.__class__.output_root / f"{blend.id}_qwen.wav"
-            output.write_bytes(b"fake-qwen-wav")
+            write_reference_wav(output, duration_seconds=1)
             return output
 
     monkeypatch.setattr("app.api.routes.QwenTtsAdapter", FakeQwenAdapter)
@@ -1734,7 +1734,7 @@ def test_generate_endpoint_can_use_qwen_with_imported_profiles(tmp_path: Path, m
         def synthesize(self, text, blend, voice_profiles=None):
             self.__class__.seen_profile_ids = sorted((voice_profiles or {}).keys())
             output = self.__class__.output_root / f"{blend.id}_qwen.wav"
-            output.write_bytes(b"fake-qwen-wav")
+            write_reference_wav(output, duration_seconds=1)
             return output
 
     monkeypatch.setattr("app.api.routes.QwenTtsAdapter", FakeQwenAdapter)
