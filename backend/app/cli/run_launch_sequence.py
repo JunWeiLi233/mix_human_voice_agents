@@ -113,6 +113,7 @@ def _validate_manifest(manifest: dict[str, Any]) -> None:
         _require_string(voice, "confirmed_by", f"voices[{index}]")
         _require_string(voice, "reference_text", f"voices[{index}]")
         _require_string(voice, "audio", f"voices[{index}]")
+        _validate_optional_string(voice, "notes", f"voices[{index}]", allow_blank=True)
         _validate_voice_weight(voice, index)
         normalized_speakers.add(str(voice["speaker_display_name"]).strip().casefold())
         audio_path = Path(str(voice["audio"]))
@@ -140,6 +141,8 @@ def _validate_manifest(manifest: dict[str, Any]) -> None:
             "agent_provider.provider must be one of: "
             f"{', '.join(SUPPORTED_AGENT_PROVIDERS)}."
         )
+    _validate_optional_string(provider, "api_key", "agent_provider", allow_blank=True)
+    _validate_optional_string(provider, "system_prompt", "agent_provider")
     _validate_optional_string(provider, "prompt", "agent_provider")
     generation = _optional_object(manifest.get("generation"), "generation")
     _require_string(generation, "prompt", "generation")
@@ -162,12 +165,14 @@ def _require_string(payload: dict[str, Any], key: str, label: str) -> None:
         raise ValueError(f"{label}.{key} is required.")
 
 
-def _validate_optional_string(payload: dict[str, Any], key: str, label: str) -> None:
+def _validate_optional_string(
+    payload: dict[str, Any], key: str, label: str, *, allow_blank: bool = False
+) -> None:
     if key not in payload:
         return
     if not isinstance(payload[key], str):
         raise ValueError(f"{label}.{key} must be a string.")
-    if not payload[key].strip():
+    if not allow_blank and not payload[key].strip():
         raise ValueError(f"{label}.{key} must not be blank when provided.")
 
 
