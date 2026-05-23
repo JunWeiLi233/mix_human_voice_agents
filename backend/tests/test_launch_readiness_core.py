@@ -1,4 +1,4 @@
-from types import SimpleNamespace
+﻿from types import SimpleNamespace
 from pathlib import Path
 import json
 import wave
@@ -174,6 +174,56 @@ def test_core_launch_readiness_blocks_qwen_verification_report_with_mismatched_r
     qwen_verification_check = next(check for check in report.checks if check.id == "qwen_verification")
     assert qwen_verification_check.passed is False
     assert qwen_verification_check.detail == "Qwen runtime verification report path does not match the persisted report file."
+
+
+def test_core_launch_readiness_blocks_passed_qwen_verification_report_without_checked_at(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    output_path = tmp_path / "data" / "generations" / "qwen_verify.wav"
+    output_path.parent.mkdir(parents=True)
+    output_path.write_bytes(b"fake-qwen-wav")
+    report_path = tmp_path / "data" / "qwen-runtime-verification-report.json"
+    report_path.write_text(
+        json.dumps(
+            {
+                "status": "passed",
+                "voice_profile_ids": ["voice_a", "voice_b"],
+                "report_path": "data/qwen-runtime-verification-report.json",
+                "tts_backend": "qwen3_tts",
+                "blend_strategy": "multi_reference_prompt",
+                "source_profile_details": [
+                    {
+                        "voice_profile_id": "voice_a",
+                        "display_name": "Alice",
+                        "weight": 0.5,
+                        "consent_confirmed_by": "local_user",
+                        "allowed_uses": ["private_agent_voice", "local_audio_export"],
+                        "reference_text_present": True,
+                    },
+                    {
+                        "voice_profile_id": "voice_b",
+                        "display_name": "Bob",
+                        "weight": 0.5,
+                        "consent_confirmed_by": "local_user",
+                        "allowed_uses": ["private_agent_voice", "local_audio_export"],
+                        "reference_text_present": True,
+                    },
+                ],
+                "output_audio_path": str(output_path),
+                "text": "This is a disclosed synthetic mixed voice runtime verification.",
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr("app.core.launch.is_parseable_wav", lambda path: True)
+    monkeypatch.setattr("app.core.launch.wav_has_audible_signal", lambda path: True)
+
+    report = evaluate_launch_readiness()
+
+    qwen_verification_check = next(check for check in report.checks if check.id == "qwen_verification")
+    assert qwen_verification_check.passed is False
+    assert qwen_verification_check.detail == "Qwen runtime verification report is missing checked_at."
 
 
 def test_core_launch_readiness_blocks_saved_blend_without_current_imported_voices(
@@ -1330,6 +1380,7 @@ def test_core_launch_readiness_blocks_when_generation_trace_differs_from_verifie
         """
         {
           "status": "passed",
+          "checked_at": "2026-05-23T00:00:00+00:00",
           "voice_profile_ids": ["voice_a", "voice_b"],
           "source_profile_details": [
             {
@@ -1697,6 +1748,7 @@ def test_core_launch_readiness_blocks_when_qwen_verification_uses_wrong_backend(
         """
         {
           "status": "passed",
+          "checked_at": "2026-05-23T00:00:00+00:00",
           "voice_profile_ids": ["voice_a", "voice_b"],
           "source_profile_details": [
             {
@@ -1806,6 +1858,7 @@ def test_core_launch_readiness_blocks_when_qwen_verification_uses_wrong_strategy
         """
         {
           "status": "passed",
+          "checked_at": "2026-05-23T00:00:00+00:00",
           "voice_profile_ids": ["voice_a", "voice_b"],
           "source_profile_details": [
             {
@@ -1877,6 +1930,7 @@ def test_core_launch_readiness_blocks_when_qwen_verification_reuses_one_voice_id
         """
         {
           "status": "passed",
+          "checked_at": "2026-05-23T00:00:00+00:00",
           "voice_profile_ids": ["voice_a", "voice_a"],
           "source_profile_details": [
             {
@@ -1935,6 +1989,7 @@ def test_core_launch_readiness_blocks_when_qwen_verification_has_duplicate_sourc
         """
         {
           "status": "passed",
+          "checked_at": "2026-05-23T00:00:00+00:00",
           "voice_profile_ids": ["voice_a", "voice_b"],
           "source_profile_details": [
             {
@@ -2037,6 +2092,7 @@ def test_core_launch_readiness_blocks_when_qwen_source_details_do_not_match_veri
         """
         {
           "status": "passed",
+          "checked_at": "2026-05-23T00:00:00+00:00",
           "voice_profile_ids": ["voice_a", "voice_b"],
           "source_profile_details": [
             {
@@ -2150,6 +2206,7 @@ def test_core_launch_readiness_blocks_when_qwen_generation_source_details_do_not
         """
         {
           "status": "passed",
+          "checked_at": "2026-05-23T00:00:00+00:00",
           "voice_profile_ids": ["voice_a", "voice_b"],
           "source_profile_details": [
             {
@@ -2273,6 +2330,7 @@ def test_core_launch_readiness_blocks_when_qwen_generation_has_duplicate_source_
         """
         {
           "status": "passed",
+          "checked_at": "2026-05-23T00:00:00+00:00",
           "voice_profile_ids": ["voice_a", "voice_b"],
           "source_profile_details": [
             {
@@ -2446,6 +2504,7 @@ def test_core_launch_readiness_blocks_when_qwen_generation_uses_unverified_voice
         """
         {
           "status": "passed",
+          "checked_at": "2026-05-23T00:00:00+00:00",
           "voice_profile_ids": ["voice_a", "voice_b"],
           "source_profile_details": [
             {
@@ -2567,6 +2626,7 @@ def test_core_launch_readiness_blocks_when_qwen_generation_repeats_verified_voic
         """
         {
           "status": "passed",
+          "checked_at": "2026-05-23T00:00:00+00:00",
           "voice_profile_ids": ["voice_a", "voice_b"],
           "source_profile_details": [
             {
@@ -2682,6 +2742,7 @@ def test_core_launch_readiness_blocks_when_qwen_generation_runtime_differs_from_
         """
         {
           "status": "passed",
+          "checked_at": "2026-05-23T00:00:00+00:00",
           "voice_profile_ids": ["voice_a", "voice_b"],
           "model_id": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
           "device_map": "cuda:0",
@@ -2801,6 +2862,7 @@ def test_core_launch_readiness_blocks_when_loaded_qwen_model_differs_from_verifi
         """
         {
           "status": "passed",
+          "checked_at": "2026-05-23T00:00:00+00:00",
           "voice_profile_ids": ["voice_a", "voice_b"],
           "model_id": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
           "source_profile_details": [
@@ -2919,6 +2981,7 @@ def test_core_launch_readiness_blocks_when_saved_blend_does_not_match_verified_q
         """
         {
           "status": "passed",
+          "checked_at": "2026-05-23T00:00:00+00:00",
           "voice_profile_ids": ["voice_a", "voice_b"],
           "source_profile_details": [
             {
@@ -3040,6 +3103,7 @@ def test_core_launch_readiness_blocks_when_saved_blend_repeats_verified_qwen_voi
         """
         {
           "status": "passed",
+          "checked_at": "2026-05-23T00:00:00+00:00",
           "voice_profile_ids": ["voice_a", "voice_b"],
           "source_profile_details": [
             {
@@ -3162,6 +3226,7 @@ def test_core_launch_readiness_blocks_when_imported_voices_do_not_include_verifi
         """
         {
           "status": "passed",
+          "checked_at": "2026-05-23T00:00:00+00:00",
           "voice_profile_ids": ["voice_a", "voice_b"],
           "source_profile_details": [
             {
@@ -3286,6 +3351,7 @@ def test_core_launch_readiness_blocks_when_imported_verified_voice_consent_is_re
         """
         {
           "status": "passed",
+          "checked_at": "2026-05-23T00:00:00+00:00",
           "voice_profile_ids": ["voice_a", "voice_b"],
           "source_profile_details": [
             {
@@ -3427,6 +3493,7 @@ def test_core_launch_readiness_blocks_when_current_imported_voice_lacks_referenc
         """
         {
           "status": "passed",
+          "checked_at": "2026-05-23T00:00:00+00:00",
           "voice_profile_ids": ["voice_a", "voice_b"],
           "source_profile_details": [
             {
@@ -3573,6 +3640,7 @@ def test_core_launch_readiness_blocks_when_current_imported_voice_audio_is_missi
         """
         {
           "status": "passed",
+          "checked_at": "2026-05-23T00:00:00+00:00",
           "voice_profile_ids": ["voice_a", "voice_b"],
           "source_profile_details": [
             {
@@ -3724,6 +3792,7 @@ def test_core_launch_readiness_blocks_when_current_imported_voice_has_quality_wa
         """
         {
           "status": "passed",
+          "checked_at": "2026-05-23T00:00:00+00:00",
           "voice_profile_ids": ["voice_a", "voice_b"],
           "source_profile_details": [
             {
@@ -3878,6 +3947,7 @@ def test_core_launch_readiness_blocks_when_qwen_verification_reuses_generated_au
         """
         {
           "status": "passed",
+          "checked_at": "2026-05-23T00:00:00+00:00",
           "voice_profile_ids": ["voice_a", "voice_b"],
           "source_profile_details": [
             {
@@ -4003,6 +4073,7 @@ def test_core_launch_readiness_blocks_when_qwen_generation_lacks_agent_transcrip
         """
         {
           "status": "passed",
+          "checked_at": "2026-05-23T00:00:00+00:00",
           "voice_profile_ids": ["voice_a", "voice_b"],
           "source_profile_details": [
             {
@@ -4128,6 +4199,7 @@ def test_core_launch_readiness_blocks_when_qwen_verification_lacks_private_voice
         """
         {
           "status": "passed",
+          "checked_at": "2026-05-23T00:00:00+00:00",
           "voice_profile_ids": ["voice_a", "voice_b"],
           "source_profile_details": [
             {
@@ -4275,6 +4347,7 @@ def test_core_launch_readiness_blocks_when_qwen_generation_lacks_private_voice_u
         """
         {
           "status": "passed",
+          "checked_at": "2026-05-23T00:00:00+00:00",
           "voice_profile_ids": ["voice_a", "voice_b"],
           "source_profile_details": [
             {
@@ -4340,3 +4413,5 @@ def test_core_launch_readiness_blocks_when_qwen_generation_lacks_private_voice_u
     generated_audio_check = next(check for check in report.checks if check.id == "generated_audio")
     assert generated_audio_check.passed is False
     assert generated_audio_check.detail == "Qwen mixed voice clips include a source profile not allowed for private agent voice use."
+
+

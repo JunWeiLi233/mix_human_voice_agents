@@ -42,6 +42,12 @@ def get_qwen_verification_report() -> QwenVerificationReport:
                 report_path=str(report_path),
                 error="Qwen runtime verification report path does not match the persisted report file.",
             )
+        if payload.get("status") == "passed" and not payload.get("checked_at"):
+            return QwenVerificationReport(
+                status="failed",
+                report_path=str(report_path),
+                error="Qwen runtime verification report is missing checked_at.",
+            )
         payload.setdefault("report_path", str(report_path))
         return QwenVerificationReport.model_validate(payload)
     except (json.JSONDecodeError, ValidationError):

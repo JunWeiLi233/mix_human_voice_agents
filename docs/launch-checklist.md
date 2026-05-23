@@ -30,7 +30,7 @@
 - Deleting an imported voice profile removes saved blend presets that reference that profile so stale blends cannot generate audio.
 - Deleting an imported voice profile removes generated clip audio and metadata that reference that profile.
 - Voice Engine panel shows the saved Qwen runtime verification report status and verified output path when present.
-- Voice Engine can run Qwen verification with at least two selected imported consented voices and persist the report with `source_profile_details`.
+- Voice Engine can run Qwen verification with at least two selected imported consented voices and persist the report with `checked_at` and `source_profile_details`.
 - Launch Readiness panel and `/api/launch/readiness` report blockers until imported voices, a saved blend, at least one Qwen3-TTS mixed voice clip with imported source details, passed agent provider verification, Qwen runtime availability, and passed Qwen verification are present.
 - `data/launch-readiness-report.json` can be generated from the CLI for a saved launch audit outside the browser.
 
@@ -50,6 +50,6 @@
 - Select the imported voices for verification, run Qwen verification from the Voice Engine panel, and confirm the verified output path exists.
 - Run `cd backend && .\.venv\Scripts\python -m app.cli.verify_qwen_runtime --voice-profile-id <id-a> --voice-profile-id <id-b> --report data/qwen-runtime-verification-report.json`.
 - Generate a short reply and confirm the output WAV is produced by Qwen3-TTS rather than the local development adapter.
-- Confirm `data/qwen-runtime-verification-report.json` contains `"status": "passed"` and an existing `output_audio_path`.
+- Confirm `data/qwen-runtime-verification-report.json` contains `"status": "passed"`, `checked_at`, and an existing `output_audio_path`.
 - Confirm the Voice Engine panel shows `Verification passed` and the verified output path from the report.
 - Follow `docs/qwen-runtime-verification.md` before claiming real acoustic cloning/mixing is verified on a target machine.

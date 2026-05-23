@@ -60,6 +60,7 @@ def test_qwen_verification_report_returns_saved_report(tmp_path: Path, monkeypat
         json.dumps(
             {
                 "status": "passed",
+                "checked_at": "2026-05-23T00:00:00+00:00",
                 "voice_profile_ids": ["voice_a", "voice_b"],
                 "tts_backend": "qwen3_tts",
                 "blend_strategy": "multi_reference_prompt",
@@ -640,6 +641,7 @@ def test_launch_readiness_reports_ready_after_full_qwen_verification(tmp_path: P
         json.dumps(
             {
                 "status": "passed",
+                "checked_at": "2026-05-23T00:00:00+00:00",
                 "voice_profile_ids": [voices[0]["id"], voices[1]["id"]],
                 "source_profile_details": [
                     {
@@ -766,6 +768,7 @@ def test_launch_readiness_blocks_when_qwen_verification_lacks_source_details(tmp
         json.dumps(
             {
                 "status": "passed",
+                "checked_at": "2026-05-23T00:00:00+00:00",
                 "voice_profile_ids": [voices[0]["id"], voices[1]["id"]],
                 "tts_backend": "qwen3_tts",
                 "blend_strategy": "multi_reference_prompt",
@@ -865,6 +868,7 @@ def test_launch_readiness_blocks_when_only_local_preview_audio_exists(tmp_path: 
         json.dumps(
             {
                 "status": "passed",
+                "checked_at": "2026-05-23T00:00:00+00:00",
                 "voice_profile_ids": [voices[0]["id"], voices[1]["id"]],
                 "source_profile_details": [
                     {
@@ -2453,6 +2457,7 @@ def write_qwen_runtime_verification_report(
         json.dumps(
             {
                 "status": "passed",
+                "checked_at": "2026-05-23T00:00:00+00:00",
                 "tts_backend": "qwen3_tts",
                 "report_path": str(report_path),
                 "voice_profile_ids": resolved_voice_profile_ids,
