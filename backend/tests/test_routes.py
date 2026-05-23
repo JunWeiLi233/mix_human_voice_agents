@@ -855,6 +855,7 @@ def test_launch_readiness_blocks_when_only_local_preview_audio_exists(tmp_path: 
         json.dumps(
             {
                 "status": "passed",
+                "checked_at": "2026-05-23T00:00:00+00:00",
                 "provider": "openai",
                 "model": "gpt-4.1-mini",
                 "reply": "Provider ready.",
@@ -2424,6 +2425,7 @@ def write_agent_provider_verification_report(
         json.dumps(
             {
                 "status": "passed",
+                "checked_at": "2026-05-23T00:00:00+00:00",
                 "provider": provider,
                 "model": model,
                 "base_url": base_url,

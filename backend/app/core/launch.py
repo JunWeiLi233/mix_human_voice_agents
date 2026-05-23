@@ -74,6 +74,12 @@ def get_agent_provider_verification_report() -> AgentProviderVerificationReport:
                 report_path=str(report_path),
                 error="Agent provider verification report path does not match the persisted report file.",
             )
+        if payload.get("status") == "passed" and not payload.get("checked_at"):
+            return AgentProviderVerificationReport(
+                status="failed",
+                report_path=str(report_path),
+                error="Agent provider verification report is missing checked_at.",
+            )
         payload.setdefault("report_path", str(report_path))
         return AgentProviderVerificationReport.model_validate(payload)
     except (json.JSONDecodeError, ValidationError):

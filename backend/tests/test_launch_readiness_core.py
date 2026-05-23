@@ -35,6 +35,7 @@ def test_core_launch_readiness_blocks_passed_agent_provider_report_without_provi
         """
         {
           "status": "passed",
+          "checked_at": "2026-05-23T00:00:00+00:00",
           "reply": "Provider ready.",
           "report_path": "data/agent-provider-verification-report.json"
         }
@@ -58,6 +59,7 @@ def test_core_launch_readiness_blocks_passed_agent_provider_report_without_base_
         """
         {
           "status": "passed",
+          "checked_at": "2026-05-23T00:00:00+00:00",
           "provider": "openai_compatible",
           "model": "custom-voice-agent-model",
           "reply": "Provider ready.",
@@ -98,6 +100,32 @@ def test_core_launch_readiness_blocks_agent_provider_report_with_mismatched_repo
     agent_provider_check = next(check for check in report.checks if check.id == "agent_provider")
     assert agent_provider_check.passed is False
     assert agent_provider_check.detail == "Agent provider verification report path does not match the persisted report file."
+
+
+def test_core_launch_readiness_blocks_passed_agent_provider_report_without_checked_at(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "agent-provider-verification-report.json").write_text(
+        """
+        {
+          "status": "passed",
+          "provider": "openai",
+          "model": "gpt-4.1-mini",
+          "base_url": "https://api.openai.com/v1",
+          "reply": "Provider ready.",
+          "report_path": "data/agent-provider-verification-report.json"
+        }
+        """,
+        encoding="utf-8",
+    )
+
+    report = evaluate_launch_readiness()
+
+    agent_provider_check = next(check for check in report.checks if check.id == "agent_provider")
+    assert agent_provider_check.passed is False
+    assert agent_provider_check.detail == "Agent provider verification report is missing checked_at."
 
 
 def test_core_launch_readiness_blocks_invalid_agent_provider_report(tmp_path, monkeypatch):
@@ -1338,6 +1366,7 @@ def test_core_launch_readiness_blocks_when_generation_trace_differs_from_verifie
     audio_path = tmp_path / "data" / "generations" / "mixed.wav"
     audio_path.parent.mkdir(parents=True)
     audio_path.write_bytes(b"fake-qwen-wav")
+    (tmp_path / "data" / "generations" / "qwen_verify.wav").write_bytes(b"fake-qwen-verification-wav")
     research_review_path = tmp_path / "docs" / "research-review.md"
     research_review_path.parent.mkdir(parents=True)
     research_review_path.write_text(
@@ -1368,6 +1397,7 @@ def test_core_launch_readiness_blocks_when_generation_trace_differs_from_verifie
         """
         {
           "status": "passed",
+          "checked_at": "2026-05-23T00:00:00+00:00",
           "provider": "openai",
           "model": "gpt-4.1-mini",
           "reply": "Provider ready.",
@@ -1402,7 +1432,7 @@ def test_core_launch_readiness_blocks_when_generation_trace_differs_from_verifie
           ],
           "tts_backend": "qwen3_tts",
           "blend_strategy": "multi_reference_prompt",
-          "output_audio_path": "data/generations/mixed.wav",
+          "output_audio_path": "data/generations/qwen_verify.wav",
           "text": "Launch readiness verification."
         }
         """,
@@ -1416,6 +1446,8 @@ def test_core_launch_readiness_blocks_when_generation_trace_differs_from_verifie
             GenerationResult(
                 audio_path=str(audio_path),
                 metadata_path=str(tmp_path / "data" / "generations" / "mixed.json"),
+                prompt="Say hello as a disclosed synthetic assistant.",
+                agent_reply="Hello from a launch-ready mixed voice.",
                 synthetic_label="synthetic mixed voice",
                 source_profile_ids=["voice_a", "voice_b"],
                 source_profile_details=source_details,
@@ -4413,5 +4445,6 @@ def test_core_launch_readiness_blocks_when_qwen_generation_lacks_private_voice_u
     generated_audio_check = next(check for check in report.checks if check.id == "generated_audio")
     assert generated_audio_check.passed is False
     assert generated_audio_check.detail == "Qwen mixed voice clips include a source profile not allowed for private agent voice use."
+
 
 
