@@ -61,12 +61,31 @@ This matches current production voice-agent practice while preserving the specif
 - Launch readiness must stay blocked until the selected agent provider preflight and Qwen runtime verification have both produced persisted passed reports.
 - Real acoustic cloning/mixing remains unverified until `docs/qwen-runtime-verification.md` is completed on a machine with the Qwen runtime and consented samples installed.
 
+## 2026-05-23 Revalidation
+
+Primary-source documentation still supports the current launch direction:
+
+- OpenAI, LiveKit, and Pipecat all describe production voice agents as either realtime speech-to-speech systems or explicit pipelines that connect audio input, model reasoning, and TTS output. This app should keep the launch path as an inspectable chained pipeline because consent, transcript matching, profile provenance, blend metadata, and provider preflight evidence are release blockers.
+- OpenAI, Anthropic, Google Gemini, xAI, Ollama, and OpenAI-compatible endpoints expose different request surfaces and model capabilities. The provider layer should therefore stay independent from voice storage and TTS synthesis, with per-provider preflight reports proving the selected ChatGPT/OpenAI, Claude/Anthropic, Gemini/Google, Grok/xAI, custom OpenAI-compatible, or Ollama/local model before generation.
+- Qwen3-TTS primary docs still frame cloning around reference audio plus reference transcript, with reusable clone prompts for repeat synthesis. That keeps the current import requirement correct: every voice profile must persist source audio, transcript, consent metadata, and quality metadata before it can participate in Qwen verification or a saved blend.
+- Qwen's Base model workflow clones one reference voice at a time. Until a true multi-speaker blend model is proven locally, this project should continue to label the implemented Qwen blend strategy as per-profile synthesis followed by weighted waveform mixing, not as a native Qwen acoustic identity interpolation.
+- Launch readiness should continue rejecting stale or unverifiable evidence. Passed provider and Qwen reports need persisted `report_path`, non-future `checked_at`, source-profile details, and existing generated audio paths where applicable.
+
 ## Source Links
 
 - OpenAI Voice Agents: https://platform.openai.com/docs/guides/voice-agents
+- OpenAI Audio and speech: https://platform.openai.com/docs/guides/audio
+- OpenAI Chat Completions API: https://platform.openai.com/docs/api-reference/chat/create
+- Anthropic Messages API examples: https://docs.anthropic.com/en/api/messages-examples
+- Google Gemini OpenAI compatibility: https://ai.google.dev/gemini-api/docs/openai
+- xAI Chat Completions: https://docs.x.ai/docs/guides/chat-completions
+- Ollama OpenAI compatibility: https://docs.ollama.com/api/openai-compatibility
+- Ollama Chat API: https://docs.ollama.com/api/chat
 - LiveKit Voice AI quickstart: https://docs.livekit.io/agents/start/voice-ai/
 - Pipecat introduction: https://docs.pipecat.ai/overview/introduction
 - Qwen3-TTS repository: https://github.com/QwenLM/Qwen3-TTS
+- Qwen3-TTS 1.7B Base model card: https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-Base
+- qwen-tts PyPI package: https://pypi.org/project/qwen-tts/
 - Qwen3-TTS technical report: https://arxiv.org/abs/2601.15621
 - F5-TTS repository: https://github.com/SWivid/F5-TTS
 - Fish Audio voice cloning: https://docs.fish.audio/developer-guide/sdk-guide/javascript/voice-cloning
