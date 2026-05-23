@@ -34,7 +34,7 @@ This file is the handoff point for JunWeiLi233's AI agents. When Codex is close 
 ## Launch Readiness Remaining Tasks
 
 - Status: `blocked`
-- Checked at: `2026-05-23T18:04:24.003803+00:00`
+- Checked at: `2026-05-23T18:10:16.156745+00:00`
 
 The following tasks are generated from failed launch-readiness checks:
 - [ ] imported_voices: Re-record or replace unusable voice samples, then import at least two clean consented WAV voices with matching transcripts.
@@ -188,6 +188,7 @@ Next artifact commands:
 - Hardened launch artifact inventory so non-parseable Qwen generation audio is marked stale instead of launch-eligible.
 - Hardened launch artifact inventory so silent Qwen generation audio is marked stale instead of launch-eligible.
 - Hardened launch artifact inventory so Qwen generations missing metadata are marked stale instead of launch-eligible.
+- Hardened launch artifact inventory so invalid or mismatched Qwen generation metadata is marked stale instead of launch-eligible.
 - Added structured `voice_diagnostics` to launch manifest dry-run reports for clean samples and clipped/warning-blocked samples.
 - Updated `/api/launch/manifest/validate` so browser validation can return a failed dry-run report with per-voice diagnostics instead of only an HTTP error string.
 - Rendered manifest voice diagnostics in the Launch Readiness panel so users and other agents can see sample duration, sample rate, channels, warnings, and re-record actions.

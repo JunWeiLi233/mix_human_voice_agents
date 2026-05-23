@@ -5,6 +5,8 @@ import json
 from pathlib import Path
 from typing import Sequence
 
+from pydantic import ValidationError
+
 from app.core.audio import is_parseable_wav, wav_has_audible_signal
 from app.core.launch import get_agent_provider_verification_report, get_qwen_verification_report
 from app.core.storage import list_blends, list_generation_results, list_voice_profiles
@@ -357,12 +359,49 @@ def _generation_status(generation: GenerationResult, blends: list[VoiceBlend]) -
         reasons.append("Qwen generation audio must be a parseable WAV file.")
     elif not wav_has_audible_signal(audio_path):
         reasons.append("Qwen generation audio must contain audible signal.")
-    if not Path(generation.metadata_path).exists():
+    metadata_path = Path(generation.metadata_path)
+    if not metadata_path.exists():
         reasons.append("Qwen generation metadata is missing.")
+    else:
+        metadata_reason = _generation_metadata_stale_reason(generation, metadata_path)
+        if metadata_reason:
+            reasons.append(metadata_reason)
     return {
         "launch_eligible": not reasons,
         "stale_reasons": reasons,
     }
+
+
+def _generation_metadata_stale_reason(generation: GenerationResult, metadata_path: Path) -> str | None:
+    try:
+        payload = json.loads(metadata_path.read_text(encoding="utf-8"))
+        metadata = GenerationResult.model_validate(payload)
+    except (json.JSONDecodeError, ValidationError):
+        return "Qwen generation metadata is invalid."
+    if (
+        metadata.id != generation.id
+        or not _same_artifact_path(metadata.audio_path, generation.audio_path)
+        or not _same_artifact_path(metadata.metadata_path, generation.metadata_path)
+        or metadata.blend_id != generation.blend_id
+        or metadata.blend_name != generation.blend_name
+        or metadata.source_profile_ids != generation.source_profile_ids
+        or metadata.source_profiles != generation.source_profiles
+        or metadata.source_profile_details != generation.source_profile_details
+        or metadata.blend_strategy != generation.blend_strategy
+        or metadata.tts_backend != generation.tts_backend
+        or metadata.qwen_runtime_config != generation.qwen_runtime_config
+        or metadata.prompt != generation.prompt
+        or metadata.agent_reply != generation.agent_reply
+        or metadata.synthetic_label != generation.synthetic_label
+        or metadata.watermark != generation.watermark
+        or metadata.agent_trace != generation.agent_trace
+    ):
+        return "Qwen generation metadata does not match generated audio."
+    return None
+
+
+def _same_artifact_path(left: str, right: str) -> bool:
+    return Path(left).resolve(strict=False) == Path(right).resolve(strict=False)
 
 
 def _generation_references_current_blend(generation: GenerationResult, blends: list[VoiceBlend]) -> bool:
