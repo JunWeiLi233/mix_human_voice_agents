@@ -17,6 +17,7 @@ from app.models.schemas import AgentProviderKind
 
 DEFAULT_OUTPUT_DIR = Path("data") / "launch-sequence"
 SUPPORTED_AGENT_PROVIDERS = list(AgentProviderKind.__args__)
+LAUNCH_BLEND_STRATEGY = "multi_reference_prompt"
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -118,6 +119,9 @@ def _validate_manifest(manifest: dict[str, Any]) -> None:
             raise ValueError(f"voices[{index}].audio must contain audible signal: {audio_path}")
     if len(normalized_speakers) < 2:
         raise ValueError("Launch sequence manifest requires at least two distinct speaker display names.")
+    blend = manifest.get("blend") or {}
+    if str(blend.get("strategy", LAUNCH_BLEND_STRATEGY)) != LAUNCH_BLEND_STRATEGY:
+        raise ValueError("blend.strategy must be multi_reference_prompt for Qwen launch generation.")
     provider = manifest.get("agent_provider") or {}
     _require(provider, "provider", "agent_provider")
     _require(provider, "model", "agent_provider")
@@ -181,7 +185,7 @@ def _run_blend_creation(manifest: dict[str, Any], voice_ids: list[str], output_d
         "--name",
         str(blend.get("name", "Launch blend")),
         "--strategy",
-        str(blend.get("strategy", "multi_reference_prompt")),
+        str(blend.get("strategy", LAUNCH_BLEND_STRATEGY)),
         "--metadata",
         str(metadata_path),
     ]
