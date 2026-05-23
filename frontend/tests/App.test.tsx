@@ -40,6 +40,7 @@ describe("App", () => {
       if (url === "/api/launch/readiness") {
         return jsonResponse({
           status: "blocked",
+          checked_at: "2026-05-23T00:20:00+00:00",
           blocking_reasons: [
             "Import at least two consented voice profiles.",
             "Run Qwen runtime verification successfully before launch.",
@@ -69,6 +70,7 @@ describe("App", () => {
     expect(screen.getByText("Voice Library")).toBeInTheDocument();
     expect(await screen.findByText("Launch Readiness")).toBeInTheDocument();
     expect(screen.getByText("Blocked before launch")).toBeInTheDocument();
+    expect(screen.getByText("2026-05-23T00:20:00+00:00")).toBeInTheDocument();
     expect(screen.getByText("Run Qwen runtime verification successfully before launch.")).toBeInTheDocument();
     expect(screen.getByText("Blend Mixer")).toBeInTheDocument();
     expect(screen.getByText("Agent Provider")).toBeInTheDocument();

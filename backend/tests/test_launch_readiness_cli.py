@@ -1,4 +1,5 @@
 from pathlib import Path
+from datetime import datetime
 import json
 
 from app.cli.launch_readiness import main
@@ -27,6 +28,7 @@ def test_launch_readiness_cli_writes_report(tmp_path: Path, monkeypatch):
 
     assert exit_code == 1
     payload = json.loads(report_path.read_text(encoding="utf-8"))
+    assert datetime.fromisoformat(payload.pop("checked_at"))
     assert payload == {
         "status": "blocked",
         "checks": [

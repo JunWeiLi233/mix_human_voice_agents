@@ -119,6 +119,7 @@ export type LaunchReadinessCheck = {
 
 export type LaunchReadinessReport = {
   status: "ready" | "blocked";
+  checked_at?: string;
   checks: LaunchReadinessCheck[];
   blocking_reasons: string[];
 };

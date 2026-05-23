@@ -143,6 +143,7 @@ class LaunchReadinessCheck(BaseModel):
 
 class LaunchReadinessReport(BaseModel):
     status: LaunchReadinessStatus
+    checked_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     checks: list[LaunchReadinessCheck]
     blocking_reasons: list[str]
 

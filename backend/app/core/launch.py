@@ -187,6 +187,7 @@ def evaluate_launch_readiness() -> LaunchReadinessReport:
     blocking_reasons = _launch_blocking_reasons(checks)
     return LaunchReadinessReport(
         status="ready" if not blocking_reasons else "blocked",
+        checked_at=datetime.now(timezone.utc),
         checks=checks,
         blocking_reasons=blocking_reasons,
     )

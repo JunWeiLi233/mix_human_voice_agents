@@ -13,6 +13,12 @@ export function LaunchReadiness({ readiness }: Props) {
           <p className={readiness.status === "ready" ? "readiness-ready" : "readiness-blocked"}>
             {readiness.status === "ready" ? "Ready for launch verification" : "Blocked before launch"}
           </p>
+          {readiness.checked_at ? (
+            <dl>
+              <dt>Checked at</dt>
+              <dd>{readiness.checked_at}</dd>
+            </dl>
+          ) : null}
           {readiness.blocking_reasons.length > 0 ? (
             <ul className="readiness-reasons">
               {readiness.blocking_reasons.map((reason) => (
