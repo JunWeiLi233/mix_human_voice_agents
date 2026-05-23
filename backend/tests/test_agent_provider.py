@@ -1,4 +1,5 @@
 import pytest
+import httpx
 
 from app.core.agent import AgentProviderError, build_agent_payload, generate_agent_reply
 from app.models.schemas import AgentConfig, AgentProviderKind
@@ -23,6 +24,19 @@ class FakeResponse:
 
     def json(self):
         return self.payload
+
+
+class FailingHttpResponse(FakeResponse):
+    def raise_for_status(self):
+        request = httpx.Request("POST", "https://api.example.test/v1/chat/completions")
+        response = httpx.Response(401, request=request)
+        raise httpx.HTTPStatusError("401 Unauthorized", request=request, response=response)
+
+
+class FailingHttpClient(FakeHttpClient):
+    def post(self, url, headers=None, json=None, timeout=None):
+        self.requests.append({"url": url, "headers": headers, "json": json, "timeout": timeout})
+        return FailingHttpResponse(self.payload)
 
 
 def config(provider: AgentProviderKind) -> AgentConfig:
@@ -208,6 +222,17 @@ def test_openai_compatible_provider_rejects_blank_reply():
     client = FakeHttpClient({"choices": [{"message": {"content": "   "}}]})
 
     with pytest.raises(AgentProviderError, match="non-empty text"):
+        generate_agent_reply(
+            prompt="Say hello.",
+            config=config("openai_compatible"),
+            http_client=client,
+        )
+
+
+def test_openai_compatible_provider_wraps_http_status_errors():
+    client = FailingHttpClient({})
+
+    with pytest.raises(AgentProviderError, match="Agent provider request failed: 401 Unauthorized"):
         generate_agent_reply(
             prompt="Say hello.",
             config=config("openai_compatible"),

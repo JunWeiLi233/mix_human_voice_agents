@@ -3,6 +3,7 @@ import json
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
+import httpx
 from pydantic import BaseModel
 
 from app.core.agent import AgentProviderError, generate_agent_reply_record
@@ -115,7 +116,7 @@ def agent_provider_verification_route() -> AgentProviderVerificationReport:
 def run_agent_provider_verification_route(request: AgentReplyRequest) -> AgentProviderVerificationReport:
     try:
         reply = generate_agent_reply_record(prompt=request.prompt, config=request.config)
-    except (AgentProviderError, SafetyError) as exc:
+    except (AgentProviderError, SafetyError, httpx.HTTPError) as exc:
         return _write_agent_provider_verification_report(
             {
                 "status": "failed",

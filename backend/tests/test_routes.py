@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 from pathlib import Path
+import httpx
 import json
 import math
 import struct
@@ -127,6 +128,41 @@ def test_agent_provider_verification_route_persists_passed_report(tmp_path: Path
     assert saved_report["status"] == "passed"
     assert saved_report["provider"] == "anthropic"
     assert saved_report["base_url"] == "https://api.anthropic.com"
+
+
+def test_agent_provider_verification_route_persists_failed_report_on_http_error(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    def failing_reply_record(prompt, config):
+        request = httpx.Request("POST", "https://api.openai.com/v1/chat/completions")
+        response = httpx.Response(401, request=request)
+        raise httpx.HTTPStatusError("401 Unauthorized", request=request, response=response)
+
+    monkeypatch.setattr("app.api.routes.generate_agent_reply_record", failing_reply_record)
+
+    response = client.post(
+        "/api/agent/provider-verification",
+        json={
+            "prompt": "Reply with one short sentence confirming this provider is connected.",
+            "config": {
+                "provider": "openai",
+                "model": "gpt-4.1-mini",
+                "base_url": "https://api.openai.com/v1",
+                "api_key": "bad-key",
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "failed"
+    assert payload["provider"] == "openai"
+    assert payload["model"] == "gpt-4.1-mini"
+    assert payload["base_url"] == "https://api.openai.com/v1"
+    assert payload["error"] == "401 Unauthorized"
+    saved_report = client.get("/api/agent/provider-verification").json()
+    assert saved_report["status"] == "failed"
+    assert saved_report["error"] == "401 Unauthorized"
 
 
 def test_qwen_verification_route_runs_with_selected_imported_profiles(tmp_path: Path, monkeypatch):

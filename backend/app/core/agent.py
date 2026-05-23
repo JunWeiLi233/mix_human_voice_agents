@@ -102,7 +102,7 @@ def generate_agent_reply(
             json=build_agent_payload(config, prompt),
             timeout=60,
         )
-        response.raise_for_status()
+        _raise_for_provider_status(response)
         data = response.json()
         reply = _extract_openai_compatible_reply(data)
     elif config.provider == "anthropic":
@@ -118,7 +118,7 @@ def generate_agent_reply(
             json=build_anthropic_payload(config, prompt),
             timeout=60,
         )
-        response.raise_for_status()
+        _raise_for_provider_status(response)
         data = response.json()
         reply = _extract_anthropic_reply(data)
     elif config.provider == "google":
@@ -133,7 +133,7 @@ def generate_agent_reply(
             json=build_google_payload(config, prompt),
             timeout=60,
         )
-        response.raise_for_status()
+        _raise_for_provider_status(response)
         data = response.json()
         reply = _extract_google_reply(data)
     elif config.provider == "ollama":
@@ -143,7 +143,7 @@ def generate_agent_reply(
             json={**build_agent_payload(config, prompt), "stream": False},
             timeout=120,
         )
-        response.raise_for_status()
+        _raise_for_provider_status(response)
         data = response.json()
         reply = _extract_ollama_reply(data)
     else:
@@ -162,6 +162,13 @@ def generate_agent_reply_record(prompt: str, config: AgentConfig) -> AgentReply:
 def _validate_agent_reply_text(reply: str) -> None:
     if not reply.strip():
         raise AgentProviderError("Agent provider response must include non-empty text.")
+
+
+def _raise_for_provider_status(response: Any) -> None:
+    try:
+        response.raise_for_status()
+    except httpx.HTTPError as exc:
+        raise AgentProviderError(f"Agent provider request failed: {exc}") from exc
 
 
 def _extract_openai_compatible_reply(data: dict[str, Any]) -> str:
