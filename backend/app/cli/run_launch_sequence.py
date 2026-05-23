@@ -132,9 +132,9 @@ def _validate_manifest(manifest: dict[str, Any]) -> None:
     if str(blend.get("strategy", LAUNCH_BLEND_STRATEGY)) != LAUNCH_BLEND_STRATEGY:
         raise ValueError("blend.strategy must be multi_reference_prompt for Qwen launch generation.")
     provider = _optional_object(manifest.get("agent_provider"), "agent_provider")
-    _require(provider, "provider", "agent_provider")
-    _require(provider, "model", "agent_provider")
-    _require(provider, "base_url", "agent_provider")
+    _require_string(provider, "provider", "agent_provider")
+    _require_string(provider, "model", "agent_provider")
+    _require_string(provider, "base_url", "agent_provider")
     if str(provider["provider"]) not in SUPPORTED_AGENT_PROVIDERS:
         raise ValueError(
             "agent_provider.provider must be one of: "
@@ -152,6 +152,15 @@ def _validate_manifest(manifest: dict[str, Any]) -> None:
 
 def _require(payload: dict[str, Any], key: str, label: str) -> None:
     if not str(payload.get(key, "")).strip():
+        raise ValueError(f"{label}.{key} is required.")
+
+
+def _require_string(payload: dict[str, Any], key: str, label: str) -> None:
+    if key not in payload or payload[key] is None:
+        raise ValueError(f"{label}.{key} is required.")
+    if not isinstance(payload[key], str):
+        raise ValueError(f"{label}.{key} must be a string.")
+    if not payload[key].strip():
         raise ValueError(f"{label}.{key} is required.")
 
 
